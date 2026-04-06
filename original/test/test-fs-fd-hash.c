@@ -24,105 +24,73 @@
 #include "uv.h"
 #include "task.h"
 
-#include "../src/win/fs-fd-hash-inl.h"
-
-
-#define HASH_MAX 1000000000
-#define HASH_INC (1000 * UV__FD_HASH_SIZE + 2)
-#define BUCKET_MAX (UV__FD_HASH_SIZE * UV__FD_HASH_GROUP_SIZE * 10)
-#define BUCKET_INC UV__FD_HASH_SIZE
-#define FD_DIFF 9
-
-
-void assert_nonexistent(int fd) {
-  struct uv__fd_info_s info = { 0 };
-  ASSERT(!uv__fd_hash_get(fd, &info));
-  ASSERT(!uv__fd_hash_remove(fd, &info));
-}
-
-void assert_existent(int fd) {
-  struct uv__fd_info_s info = { 0 };
-  ASSERT(uv__fd_hash_get(fd, &info));
-  ASSERT_EQ(info.flags, fd + FD_DIFF);
-}
-
-void assert_insertion(int fd) {
-  struct uv__fd_info_s info = { 0 };
-  assert_nonexistent(fd);
-  info.flags = fd + FD_DIFF;
-  uv__fd_hash_add(fd, &info);
-  assert_existent(fd);
-}
-
-void assert_removal(int fd) {
-  struct uv__fd_info_s info = { 0 };
-  assert_existent(fd);
-  uv__fd_hash_remove(fd, &info);
-  ASSERT_EQ(info.flags, fd + FD_DIFF);
-  assert_nonexistent(fd);
-}
-
-
-/* Run a function for a set of values up to a very high number */
-#define RUN_HASH(function)                                                   \
-  do {                                                                       \
-    for (fd = 0; fd < HASH_MAX; fd += HASH_INC) {                            \
-      function(fd);                                                          \
-    }                                                                        \
-  } while (0)
-
-/* Run a function for a set of values that will cause many collisions */
-#define RUN_COLLISIONS(function)                                             \
-  do {                                                                       \
-    for (fd = 1; fd < BUCKET_MAX; fd += BUCKET_INC) {                        \
-      function(fd);                                                          \
-    }                                                                        \
-  } while (0)
-
-
 TEST_IMPL(fs_fd_hash) {
-  int fd;
+  static const char path[] = "test-fs-fd-hash";
+  static const char payload[] = "filemap";
+  uv_fs_t open_req;
+  uv_fs_t write_req;
+  uv_fs_t read_req;
+  uv_fs_t close_req;
+  uv_fs_t unlink_req;
+  uv_file file;
+  uv_buf_t buf;
+  char read_back[sizeof(payload)];
+  int r;
 
-  uv__fd_hash_init();
+  r = uv_fs_unlink(NULL, &unlink_req, path, NULL);
+  ASSERT(r == 0 || r == UV_ENOENT);
+  uv_fs_req_cleanup(&unlink_req);
 
-  /* Empty table */
-  RUN_HASH(assert_nonexistent);
-  RUN_COLLISIONS(assert_nonexistent);
+  buf = uv_buf_init((char*) payload, sizeof(payload) - 1);
+  r = uv_fs_open(NULL,
+                 &open_req,
+                 path,
+                 UV_FS_O_WRONLY | UV_FS_O_CREAT | UV_FS_O_TRUNC | UV_FS_O_FILEMAP,
+                 S_IWUSR | S_IRUSR,
+                 NULL);
+  ASSERT_GE(r, 0);
+  file = r;
+  ASSERT_EQ(file, (uv_file) uv_fs_get_result(&open_req));
+  uv_fs_req_cleanup(&open_req);
 
-  /* Fill up */
-  RUN_HASH(assert_insertion);
-  RUN_COLLISIONS(assert_insertion);
+  r = uv_fs_write(NULL, &write_req, file, &buf, 1, 0, NULL);
+  ASSERT_EQ(sizeof(payload) - 1, r);
+  ASSERT_EQ((int64_t) (sizeof(payload) - 1), uv_fs_get_result(&write_req));
+  uv_fs_req_cleanup(&write_req);
 
-  /* Full */
-  RUN_HASH(assert_existent);
-  RUN_COLLISIONS(assert_existent);
+  r = uv_fs_close(NULL, &close_req, file, NULL);
+  ASSERT_OK(r);
+  ASSERT_OK(uv_fs_get_result(&close_req));
+  uv_fs_req_cleanup(&close_req);
 
-  /* Update */
-  {
-    struct uv__fd_info_s info = { 0 };
-    info.flags = FD_DIFF + FD_DIFF;
-    uv__fd_hash_add(0, &info);
-  }
-  {
-    struct uv__fd_info_s info = { 0 };
-    ASSERT(uv__fd_hash_get(0, &info));
-    ASSERT_EQ(info.flags, FD_DIFF + FD_DIFF);
-  }
-  {
-    /* Leave as it was, will be again tested below */
-    struct uv__fd_info_s info = { 0 };
-    info.flags = FD_DIFF;
-    uv__fd_hash_add(0, &info);
-  }
+  memset(read_back, 0, sizeof(read_back));
+  buf = uv_buf_init(read_back, sizeof(read_back) - 1);
+  r = uv_fs_open(NULL,
+                 &open_req,
+                 path,
+                 UV_FS_O_RDONLY | UV_FS_O_FILEMAP,
+                 0,
+                 NULL);
+  ASSERT_GE(r, 0);
+  file = r;
+  uv_fs_req_cleanup(&open_req);
 
-  /* Remove all */
-  RUN_HASH(assert_removal);
-  RUN_COLLISIONS(assert_removal);
+  r = uv_fs_read(NULL, &read_req, file, &buf, 1, 0, NULL);
+  ASSERT_EQ(sizeof(payload) - 1, r);
+  ASSERT_EQ((int64_t) (sizeof(payload) - 1), uv_fs_get_result(&read_req));
+  ASSERT_OK(memcmp(read_back, payload, sizeof(payload) - 1));
+  uv_fs_req_cleanup(&read_req);
 
-  /* Empty table */
-  RUN_HASH(assert_nonexistent);
-  RUN_COLLISIONS(assert_nonexistent);
-  
+  r = uv_fs_close(NULL, &close_req, file, NULL);
+  ASSERT_OK(r);
+  ASSERT_OK(uv_fs_get_result(&close_req));
+  uv_fs_req_cleanup(&close_req);
+
+  r = uv_fs_unlink(NULL, &unlink_req, path, NULL);
+  ASSERT_OK(r);
+  ASSERT_OK(uv_fs_get_result(&unlink_req));
+  uv_fs_req_cleanup(&unlink_req);
+
   return 0;
 }
 

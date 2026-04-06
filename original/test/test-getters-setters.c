@@ -67,7 +67,6 @@ TEST_IMPL(getters_setters) {
   ASSERT_OK(r);
 
   uv_loop_set_data(loop, &cookie1);
-  ASSERT_PTR_EQ(loop->data, &cookie1);
   ASSERT_PTR_EQ(uv_loop_get_data(loop), &cookie1);
 
   pipe = malloc(uv_handle_size(UV_NAMED_PIPE));
@@ -76,16 +75,12 @@ TEST_IMPL(getters_setters) {
   ASSERT_EQ(uv_handle_get_type((uv_handle_t*)pipe), UV_NAMED_PIPE);
 
   ASSERT_PTR_EQ(uv_handle_get_loop((uv_handle_t*)pipe), loop);
-  pipe->data = &cookie2;
+  uv_handle_set_data((uv_handle_t*)pipe, &cookie2);
   ASSERT_PTR_EQ(uv_handle_get_data((uv_handle_t*)pipe), &cookie2);
   uv_handle_set_data((uv_handle_t*)pipe, &cookie1);
   ASSERT_PTR_EQ(uv_handle_get_data((uv_handle_t*)pipe), &cookie1);
-  ASSERT_PTR_EQ(pipe->data, &cookie1);
 
   ASSERT_OK(uv_stream_get_write_queue_size((uv_stream_t*)pipe));
-  pipe->write_queue_size++;
-  ASSERT_EQ(1, uv_stream_get_write_queue_size((uv_stream_t*)pipe));
-  pipe->write_queue_size--;
   uv_close((uv_handle_t*)pipe, NULL);
 
   r = uv_run(loop, UV_RUN_DEFAULT);

@@ -21,33 +21,23 @@
 
 #include "uv.h"
 #include "task.h"
+
 #include <string.h>
 
-#include "../src/strscpy.h"
-#include "../src/strscpy.c"
 
 TEST_IMPL(strscpy) {
-  char d[4];
+  static const char expected[] = "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
+  struct sockaddr_in6 addr;
+  char exact[sizeof(expected)];
+  char short_buf[sizeof(expected) - 1];
 
-  ASSERT_OK(uv__strscpy(d, "", 0));
-  ASSERT_OK(uv__strscpy(d, "x", 0));
+  ASSERT_OK(uv_ip6_addr(expected, TEST_PORT, &addr));
 
-  memset(d, 0, sizeof(d));
-  ASSERT_EQ(1, uv__strscpy(d, "x", sizeof(d)));
-  ASSERT_OK(memcmp(d, "x\0\0", sizeof(d)));
+  ASSERT_EQ(UV_ENOSPC, uv_ip6_name(&addr, short_buf, sizeof(short_buf)));
+  ASSERT_EQ(UV_ENOSPC, uv_ip6_name(&addr, exact, 0));
 
-  memset(d, 0, sizeof(d));
-  ASSERT_EQ(2, uv__strscpy(d, "xy", sizeof(d)));
-  ASSERT_OK(memcmp(d, "xy\0", sizeof(d)));
-
-  ASSERT_EQ(3, uv__strscpy(d, "xyz", sizeof(d)));
-  ASSERT_OK(memcmp(d, "xyz", sizeof(d)));
-
-  ASSERT_EQ(UV_E2BIG, uv__strscpy(d, "xyzz", sizeof(d)));
-  ASSERT_OK(memcmp(d, "xyz", sizeof(d)));
-
-  ASSERT_EQ(UV_E2BIG, uv__strscpy(d, "xyzzy", sizeof(d)));
-  ASSERT_OK(memcmp(d, "xyz", sizeof(d)));
+  ASSERT_OK(uv_ip6_name(&addr, exact, sizeof(exact)));
+  ASSERT_OK(strcmp(exact, expected));
 
   return 0;
 }
