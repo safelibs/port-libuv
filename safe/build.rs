@@ -635,8 +635,6 @@ fn main() {
     println!("cargo:rerun-if-changed={}", legacy_manifest.display());
     println!("cargo:rerun-if-changed={}", exported_symbols_path.display());
     println!("cargo:rerun-if-changed={}", rename_header.display());
-    println!("cargo:rerun-if-env-changed=LIBUV_SAFE_HELPER_LIB_DIR");
-    println!("cargo:rerun-if-env-changed=LIBUV_SAFE_HELPER_LIB_NAMES");
     for source in &legacy_sources {
         println!("cargo:rerun-if-changed={source}");
     }
@@ -655,7 +653,7 @@ fn main() {
     let generated_production_non_rust_sources: Vec<String> = Vec::new();
     if target_os == "linux" {
         emit_linux_native_link_libs();
-        emit_helper_link();
+        emit_linux_runtime_support(&manifest_dir);
     }
 
     write_build_manifest(
@@ -688,15 +686,22 @@ fn emit_linux_native_link_libs() {
     }
 }
 
-fn emit_helper_link() {
-    let helper_dir = env::var("LIBUV_SAFE_HELPER_LIB_DIR")
-        .expect("LIBUV_SAFE_HELPER_LIB_DIR must be set for linux builds");
-    let helper_names = env::var("LIBUV_SAFE_HELPER_LIB_NAMES")
-        .expect("LIBUV_SAFE_HELPER_LIB_NAMES must be set for linux builds");
-    println!("cargo:rustc-link-search=native={helper_dir}");
-    for helper_name in helper_names.split(',').map(str::trim).filter(|name| !name.is_empty()) {
-        println!("cargo:rustc-link-lib=static={helper_name}");
-    }
+fn emit_linux_runtime_support(manifest_dir: &Path) {
+    let target = env::var("TARGET").expect("missing TARGET");
+    let support_dir = manifest_dir.join("prebuilt").join(target);
+    let support_archive = support_dir.join("libuv_safe_runtime_support.a");
+    assert!(
+        support_archive.is_file(),
+        "missing prebuilt runtime support archive: {}",
+        support_archive.display()
+    );
+
+    println!("cargo:rerun-if-changed={}", support_archive.display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        support_dir.display()
+    );
+    println!("cargo:rustc-link-lib=static=uv_safe_runtime_support");
 }
 
 fn generate_bindings(header: &Path, include_dir: &Path, bindings_path: &Path) {
@@ -851,7 +856,7 @@ uv_legacy_{symbol}:\n\
         ));
     }
 
-    let tokens = format!("use std::arch::global_asm;\n\nglobal_asm!(r#\"\n{aliases}\"#);\n");
+    let tokens = format!("std::arch::global_asm!(r#\"\n{aliases}\"#);\n");
 
     fs::write(output_path, tokens.to_string()).expect("failed to write ffi legacy aliases");
 }
