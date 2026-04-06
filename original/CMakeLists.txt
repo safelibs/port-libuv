@@ -695,9 +695,24 @@ if(LIBUV_BUILD_TESTS)
        test/test-walk-handles.c
        test/test-watcher-cross-stop.c)
 
+  if(NOT WIN32 AND
+     NOT CMAKE_SYSTEM_NAME MATCHES "OS390|OS400")
+    add_library(uv_test_idna_intercept SHARED test/test-idna-intercept.c)
+    target_compile_options(uv_test_idna_intercept PRIVATE ${uv_cflags})
+    target_link_libraries(uv_test_idna_intercept ${CMAKE_DL_LIBS})
+  endif()
+
   add_executable(uv_run_tests ${uv_test_sources} uv_win_longpath.manifest)
   target_compile_definitions(uv_run_tests
                              PRIVATE ${uv_defines} USING_UV_SHARED=1)
+  if(TARGET uv_test_idna_intercept)
+    target_compile_definitions(
+      uv_run_tests
+      PRIVATE
+        UV_TEST_HAS_IDNA_INTERCEPT=1
+        UV_TEST_IDNA_INTERCEPT_PATH=\"$<TARGET_FILE:uv_test_idna_intercept>\")
+    add_dependencies(uv_run_tests uv_test_idna_intercept)
+  endif()
   target_compile_options(uv_run_tests PRIVATE ${uv_cflags})
   target_link_libraries(uv_run_tests uv ${uv_test_libraries})
   add_test(NAME uv_test
@@ -715,6 +730,14 @@ if(LIBUV_BUILD_TESTS)
   endif()
   add_executable(uv_run_tests_a ${uv_test_sources} uv_win_longpath.manifest)
   target_compile_definitions(uv_run_tests_a PRIVATE ${uv_defines})
+  if(TARGET uv_test_idna_intercept)
+    target_compile_definitions(
+      uv_run_tests_a
+      PRIVATE
+        UV_TEST_HAS_IDNA_INTERCEPT=1
+        UV_TEST_IDNA_INTERCEPT_PATH=\"$<TARGET_FILE:uv_test_idna_intercept>\")
+    add_dependencies(uv_run_tests_a uv_test_idna_intercept)
+  endif()
   target_compile_options(uv_run_tests_a PRIVATE ${uv_cflags})
   if(QEMU)
     target_link_libraries(uv_run_tests_a uv_a ${uv_test_libraries} -static)
