@@ -65,6 +65,87 @@ configure_file(
   @ONLY
 )
 
+set(uv_legacy_support_sources
+    ../original/src/idna.c
+    ../original/src/random.c
+    ../original/src/threadpool.c
+    ../original/src/uv-common.c
+    ../original/src/unix/fs.c
+    ../original/src/unix/getaddrinfo.c
+    ../original/src/unix/getnameinfo.c
+    ../original/src/unix/linux.c
+    ../original/src/unix/process.c
+    ../original/src/unix/random-devurandom.c
+    ../original/src/unix/random-getrandom.c
+    ../original/src/unix/random-sysctl-linux.c
+)
+
+set(uv_phase5_private_support_sources
+    ../original/src/fs-poll.c
+    ../original/src/unix/core.c
+    ../original/src/unix/pipe.c
+    ../original/src/unix/poll.c
+    ../original/src/unix/signal.c
+    ../original/src/unix/stream.c
+    ../original/src/unix/tcp.c
+    ../original/src/unix/tty.c
+    ../original/src/unix/udp.c)
+
+add_library(uv_legacy_support STATIC ${uv_legacy_support_sources})
+target_compile_definitions(uv_legacy_support PRIVATE ${uv_defines} SAFE_LIBUV_RUST_LOOP_CORE=1)
+target_compile_options(
+  uv_legacy_support
+  PRIVATE
+    ${uv_cflags}
+    -include
+    ${PROJECT_SOURCE_DIR}/legacy/generated/legacy_rename.h
+)
+target_include_directories(
+  uv_legacy_support
+  PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/../original/include
+    ${PROJECT_SOURCE_DIR}/../original/src
+)
+target_link_libraries(uv_legacy_support PRIVATE ${uv_libraries})
+set_target_properties(
+  uv_legacy_support
+  PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    OUTPUT_NAME uv_legacy_support
+    POSITION_INDEPENDENT_CODE ON
+)
+
+add_library(uv_phase5_private_support STATIC ${uv_phase5_private_support_sources})
+target_compile_definitions(
+  uv_phase5_private_support
+  PRIVATE
+    ${uv_defines}
+    SAFE_LIBUV_RUST_LOOP_CORE=1
+)
+target_compile_options(
+  uv_phase5_private_support
+  PRIVATE
+    ${uv_cflags}
+    -include
+    ${PROJECT_SOURCE_DIR}/legacy/generated/phase5_private_rename.h
+)
+target_include_directories(
+  uv_phase5_private_support
+  PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/../original/include
+    ${PROJECT_SOURCE_DIR}/../original/src
+)
+target_link_libraries(uv_phase5_private_support PRIVATE ${uv_libraries})
+set_target_properties(
+  uv_phase5_private_support
+  PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    OUTPUT_NAME uv_phase5_private_support
+    POSITION_INDEPENDENT_CODE ON
+)
+
 add_custom_command(
   OUTPUT
     ${STAGED_SHARED_LIBRARY}
@@ -75,6 +156,8 @@ add_custom_command(
   COMMAND
     ${CMAKE_COMMAND} -E env
       CARGO_TARGET_DIR=${CARGO_TARGET_DIR}
+      LIBUV_SAFE_HELPER_LIB_DIR=${CMAKE_BINARY_DIR}
+      LIBUV_SAFE_HELPER_LIB_NAMES=uv_legacy_support,uv_phase5_private_support
       cargo build --manifest-path ${PROJECT_SOURCE_DIR}/Cargo.toml ${CARGO_BUILD_ARGS}
   COMMAND
     /bin/bash -lc
@@ -90,7 +173,11 @@ add_custom_command(
      ln -s 'libuv.so.1.0.0' '${STAGED_SHARED_LIBRARY_LINK}'; \
      rm -rf '${CMAKE_BINARY_DIR}/include'; \
      cp -a '${PROJECT_SOURCE_DIR}/include' '${CMAKE_BINARY_DIR}/include'"
-  DEPENDS ${UV_CARGO_INPUTS} ${UV_LEGACY_INPUTS}
+  DEPENDS
+    ${UV_CARGO_INPUTS}
+    ${UV_LEGACY_INPUTS}
+    uv_legacy_support
+    uv_phase5_private_support
   VERBATIM
 )
 
@@ -376,7 +463,11 @@ add_executable(
   uv_run_safe_regressions
   test/runner-unix.c
   test/runner.c
+  test-extra/privdrop-wrap.c
   test-extra/run-regressions.c
+  test-extra/test-getaddrinfo-long-hostname.c
+  test-extra/test-io-uring-privdrop.c
+  test-extra/test-supplementary-groups-dropped.c
 )
 target_compile_definitions(uv_run_safe_regressions PRIVATE ${uv_defines})
 target_compile_options(uv_run_safe_regressions PRIVATE ${uv_cflags})

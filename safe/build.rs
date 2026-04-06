@@ -193,6 +193,7 @@ const PHASE5_LEGACY_ALIAS_EXPORTS: &[&str] = &[
     "uv_write",
     "uv_write2",
 ];
+#[allow(dead_code)]
 const PHASE5_PRIVATE_SOURCE_EXPORTS: &[(&str, &str, &[&str])] = &[
     (
         "core",
@@ -396,6 +397,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_fs_get_result",
     "uv_fs_get_statbuf",
     "uv_fs_get_type",
+    "uv_getaddrinfo",
     "uv_get_available_memory",
     "uv_get_constrained_memory",
     "uv_get_free_memory",
@@ -633,14 +635,10 @@ fn main() {
     println!("cargo:rerun-if-changed={}", legacy_manifest.display());
     println!("cargo:rerun-if-changed={}", exported_symbols_path.display());
     println!("cargo:rerun-if-changed={}", rename_header.display());
+    println!("cargo:rerun-if-env-changed=LIBUV_SAFE_HELPER_LIB_DIR");
+    println!("cargo:rerun-if-env-changed=LIBUV_SAFE_HELPER_LIB_NAMES");
     for source in &legacy_sources {
         println!("cargo:rerun-if-changed={source}");
-    }
-    for (_, relative_source, _) in PHASE5_PRIVATE_SOURCE_EXPORTS {
-        println!(
-            "cargo:rerun-if-changed={}",
-            manifest_dir.join(relative_source).display()
-        );
     }
 
     write_dynamic_list(&dynamic_list_path, &exported_symbols);
@@ -653,16 +651,11 @@ fn main() {
     generate_ffi_legacy_aliases(&ffi_legacy_aliases_path, &uv_functions);
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    let mut production_non_rust_sources = Vec::new();
+    let production_non_rust_sources: Vec<String> = Vec::new();
     let generated_production_non_rust_sources: Vec<String> = Vec::new();
     if target_os == "linux" {
-        compile_legacy_sources(&manifest_dir, &legacy_sources, &rename_header);
-        let mut phase5_private_sources = compile_phase5_private_sources(&manifest_dir, &out_dir);
         emit_linux_native_link_libs();
-        production_non_rust_sources = legacy_sources.clone();
-        production_non_rust_sources.append(&mut phase5_private_sources);
-        production_non_rust_sources.sort();
-        production_non_rust_sources.dedup();
+        emit_helper_link();
     }
 
     write_build_manifest(
@@ -692,6 +685,17 @@ fn emit_linux_link_args(version_script: &Path, dynamic_list: &Path) {
 fn emit_linux_native_link_libs() {
     for lib in ["pthread", "dl", "rt"] {
         println!("cargo:rustc-link-lib={lib}");
+    }
+}
+
+fn emit_helper_link() {
+    let helper_dir = env::var("LIBUV_SAFE_HELPER_LIB_DIR")
+        .expect("LIBUV_SAFE_HELPER_LIB_DIR must be set for linux builds");
+    let helper_names = env::var("LIBUV_SAFE_HELPER_LIB_NAMES")
+        .expect("LIBUV_SAFE_HELPER_LIB_NAMES must be set for linux builds");
+    println!("cargo:rustc-link-search=native={helper_dir}");
+    for helper_name in helper_names.split(',').map(str::trim).filter(|name| !name.is_empty()) {
+        println!("cargo:rustc-link-lib=static={helper_name}");
     }
 }
 
@@ -864,107 +868,6 @@ fn argument_pattern_ident(argument: &FnArg) -> syn::Ident {
             quote! { #other }
         ),
     }
-}
-
-fn compile_legacy_sources(manifest_dir: &Path, legacy_sources: &[String], rename_header: &Path) {
-    let mut build = cc::Build::new();
-    build
-        .cargo_metadata(true)
-        .pic(true)
-        .warnings(false)
-        .flag_if_supported("-fno-strict-aliasing")
-        .flag_if_supported("-Wno-unused-parameter")
-        .flag_if_supported("-Wstrict-prototypes")
-        .flag_if_supported("-Wextra")
-        .define("_GNU_SOURCE", Some("1"))
-        .define("_POSIX_C_SOURCE", Some("200112"))
-        .define("_FILE_OFFSET_BITS", Some("64"))
-        .define("_LARGEFILE_SOURCE", None)
-        .define("SAFE_LIBUV_RUST_LOOP_CORE", Some("1"))
-        .flag("-include")
-        .flag(
-            rename_header
-                .to_str()
-                .expect("rename header path must be valid UTF-8"),
-        )
-        .include(manifest_dir.join("include"))
-        .include(manifest_dir.join("../original/include"))
-        .include(manifest_dir.join("../original/src"));
-
-    for source in legacy_sources {
-        build.file(source);
-    }
-
-    build.compile("uv_legacy");
-}
-
-fn compile_phase5_private_sources(manifest_dir: &Path, out_dir: &Path) -> Vec<String> {
-    let mut compiled_sources = Vec::new();
-
-    for (name, relative_source, symbols) in PHASE5_PRIVATE_SOURCE_EXPORTS {
-        let source = manifest_dir
-            .join(relative_source)
-            .canonicalize()
-            .unwrap_or_else(|error| panic!("failed to resolve {relative_source}: {error}"));
-        let rename_header = out_dir.join(format!("phase5-private-{name}.h"));
-        write_phase5_private_rename_header(&rename_header, name, symbols);
-
-        let mut build = cc::Build::new();
-        build
-            .cargo_metadata(true)
-            .pic(true)
-            .warnings(false)
-            .flag_if_supported("-fno-strict-aliasing")
-            .flag_if_supported("-Wno-unused-parameter")
-            .flag_if_supported("-Wstrict-prototypes")
-            .flag_if_supported("-Wextra")
-            .define("_GNU_SOURCE", Some("1"))
-            .define("_POSIX_C_SOURCE", Some("200112"))
-            .define("_FILE_OFFSET_BITS", Some("64"))
-            .define("_LARGEFILE_SOURCE", None)
-            .define("SAFE_LIBUV_RUST_LOOP_CORE", Some("1"))
-            .flag("-include")
-            .flag(
-                rename_header
-                    .to_str()
-                    .expect("private rename header path must be valid UTF-8"),
-            )
-            .include(manifest_dir.join("include"))
-            .include(manifest_dir.join("../original/include"))
-            .include(manifest_dir.join("../original/src"))
-            .file(&source);
-        build.compile(&format!("uv_phase5_{name}"));
-
-        compiled_sources.push(source.display().to_string());
-    }
-
-    compiled_sources
-}
-
-fn write_phase5_private_rename_header(path: &Path, name: &str, symbols: &[&str]) {
-    let guard = name
-        .chars()
-        .map(|ch| {
-            if ch.is_ascii_alphanumeric() {
-                ch.to_ascii_uppercase()
-            } else {
-                '_'
-            }
-        })
-        .collect::<String>();
-
-    let mut body = format!(
-        "/* Generated private rename header for phase-5 source delegation. */\n\
-#ifndef SAFE_PHASE5_PRIVATE_{guard}_H_\n\
-#define SAFE_PHASE5_PRIVATE_{guard}_H_\n\n"
-    );
-
-    for symbol in symbols {
-        body.push_str(&format!("#define {symbol} uv_phase5_private_{symbol}\n"));
-    }
-
-    body.push_str("\n#endif\n");
-    fs::write(path, body).expect("failed to write phase-5 private rename header");
 }
 
 fn write_build_manifest(

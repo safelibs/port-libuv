@@ -15,7 +15,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/idna.c"
 name = "idna"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -35,7 +35,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/random.c"
 name = "random"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -75,7 +75,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/threadpool.c"
 name = "threadpool"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -171,7 +171,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/fs.c"
 name = "fs"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -181,7 +181,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/getaddrinfo.c"
 name = "getaddrinfo"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -191,7 +191,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/getnameinfo.c"
 name = "getnameinfo"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -213,7 +213,7 @@ symbols = [
 name = "io_uring_fs_random_process_system_info"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv__getrandom",
   "uv__hrtime",
@@ -277,7 +277,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/process.c"
 name = "process"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -307,7 +307,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/random-devuran
 name = "random_devurandom"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -317,7 +317,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/random-getrand
 name = "random_getrandom"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -327,7 +327,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/random-sysctl-
 name = "random_sysctl_linux"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -397,7 +397,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/uv-common.c"
 name = "fs_scandir_shutdown"
 owner_phase = "impl_06_fs_dns_process_threadpool"
 retirement_phase = "impl_06_fs_dns_process_threadpool"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv__fs_*",
   "uv_fs_*",

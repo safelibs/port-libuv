@@ -13,7 +13,6 @@ libc = "0.2"
 
 [build-dependencies]
 bindgen = "0.71"
-cc = "1"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full"] }
