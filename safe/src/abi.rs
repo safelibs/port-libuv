@@ -77,6 +77,7 @@ pub(crate) const UV__POLLPRI: libc::c_uint = libc::POLLPRI as libc::c_uint;
 unsafe extern "C" {
     pub(crate) fn uv__signal_global_once_init();
     pub(crate) fn uv__process_init(loop_: *mut uv_loop_t) -> libc::c_int;
+    pub(crate) fn uv__wait_children(loop_: *mut uv_loop_t);
     pub(crate) fn uv__signal_loop_cleanup(loop_: *mut uv_loop_t);
     pub(crate) fn uv__signal_loop_fork(loop_: *mut uv_loop_t) -> libc::c_int;
 

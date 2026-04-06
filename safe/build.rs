@@ -500,6 +500,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_prepare_start",
     "uv_prepare_stop",
     "uv_process_get_pid",
+    "uv_process_kill",
     "uv_queue_work",
     "uv_ref",
     "uv_replace_allocator",
@@ -528,6 +529,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_set_process_title",
     "uv_setup_args",
     "uv_sleep",
+    "uv_spawn",
     "uv_stop",
     "uv_stream_get_write_queue_size",
     "uv_strerror",
@@ -559,6 +561,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_version",
     "uv_version_string",
     "uv_walk",
+    "uv_kill",
 ];
 const LEGACY_ALIAS_EXPORTS: &[&str] = &[
     "uv_barrier_destroy",
@@ -656,12 +659,9 @@ const PRIVATE_FORWARD_EXPORTS: &[&str] = &[
     "uv_if_indextoiid",
     "uv_if_indextoname",
     "uv_interface_addresses",
-    "uv_kill",
     "uv_library_shutdown",
     "uv_print_active_handles",
     "uv_print_all_handles",
-    "uv_process_kill",
-    "uv_spawn",
 ];
 
 fn main() {
