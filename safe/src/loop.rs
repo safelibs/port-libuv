@@ -329,7 +329,7 @@ pub unsafe extern "C" fn uv_loop_init(loop_: *mut uv_loop_t) -> libc::c_int {
     let err = r#async::uv_async_init(
         loop_,
         std::ptr::addr_of_mut!((*loop_).wq_async),
-        Some(abi::uv__work_done),
+        Some(crate::threadpool::uv__work_done_impl),
     );
     if err != 0 {
         uv_mutex_destroy(std::ptr::addr_of_mut!((*loop_).wq_mutex));
