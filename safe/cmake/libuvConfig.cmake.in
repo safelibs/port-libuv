@@ -1,0 +1,24 @@
+set(libuv_VERSION "@PROJECT_VERSION@")
+
+get_filename_component(_libuv_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+set(_libuv_include_dir "${_libuv_prefix}/@CMAKE_INSTALL_INCLUDEDIR@")
+set(_libuv_library_dir "${_libuv_prefix}/@CMAKE_INSTALL_LIBDIR@")
+
+if(NOT TARGET libuv::uv)
+  add_library(libuv::uv SHARED IMPORTED)
+  set_target_properties(libuv::uv PROPERTIES
+    IMPORTED_LOCATION "${_libuv_library_dir}/libuv.so"
+    IMPORTED_SONAME "libuv.so.1"
+    INTERFACE_INCLUDE_DIRECTORIES "${_libuv_include_dir}"
+    INTERFACE_LINK_LIBRARIES "pthread;dl;rt"
+  )
+endif()
+
+if(NOT TARGET libuv::uv_a)
+  add_library(libuv::uv_a STATIC IMPORTED)
+  set_target_properties(libuv::uv_a PROPERTIES
+    IMPORTED_LOCATION "${_libuv_library_dir}/libuv.a"
+    INTERFACE_INCLUDE_DIRECTORIES "${_libuv_include_dir}"
+    INTERFACE_LINK_LIBRARIES "pthread;dl;rt"
+  )
+endif()
