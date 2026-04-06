@@ -1,0 +1,70 @@
+{
+  "benchmarks": {
+    "async1": {
+      "baseline_verify_pct": 15,
+      "fail_regression_pct": 20,
+      "metrics": [
+        "ops_per_sec"
+      ],
+      "warn_regression_pct": 10
+    },
+    "fs_stat": {
+      "baseline_verify_pct": 20,
+      "fail_regression_pct": 30,
+      "metrics": [
+        "sync_ops_per_sec",
+        "concurrency_4_ops_per_sec",
+        "concurrency_16_ops_per_sec"
+      ],
+      "warn_regression_pct": 10
+    },
+    "getaddrinfo": {
+      "baseline_verify_pct": 15,
+      "fail_regression_pct": 30,
+      "metrics": [
+        "requests_per_sec"
+      ],
+      "warn_regression_pct": 10
+    },
+    "loop_count": {
+      "baseline_verify_pct": 15,
+      "fail_regression_pct": 20,
+      "metrics": [
+        "ticks_per_sec"
+      ],
+      "warn_regression_pct": 10
+    },
+    "ping_pongs": {
+      "baseline_verify_pct": 20,
+      "fail_regression_pct": 30,
+      "metrics": [
+        "roundtrips_per_sec"
+      ],
+      "warn_regression_pct": 10
+    },
+    "ping_udp1": {
+      "baseline_verify_pct": 15,
+      "fail_regression_pct": 30,
+      "metrics": [
+        "roundtrips_per_sec"
+      ],
+      "warn_regression_pct": 10
+    },
+    "queue_work": {
+      "baseline_verify_pct": 15,
+      "fail_regression_pct": 20,
+      "metrics": [
+        "jobs_per_sec"
+      ],
+      "warn_regression_pct": 10
+    },
+    "tcp_write_batch": {
+      "baseline_verify_pct": 15,
+      "fail_regression_pct": 30,
+      "metrics": [
+        "writes_per_sec"
+      ],
+      "warn_regression_pct": 10
+    }
+  }
+}

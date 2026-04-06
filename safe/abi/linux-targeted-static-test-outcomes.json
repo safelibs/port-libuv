@@ -1,0 +1,493 @@
+{
+  "runner": "/home/yans/code/safelibs/ported/libuv/build-check/uv_run_tests_a",
+  "tests": {
+    "active": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - active"
+    },
+    "async": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - async"
+    },
+    "async_null_cb": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - async_null_cb"
+    },
+    "async_ref": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - async_ref"
+    },
+    "barrier_1": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - barrier_1"
+    },
+    "barrier_2": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - barrier_2"
+    },
+    "barrier_3": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - barrier_3"
+    },
+    "barrier_serial_thread": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - barrier_serial_thread"
+    },
+    "barrier_serial_thread_single": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - barrier_serial_thread_single"
+    },
+    "callback_stack": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - callback_stack"
+    },
+    "check_ref": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - check_ref"
+    },
+    "clock_gettime": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - clock_gettime"
+    },
+    "close_order": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - close_order"
+    },
+    "condvar_1": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - condvar_1"
+    },
+    "condvar_2": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - condvar_2"
+    },
+    "condvar_3": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - condvar_3"
+    },
+    "condvar_4": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - condvar_4"
+    },
+    "condvar_5": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - condvar_5"
+    },
+    "cwd_and_chdir": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - cwd_and_chdir"
+    },
+    "default_loop_close": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - default_loop_close"
+    },
+    "dlerror": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - dlerror"
+    },
+    "embed": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - embed"
+    },
+    "env_vars": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - env_vars"
+    },
+    "err_name_r": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - err_name_r"
+    },
+    "error_message": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - error_message"
+    },
+    "get_currentexe": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - get_currentexe"
+    },
+    "get_group": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - get_group"
+    },
+    "get_loadavg": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - get_loadavg"
+    },
+    "get_memory": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - get_memory"
+    },
+    "get_passwd": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - get_passwd"
+    },
+    "get_passwd2": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - get_passwd2"
+    },
+    "getaddrinfo_basic": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - getaddrinfo_basic"
+    },
+    "getaddrinfo_basic_sync": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - getaddrinfo_basic_sync"
+    },
+    "getaddrinfo_concurrent": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - getaddrinfo_concurrent"
+    },
+    "gethostname": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - gethostname"
+    },
+    "getnameinfo_basic_ip4": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - getnameinfo_basic_ip4"
+    },
+    "getnameinfo_basic_ip4_sync": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - getnameinfo_basic_ip4_sync"
+    },
+    "getnameinfo_basic_ip6": {
+      "exit_code": 7,
+      "final_tap_line": "ok 1 - getnameinfo_basic_ip6 # SKIP DNS request disabled in ipv6 test"
+    },
+    "getters_setters": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - getters_setters"
+    },
+    "gettimeofday": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - gettimeofday"
+    },
+    "handle_type_name": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - handle_type_name"
+    },
+    "has_ref": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - has_ref"
+    },
+    "homedir": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - homedir"
+    },
+    "idle_check": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - idle_check"
+    },
+    "idle_ref": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - idle_ref"
+    },
+    "idle_starvation": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - idle_starvation"
+    },
+    "idna_toascii": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - idna_toascii"
+    },
+    "ip4_addr": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - ip4_addr"
+    },
+    "ip6_addr_link_local": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - ip6_addr_link_local"
+    },
+    "ip_name": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - ip_name"
+    },
+    "loop_alive": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_alive"
+    },
+    "loop_backend_timeout": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_backend_timeout"
+    },
+    "loop_close": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_close"
+    },
+    "loop_configure": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_configure"
+    },
+    "loop_handles": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_handles"
+    },
+    "loop_instant_close": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_instant_close"
+    },
+    "loop_new_delete": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_new_delete"
+    },
+    "loop_stop": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_stop"
+    },
+    "loop_stop_before_run": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_stop_before_run"
+    },
+    "loop_update_time": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - loop_update_time"
+    },
+    "metrics_idle_time": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - metrics_idle_time"
+    },
+    "metrics_idle_time_thread": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - metrics_idle_time_thread"
+    },
+    "metrics_idle_time_zero": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - metrics_idle_time_zero"
+    },
+    "metrics_info_check": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - metrics_info_check"
+    },
+    "metrics_pool_events": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - metrics_pool_events"
+    },
+    "platform_output": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - platform_output"
+    },
+    "prepare_ref": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - prepare_ref"
+    },
+    "process_title": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - process_title"
+    },
+    "process_title_big_argv": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - process_title_big_argv"
+    },
+    "process_title_threadsafe": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - process_title_threadsafe"
+    },
+    "queue_foreach_delete": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - queue_foreach_delete"
+    },
+    "random_async": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - random_async"
+    },
+    "random_sync": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - random_sync"
+    },
+    "ref": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - ref"
+    },
+    "req_accessors": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - req_accessors"
+    },
+    "req_type_name": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - req_type_name"
+    },
+    "run_nowait": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - run_nowait"
+    },
+    "run_once": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - run_once"
+    },
+    "semaphore_1": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - semaphore_1"
+    },
+    "semaphore_2": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - semaphore_2"
+    },
+    "semaphore_3": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - semaphore_3"
+    },
+    "strscpy": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - strscpy"
+    },
+    "strtok": {
+      "exit_code": 7,
+      "final_tap_line": "ok 1 - strtok # SKIP uv__strtok is not reachable through a public API on this platform"
+    },
+    "thread_affinity": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_affinity"
+    },
+    "thread_create": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_create"
+    },
+    "thread_equal": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_equal"
+    },
+    "thread_local_storage": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_local_storage"
+    },
+    "thread_mutex": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_mutex"
+    },
+    "thread_mutex_recursive": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_mutex_recursive"
+    },
+    "thread_once": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_once"
+    },
+    "thread_priority": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_priority"
+    },
+    "thread_rwlock": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_rwlock"
+    },
+    "thread_rwlock_trylock": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_rwlock_trylock"
+    },
+    "thread_stack_size": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_stack_size"
+    },
+    "thread_stack_size_explicit": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - thread_stack_size_explicit"
+    },
+    "threadpool_cancel_random": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - threadpool_cancel_random"
+    },
+    "threadpool_queue_work_einval": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - threadpool_queue_work_einval"
+    },
+    "threadpool_queue_work_simple": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - threadpool_queue_work_simple"
+    },
+    "timer": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer"
+    },
+    "timer_again": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_again"
+    },
+    "timer_early_check": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_early_check"
+    },
+    "timer_from_check": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_from_check"
+    },
+    "timer_huge_repeat": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_huge_repeat"
+    },
+    "timer_huge_timeout": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_huge_timeout"
+    },
+    "timer_init": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_init"
+    },
+    "timer_is_closing": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_is_closing"
+    },
+    "timer_no_double_call_nowait": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_no_double_call_nowait"
+    },
+    "timer_no_double_call_once": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_no_double_call_once"
+    },
+    "timer_no_run_on_unref": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_no_run_on_unref"
+    },
+    "timer_null_callback": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_null_callback"
+    },
+    "timer_order": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_order"
+    },
+    "timer_run_once": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_run_once"
+    },
+    "timer_start_twice": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_start_twice"
+    },
+    "timer_zero_timeout": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - timer_zero_timeout"
+    },
+    "tmpdir": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - tmpdir"
+    },
+    "udp_send_queue_accessors": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - udp_send_queue_accessors"
+    },
+    "uname": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - uname"
+    },
+    "unref_in_prepare_cb": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - unref_in_prepare_cb"
+    },
+    "utf8_decode1": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - utf8_decode1"
+    },
+    "utf8_decode1_overrun": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - utf8_decode1_overrun"
+    },
+    "version": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - version"
+    },
+    "walk_handles": {
+      "exit_code": 0,
+      "final_tap_line": "ok 1 - walk_handles"
+    }
+  }
+}

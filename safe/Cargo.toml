@@ -1,0 +1,15 @@
+[package]
+name = "libuv-safe"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+name = "uv"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+libc = "0.2"
+
+[build-dependencies]
+bindgen = "0.71"

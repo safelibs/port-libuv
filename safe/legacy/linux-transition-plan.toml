@@ -1,0 +1,480 @@
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/fs-poll.c"
+
+[[unit.group]]
+name = "fs_poll"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/idna.c"
+
+[[unit.group]]
+name = "idna"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/inet.c"
+
+[[unit.group]]
+name = "inet"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/random.c"
+
+[[unit.group]]
+name = "random"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/strscpy.c"
+
+[[unit.group]]
+name = "strscpy"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/strtok.c"
+
+[[unit.group]]
+name = "strtok"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/thread-common.c"
+
+[[unit.group]]
+name = "thread_common"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/threadpool.c"
+
+[[unit.group]]
+name = "threadpool"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/timer.c"
+
+[[unit.group]]
+name = "timer"
+owner_phase = "impl_04_loop_core"
+retirement_phase = "impl_04_loop_core"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/async.c"
+
+[[unit.group]]
+name = "async"
+owner_phase = "impl_04_loop_core"
+retirement_phase = "impl_04_loop_core"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/core.c"
+
+[[unit.group]]
+name = "close_run_backend_watchers"
+owner_phase = "impl_04_loop_core"
+retirement_phase = "impl_04_loop_core"
+status = "legacy"
+symbols = [
+  "uv_backend_*",
+  "uv_close",
+  "uv_is_*",
+  "uv_run",
+  "uv_update_time",
+  "uv__io_*"
+]
+
+[[unit.group]]
+name = "os_helpers_and_env"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = [
+  "uv_available_parallelism",
+  "uv_chdir",
+  "uv_clock_gettime",
+  "uv_cwd",
+  "uv_disable_stdio_inheritance",
+  "uv_getrusage",
+  "uv_gettimeofday",
+  "uv_hrtime",
+  "uv_os_*",
+  "uv_sleep",
+  "uv_thread_*priority",
+  "uv_translate_sys_error"
+]
+
+[[unit.group]]
+name = "socket_fileno_helpers"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = [
+  "uv__accept",
+  "uv__close*",
+  "uv__cloexec",
+  "uv__dup2_cloexec",
+  "uv__getsockpeername",
+  "uv__getiovmax",
+  "uv__nonblock_*",
+  "uv__open_cloexec",
+  "uv__recvmsg",
+  "uv__socket*",
+  "uv_fileno"
+]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/dl.c"
+
+[[unit.group]]
+name = "dl"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/fs.c"
+
+[[unit.group]]
+name = "fs"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/getaddrinfo.c"
+
+[[unit.group]]
+name = "getaddrinfo"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/getnameinfo.c"
+
+[[unit.group]]
+name = "getnameinfo"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/linux.c"
+
+[[unit.group]]
+name = "epoll_fs_event_socket_watchers"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = [
+  "uv__io_*",
+  "uv__platform_*",
+  "uv_fs_event_*",
+  "uv__fs_event_close"
+]
+
+[[unit.group]]
+name = "io_uring_fs_random_process_system_info"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = [
+  "uv__getrandom",
+  "uv__hrtime",
+  "uv__io_uring_*",
+  "uv__iou_*",
+  "uv__set_process_title",
+  "uv__statx*",
+  "uv_cpu_info",
+  "uv_free_interface_addresses",
+  "uv_get_*memory",
+  "uv_interface_addresses",
+  "uv_loadavg",
+  "uv_resident_set_memory",
+  "uv_uptime"
+]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/loop-watcher.c"
+
+[[unit.group]]
+name = "loop_watcher"
+owner_phase = "impl_04_loop_core"
+retirement_phase = "impl_04_loop_core"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/loop.c"
+
+[[unit.group]]
+name = "loop"
+owner_phase = "impl_04_loop_core"
+retirement_phase = "impl_04_loop_core"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/pipe.c"
+
+[[unit.group]]
+name = "pipe"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/poll.c"
+
+[[unit.group]]
+name = "poll"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/process.c"
+
+[[unit.group]]
+name = "process"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/procfs-exepath.c"
+
+[[unit.group]]
+name = "procfs_exepath"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/proctitle.c"
+
+[[unit.group]]
+name = "proctitle"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/random-devurandom.c"
+
+[[unit.group]]
+name = "random_devurandom"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/random-getrandom.c"
+
+[[unit.group]]
+name = "random_getrandom"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/random-sysctl-linux.c"
+
+[[unit.group]]
+name = "random_sysctl_linux"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/signal.c"
+
+[[unit.group]]
+name = "signal"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/stream.c"
+
+[[unit.group]]
+name = "stream"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/tcp.c"
+
+[[unit.group]]
+name = "tcp"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/thread.c"
+
+[[unit.group]]
+name = "thread"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/tty.c"
+
+[[unit.group]]
+name = "tty"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/udp.c"
+
+[[unit.group]]
+name = "udp"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/uv-common.c"
+
+[[unit.group]]
+name = "fs_scandir_shutdown"
+owner_phase = "impl_06_fs_dns_process_threadpool"
+retirement_phase = "impl_06_fs_dns_process_threadpool"
+status = "legacy"
+symbols = [
+  "uv__fs_*",
+  "uv_fs_*",
+  "uv_library_shutdown"
+]
+
+[[unit.group]]
+name = "helpers_accessors"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = [
+  "uv_buf_init",
+  "uv_err_name*",
+  "uv_handle_size",
+  "uv_ip*_addr",
+  "uv_ip*_name",
+  "uv_os_free_*",
+  "uv_replace_allocator",
+  "uv_req_size",
+  "uv_strerror*",
+  "uv__calloc",
+  "uv__free",
+  "uv__malloc",
+  "uv__realloc*",
+  "uv__str*dup"
+]
+
+[[unit.group]]
+name = "loop_default_metrics"
+owner_phase = "impl_04_loop_core"
+retirement_phase = "impl_04_loop_core"
+status = "legacy"
+symbols = [
+  "uv__metrics_*",
+  "uv_default_loop",
+  "uv_has_ref",
+  "uv_loop_*",
+  "uv_metrics_*",
+  "uv_now",
+  "uv_ref",
+  "uv_stop",
+  "uv_unref",
+  "uv_walk"
+]
+
+[[unit.group]]
+name = "stream_io_buffers"
+owner_phase = "impl_05_network_backend"
+retirement_phase = "impl_05_network_backend"
+status = "legacy"
+symbols = [
+  "uv__count_bufs",
+  "uv__udp_*",
+  "uv_read_start",
+  "uv_recv_buffer_size",
+  "uv_send_buffer_size",
+  "uv_tcp_*",
+  "uv_udp_*"
+]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/uv-data-getter-setters.c"
+
+[[unit.group]]
+name = "data_getter_setters"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
+
+[[unit]]
+source = "/home/yans/code/safelibs/ported/libuv/original/src/version.c"
+
+[[unit.group]]
+name = "version"
+owner_phase = "impl_03_helpers_threads_os"
+retirement_phase = "impl_03_helpers_threads_os"
+status = "legacy"
+symbols = ["*"]
