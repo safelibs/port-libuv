@@ -298,12 +298,11 @@ EOF
 
 test_r_cran_httpuv() {
   local dir="$workdir/r-cran-httpuv"
+  local i
   mkdir -p "$dir"
   cat >"$dir/test.R" <<'EOF'
 port <- 19091
-served <- FALSE
 app <- list(call = function(req) {
-  served <<- TRUE
   list(
     status = 200L,
     headers = list("Content-Type" = "text/plain"),
@@ -311,16 +310,33 @@ app <- list(call = function(req) {
   )
 })
 server <- httpuv::startServer("127.0.0.1", port, app)
-while (!served) {
+message("httpuv-ready")
+repeat {
   httpuv::service(timeoutMs = 100)
 }
-httpuv::stopServer(server)
 EOF
   Rscript "$dir/test.R" >"$dir/httpuv.log" 2>&1 &
   local pid=$!
   cleanup_pids+=("$pid")
-  wait_for_http "http://127.0.0.1:19091/" "$dir/out.txt" 20 || fail "httpuv did not answer HTTP request"
-  wait "$pid"
+  for ((i = 0; i < 60; i++)); do
+    if grep -Fq -- "httpuv-ready" "$dir/httpuv.log" 2>/dev/null; then
+      break
+    fi
+    if ! kill -0 "$pid" 2>/dev/null; then
+      cat "$dir/httpuv.log" >&2 || true
+      fail "httpuv server exited before becoming ready"
+    fi
+    sleep 0.5
+  done
+  if ! grep -Fq -- "httpuv-ready" "$dir/httpuv.log" 2>/dev/null; then
+    cat "$dir/httpuv.log" >&2 || true
+    fail "httpuv server did not become ready"
+  fi
+  if ! wait_for_http "http://127.0.0.1:19091/" "$dir/out.txt" 60; then
+    cat "$dir/httpuv.log" >&2 || true
+    fail "httpuv did not answer HTTP request"
+  fi
+  stop_pid "$pid"
   require_file_contains "$dir/out.txt" "httpuv-ok"
 }
 
