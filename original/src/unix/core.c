@@ -144,6 +144,7 @@ uint64_t uv_hrtime(void) {
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 void uv_close(uv_handle_t* handle, uv_close_cb close_cb) {
   assert(!uv__is_closing(handle));
 
@@ -224,6 +225,7 @@ void uv_close(uv_handle_t* handle, uv_close_cb close_cb) {
 
   uv__make_close_pending(handle);
 }
+#endif
 
 int uv__socket_sockopt(uv_handle_t* handle, int optname, int* value) {
   int r;
@@ -288,6 +290,7 @@ int uv__getiovmax(void) {
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 static void uv__finish_close(uv_handle_t* handle) {
   uv_signal_t* sh;
 
@@ -488,6 +491,7 @@ void uv_update_time(uv_loop_t* loop) {
 int uv_is_active(const uv_handle_t* handle) {
   return uv__is_active(handle);
 }
+#endif
 
 
 /* Open a socket in non-blocking close-on-exec mode, atomically if possible. */
@@ -827,6 +831,7 @@ int uv_fileno(const uv_handle_t* handle, uv_os_fd_t* fd) {
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 static void uv__run_pending(uv_loop_t* loop) {
   struct uv__queue* q;
   struct uv__queue pq;
@@ -987,6 +992,7 @@ int uv__io_active(const uv__io_t* w, unsigned int events) {
 int uv__fd_exists(uv_loop_t* loop, int fd) {
   return (unsigned) fd < loop->nwatchers && loop->watchers[fd] != NULL;
 }
+#endif
 
 
 int uv_getrusage(uv_rusage_t* rusage) {

@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stddef.h> /* NULL */
 #include <stdio.h>
@@ -182,9 +183,11 @@ size_t uv_req_size(uv_req_type type) {
 #undef XX
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 size_t uv_loop_size(void) {
   return sizeof(uv_loop_t);
 }
+#endif
 
 
 uv_buf_t uv_buf_init(char* base, unsigned int len) {
@@ -532,6 +535,7 @@ int uv_udp_recv_stop(uv_udp_t* handle) {
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 void uv_walk(uv_loop_t* loop, uv_walk_cb walk_cb, void* arg) {
   struct uv__queue queue;
   struct uv__queue* q;
@@ -549,6 +553,7 @@ void uv_walk(uv_loop_t* loop, uv_walk_cb walk_cb, void* arg) {
     walk_cb(h, arg);
   }
 }
+#endif
 
 
 static void uv__print_handles(uv_loop_t* loop, int only_active, FILE* stream) {
@@ -596,6 +601,7 @@ void uv_print_active_handles(uv_loop_t* loop, FILE* stream) {
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 void uv_ref(uv_handle_t* handle) {
   uv__handle_ref(handle);
 }
@@ -619,6 +625,7 @@ void uv_stop(uv_loop_t* loop) {
 uint64_t uv_now(const uv_loop_t* loop) {
   return loop->time;
 }
+#endif
 
 
 
@@ -809,13 +816,28 @@ int uv_loop_configure(uv_loop_t* loop, uv_loop_option option, ...) {
 
   va_start(ap, option);
   /* Any platform-agnostic options should be handled here. */
+#ifdef SAFE_LIBUV_RUST_LOOP_CORE
+  if (option == UV_METRICS_IDLE_TIME) {
+    uv__get_internal_fields(loop)->flags |= UV_METRICS_IDLE_TIME;
+    err = 0;
+  } else if (option != UV_LOOP_BLOCK_SIGNAL) {
+    err = UV_ENOSYS;
+  } else if (va_arg(ap, int) != SIGPROF) {
+    err = UV_EINVAL;
+  } else {
+    loop->flags |= 0x1;
+    err = 0;
+  }
+#else
   err = uv__loop_configure(loop, option, ap);
+#endif
   va_end(ap);
 
   return err;
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 static uv_loop_t default_loop_struct;
 static uv_loop_t* default_loop_ptr;
 
@@ -890,6 +912,7 @@ void uv_loop_delete(uv_loop_t* loop) {
   if (loop != default_loop)
     uv__free(loop);
 }
+#endif
 
 
 int uv_read_start(uv_stream_t* stream,
@@ -961,6 +984,7 @@ void uv_library_shutdown(void) {
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 void uv__metrics_update_idle_time(uv_loop_t* loop) {
   uv__loop_metrics_t* loop_metrics;
   uint64_t entry_time;
@@ -1027,3 +1051,4 @@ uint64_t uv_metrics_idle_time(uv_loop_t* loop) {
     idle_time += uv_hrtime() - entry_time;
   return idle_time;
 }
+#endif

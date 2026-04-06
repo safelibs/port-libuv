@@ -3,22 +3,14 @@
 #define SAFE_LEGACY_GENERATED_LEGACY_RENAME_H_
 
 #define uv_accept uv_legacy_uv_accept
-#define uv_async_init uv_legacy_uv_async_init
-#define uv_async_send uv_legacy_uv_async_send
 #define uv_available_parallelism uv_legacy_uv_available_parallelism
-#define uv_backend_fd uv_legacy_uv_backend_fd
-#define uv_backend_timeout uv_legacy_uv_backend_timeout
 #define uv_barrier_destroy uv_legacy_uv_barrier_destroy
 #define uv_barrier_init uv_legacy_uv_barrier_init
 #define uv_barrier_wait uv_legacy_uv_barrier_wait
 #define uv_buf_init uv_legacy_uv_buf_init
 #define uv_cancel uv_legacy_uv_cancel
 #define uv_chdir uv_legacy_uv_chdir
-#define uv_check_init uv_legacy_uv_check_init
-#define uv_check_start uv_legacy_uv_check_start
-#define uv_check_stop uv_legacy_uv_check_stop
 #define uv_clock_gettime uv_legacy_uv_clock_gettime
-#define uv_close uv_legacy_uv_close
 #define uv_cond_broadcast uv_legacy_uv_cond_broadcast
 #define uv_cond_destroy uv_legacy_uv_cond_destroy
 #define uv_cond_init uv_legacy_uv_cond_init
@@ -28,7 +20,6 @@
 #define uv_cpu_info uv_legacy_uv_cpu_info
 #define uv_cpumask_size uv_legacy_uv_cpumask_size
 #define uv_cwd uv_legacy_uv_cwd
-#define uv_default_loop uv_legacy_uv_default_loop
 #define uv_disable_stdio_inheritance uv_legacy_uv_disable_stdio_inheritance
 #define uv_dlclose uv_legacy_uv_dlclose
 #define uv_dlerror uv_legacy_uv_dlerror
@@ -110,11 +101,7 @@
 #define uv_handle_set_data uv_legacy_uv_handle_set_data
 #define uv_handle_size uv_legacy_uv_handle_size
 #define uv_handle_type_name uv_legacy_uv_handle_type_name
-#define uv_has_ref uv_legacy_uv_has_ref
 #define uv_hrtime uv_legacy_uv_hrtime
-#define uv_idle_init uv_legacy_uv_idle_init
-#define uv_idle_start uv_legacy_uv_idle_start
-#define uv_idle_stop uv_legacy_uv_idle_stop
 #define uv_if_indextoiid uv_legacy_uv_if_indextoiid
 #define uv_if_indextoname uv_legacy_uv_if_indextoname
 #define uv_inet_ntop uv_legacy_uv_inet_ntop
@@ -125,8 +112,6 @@
 #define uv_ip6_addr uv_legacy_uv_ip6_addr
 #define uv_ip6_name uv_legacy_uv_ip6_name
 #define uv_ip_name uv_legacy_uv_ip_name
-#define uv_is_active uv_legacy_uv_is_active
-#define uv_is_closing uv_legacy_uv_is_closing
 #define uv_is_readable uv_legacy_uv_is_readable
 #define uv_is_writable uv_legacy_uv_is_writable
 #define uv_key_create uv_legacy_uv_key_create
@@ -137,24 +122,14 @@
 #define uv_library_shutdown uv_legacy_uv_library_shutdown
 #define uv_listen uv_legacy_uv_listen
 #define uv_loadavg uv_legacy_uv_loadavg
-#define uv_loop_alive uv_legacy_uv_loop_alive
-#define uv_loop_close uv_legacy_uv_loop_close
-#define uv_loop_delete uv_legacy_uv_loop_delete
-#define uv_loop_fork uv_legacy_uv_loop_fork
 #define uv_loop_get_data uv_legacy_uv_loop_get_data
-#define uv_loop_init uv_legacy_uv_loop_init
-#define uv_loop_new uv_legacy_uv_loop_new
 #define uv_loop_set_data uv_legacy_uv_loop_set_data
-#define uv_loop_size uv_legacy_uv_loop_size
-#define uv_metrics_idle_time uv_legacy_uv_metrics_idle_time
-#define uv_metrics_info uv_legacy_uv_metrics_info
 #define uv_mutex_destroy uv_legacy_uv_mutex_destroy
 #define uv_mutex_init uv_legacy_uv_mutex_init
 #define uv_mutex_init_recursive uv_legacy_uv_mutex_init_recursive
 #define uv_mutex_lock uv_legacy_uv_mutex_lock
 #define uv_mutex_trylock uv_legacy_uv_mutex_trylock
 #define uv_mutex_unlock uv_legacy_uv_mutex_unlock
-#define uv_now uv_legacy_uv_now
 #define uv_once uv_legacy_uv_once
 #define uv_open_osfhandle uv_legacy_uv_open_osfhandle
 #define uv_os_environ uv_legacy_uv_os_environ
@@ -192,9 +167,6 @@
 #define uv_poll_init_socket uv_legacy_uv_poll_init_socket
 #define uv_poll_start uv_legacy_uv_poll_start
 #define uv_poll_stop uv_legacy_uv_poll_stop
-#define uv_prepare_init uv_legacy_uv_prepare_init
-#define uv_prepare_start uv_legacy_uv_prepare_start
-#define uv_prepare_stop uv_legacy_uv_prepare_stop
 #define uv_print_active_handles uv_legacy_uv_print_active_handles
 #define uv_print_all_handles uv_legacy_uv_print_all_handles
 #define uv_process_get_pid uv_legacy_uv_process_get_pid
@@ -204,7 +176,6 @@
 #define uv_read_start uv_legacy_uv_read_start
 #define uv_read_stop uv_legacy_uv_read_stop
 #define uv_recv_buffer_size uv_legacy_uv_recv_buffer_size
-#define uv_ref uv_legacy_uv_ref
 #define uv_replace_allocator uv_legacy_uv_replace_allocator
 #define uv_req_get_data uv_legacy_uv_req_get_data
 #define uv_req_get_type uv_legacy_uv_req_get_type
@@ -212,7 +183,6 @@
 #define uv_req_size uv_legacy_uv_req_size
 #define uv_req_type_name uv_legacy_uv_req_type_name
 #define uv_resident_set_memory uv_legacy_uv_resident_set_memory
-#define uv_run uv_legacy_uv_run
 #define uv_rwlock_destroy uv_legacy_uv_rwlock_destroy
 #define uv_rwlock_init uv_legacy_uv_rwlock_init
 #define uv_rwlock_rdlock uv_legacy_uv_rwlock_rdlock
@@ -237,7 +207,6 @@
 #define uv_sleep uv_legacy_uv_sleep
 #define uv_socketpair uv_legacy_uv_socketpair
 #define uv_spawn uv_legacy_uv_spawn
-#define uv_stop uv_legacy_uv_stop
 #define uv_stream_get_write_queue_size uv_legacy_uv_stream_get_write_queue_size
 #define uv_stream_set_blocking uv_legacy_uv_stream_set_blocking
 #define uv_strerror uv_legacy_uv_strerror
@@ -263,13 +232,6 @@
 #define uv_thread_self uv_legacy_uv_thread_self
 #define uv_thread_setaffinity uv_legacy_uv_thread_setaffinity
 #define uv_thread_setpriority uv_legacy_uv_thread_setpriority
-#define uv_timer_again uv_legacy_uv_timer_again
-#define uv_timer_get_due_in uv_legacy_uv_timer_get_due_in
-#define uv_timer_get_repeat uv_legacy_uv_timer_get_repeat
-#define uv_timer_init uv_legacy_uv_timer_init
-#define uv_timer_set_repeat uv_legacy_uv_timer_set_repeat
-#define uv_timer_start uv_legacy_uv_timer_start
-#define uv_timer_stop uv_legacy_uv_timer_stop
 #define uv_translate_sys_error uv_legacy_uv_translate_sys_error
 #define uv_try_write uv_legacy_uv_try_write
 #define uv_try_write2 uv_legacy_uv_try_write2
@@ -300,12 +262,9 @@
 #define uv_udp_set_ttl uv_legacy_uv_udp_set_ttl
 #define uv_udp_try_send uv_legacy_uv_udp_try_send
 #define uv_udp_using_recvmmsg uv_legacy_uv_udp_using_recvmmsg
-#define uv_unref uv_legacy_uv_unref
-#define uv_update_time uv_legacy_uv_update_time
 #define uv_uptime uv_legacy_uv_uptime
 #define uv_version uv_legacy_uv_version
 #define uv_version_string uv_legacy_uv_version_string
-#define uv_walk uv_legacy_uv_walk
 #define uv_write uv_legacy_uv_write
 #define uv_write2 uv_legacy_uv_write2
 

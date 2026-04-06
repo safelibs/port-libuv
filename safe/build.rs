@@ -8,13 +8,21 @@ use syn::{parse_file, parse_quote, FnArg, ForeignItem, ForeignItemFn, Item, Pat}
 
 const VARIADIC_EXPORTS: &[&str] = &["uv_loop_configure"];
 const RUST_EXPORTS: &[&str] = &[
+    "uv_async_init",
+    "uv_async_send",
     "uv_available_parallelism",
+    "uv_backend_fd",
+    "uv_backend_timeout",
     "uv_barrier_destroy",
     "uv_barrier_init",
     "uv_barrier_wait",
     "uv_buf_init",
     "uv_chdir",
+    "uv_check_init",
+    "uv_check_start",
+    "uv_check_stop",
     "uv_clock_gettime",
+    "uv_close",
     "uv_cond_broadcast",
     "uv_cond_destroy",
     "uv_cond_init",
@@ -22,6 +30,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_cond_timedwait",
     "uv_cond_wait",
     "uv_cwd",
+    "uv_default_loop",
     "uv_disable_stdio_inheritance",
     "uv_dlclose",
     "uv_dlerror",
@@ -48,7 +57,11 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_handle_set_data",
     "uv_handle_size",
     "uv_handle_type_name",
+    "uv_has_ref",
     "uv_hrtime",
+    "uv_idle_init",
+    "uv_idle_start",
+    "uv_idle_stop",
     "uv_inet_ntop",
     "uv_inet_pton",
     "uv_ip4_addr",
@@ -56,19 +69,31 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_ip6_addr",
     "uv_ip6_name",
     "uv_ip_name",
+    "uv_is_active",
+    "uv_is_closing",
     "uv_key_create",
     "uv_key_delete",
     "uv_key_get",
     "uv_key_set",
     "uv_loadavg",
+    "uv_loop_alive",
+    "uv_loop_close",
+    "uv_loop_delete",
+    "uv_loop_fork",
     "uv_loop_get_data",
+    "uv_loop_init",
+    "uv_loop_new",
     "uv_loop_set_data",
+    "uv_loop_size",
+    "uv_metrics_idle_time",
+    "uv_metrics_info",
     "uv_mutex_destroy",
     "uv_mutex_init",
     "uv_mutex_init_recursive",
     "uv_mutex_lock",
     "uv_mutex_trylock",
     "uv_mutex_unlock",
+    "uv_now",
     "uv_once",
     "uv_os_environ",
     "uv_os_free_environ",
@@ -88,7 +113,11 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_os_tmpdir",
     "uv_os_uname",
     "uv_os_unsetenv",
+    "uv_prepare_init",
+    "uv_prepare_start",
+    "uv_prepare_stop",
     "uv_process_get_pid",
+    "uv_ref",
     "uv_replace_allocator",
     "uv_req_get_data",
     "uv_req_get_type",
@@ -96,6 +125,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_req_size",
     "uv_req_type_name",
     "uv_resident_set_memory",
+    "uv_run",
     "uv_rwlock_destroy",
     "uv_rwlock_init",
     "uv_rwlock_rdlock",
@@ -112,9 +142,17 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_set_process_title",
     "uv_setup_args",
     "uv_sleep",
+    "uv_stop",
     "uv_stream_get_write_queue_size",
     "uv_strerror",
     "uv_strerror_r",
+    "uv_timer_again",
+    "uv_timer_get_due_in",
+    "uv_timer_get_repeat",
+    "uv_timer_init",
+    "uv_timer_set_repeat",
+    "uv_timer_start",
+    "uv_timer_stop",
     "uv_thread_create",
     "uv_thread_create_ex",
     "uv_thread_equal",
@@ -126,11 +164,14 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_thread_setaffinity",
     "uv_thread_setpriority",
     "uv_translate_sys_error",
+    "uv_unref",
+    "uv_update_time",
     "uv_udp_get_send_queue_count",
     "uv_udp_get_send_queue_size",
     "uv_uptime",
     "uv_version",
     "uv_version_string",
+    "uv_walk",
 ];
 const LEGACY_ALIAS_EXPORTS: &[&str] = &[
     "uv_barrier_destroy",
@@ -223,6 +264,7 @@ fn main() {
     let ffi_exports_path = out_dir.join("ffi_exports_generated.rs");
     let ffi_legacy_aliases_path = out_dir.join("ffi_legacy_aliases_generated.rs");
     let build_manifest_path = out_dir.join("libuv-build-manifest.json");
+    let dynamic_list_path = out_dir.join("libuv-dynamic-list.txt");
     let legacy_sources = read_legacy_sources(&legacy_manifest);
     let exported_symbols = read_sorted_lines(&exported_symbols_path);
 
@@ -240,7 +282,8 @@ fn main() {
         println!("cargo:rerun-if-changed={source}");
     }
 
-    emit_linux_link_args(&version_script);
+    write_dynamic_list(&dynamic_list_path, &exported_symbols);
+    emit_linux_link_args(&version_script, &dynamic_list_path);
     generate_bindings(&header, &include_dir, &bindings_path);
 
     let uv_functions = parse_uv_functions(&bindings_path);
@@ -265,7 +308,7 @@ fn main() {
     );
 }
 
-fn emit_linux_link_args(version_script: &Path) {
+fn emit_linux_link_args(version_script: &Path, dynamic_list: &Path) {
     if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("linux") {
         return;
     }
@@ -274,6 +317,10 @@ fn emit_linux_link_args(version_script: &Path) {
     println!(
         "cargo:rustc-cdylib-link-arg=-Wl,--version-script={}",
         version_script.display()
+    );
+    println!(
+        "cargo:rustc-cdylib-link-arg=-Wl,--export-dynamic-symbol-list={}",
+        dynamic_list.display()
     );
 }
 
@@ -459,6 +506,7 @@ fn compile_legacy_sources(manifest_dir: &Path, legacy_sources: &[String], rename
         .define("_POSIX_C_SOURCE", Some("200112"))
         .define("_FILE_OFFSET_BITS", Some("64"))
         .define("_LARGEFILE_SOURCE", None)
+        .define("SAFE_LIBUV_RUST_LOOP_CORE", Some("1"))
         .flag("-include")
         .flag(
             rename_header
@@ -496,6 +544,17 @@ fn write_build_manifest(
     );
 
     fs::write(output_path, json).expect("failed to write libuv build manifest");
+}
+
+fn write_dynamic_list(output_path: &Path, exported_symbols: &[String]) {
+    let mut body = String::from("{\n");
+    for symbol in exported_symbols {
+        body.push_str("  ");
+        body.push_str(symbol);
+        body.push_str(";\n");
+    }
+    body.push_str("};\n");
+    fs::write(output_path, body).expect("failed to write dynamic list");
 }
 
 fn json_array(values: &[String]) -> String {

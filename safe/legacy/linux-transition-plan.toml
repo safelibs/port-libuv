@@ -85,7 +85,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/timer.c"
 name = "timer"
 owner_phase = "impl_04_loop_core"
 retirement_phase = "impl_04_loop_core"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -95,7 +95,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/async.c"
 name = "async"
 owner_phase = "impl_04_loop_core"
 retirement_phase = "impl_04_loop_core"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -105,7 +105,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/core.c"
 name = "close_run_backend_watchers"
 owner_phase = "impl_04_loop_core"
 retirement_phase = "impl_04_loop_core"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv_backend_*",
   "uv_close",
@@ -237,7 +237,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/loop-watcher.c
 name = "loop_watcher"
 owner_phase = "impl_04_loop_core"
 retirement_phase = "impl_04_loop_core"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -247,7 +247,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/loop.c"
 name = "loop"
 owner_phase = "impl_04_loop_core"
 retirement_phase = "impl_04_loop_core"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -430,7 +430,7 @@ symbols = [
 name = "loop_default_metrics"
 owner_phase = "impl_04_loop_core"
 retirement_phase = "impl_04_loop_core"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv__metrics_*",
   "uv_default_loop",

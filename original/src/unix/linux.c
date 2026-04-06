@@ -631,6 +631,7 @@ static void uv__iou_delete(struct uv__iou* iou) {
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 int uv__platform_loop_init(uv_loop_t* loop) {
   uv__loop_internal_fields_t* lfields;
 
@@ -752,6 +753,7 @@ int uv__io_check_fd(uv_loop_t* loop, int fd) {
 
   return rc;
 }
+#endif
 
 
 /* Caller must initialize SQE and call uv__iou_submit(). */
@@ -1328,6 +1330,7 @@ static void uv__epoll_ctl_flush(int epollfd,
 }
 
 
+#ifndef SAFE_LIBUV_RUST_LOOP_CORE
 void uv__io_poll(uv_loop_t* loop, int timeout) {
   uv__loop_internal_fields_t* lfields;
   struct epoll_event events[1024];
@@ -1581,6 +1584,7 @@ update_timeout:
     while (*ctl->sqhead != *ctl->sqtail)
       uv__epoll_ctl_flush(epollfd, ctl, &prep);
 }
+#endif
 
 uint64_t uv__hrtime(uv_clocktype_t type) {
   static _Atomic clock_t fast_clock_id = -1;
