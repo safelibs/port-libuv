@@ -356,8 +356,116 @@ EOF
 }
 
 test_moarvm() {
+  local dir="$workdir/moarvm"
   local out
-  out="$(nqp -e 'say("moarvm-ok")')"
+  mkdir -p "$dir"
+  cat >"$dir/test.nqp" <<'EOF'
+my class Queue is repr('ConcBlockingQueue') { }
+my class VMDecoder is repr('Decoder') { }
+my class AsyncTaskHandle is repr('AsyncTask') { }
+
+sub create-buf($type) {
+    my $buf := nqp::newtype(nqp::null(), 'VMArray');
+    nqp::composetype($buf, nqp::hash('array', nqp::hash('type', $type)));
+    $buf
+}
+
+sub run-command($command) {
+    my @stdout-bytes;
+    my @stderr-bytes;
+    my $queue := nqp::create(Queue);
+    my $done := 0;
+    my $read-all1 := 0;
+    my $read-all2 := 0;
+
+    my $config := nqp::hash(
+      'done',         -> $status { ++$done },
+      'buf_type',     create-buf(uint8),
+      'ready',        -> $stdout?, $stderr? { },
+      'stdout_bytes', -> $seq, $data, $err {
+                          nqp::isconcrete($data)
+                            ?? nqp::bindpos(@stdout-bytes, $seq, $data)
+                            !! ++$read-all1
+                      },
+      'stderr_bytes', -> $seq, $data, $err {
+                          nqp::isconcrete($data)
+                            ?? nqp::bindpos(@stderr-bytes, $seq, $data)
+                            !! ++$read-all2
+                      },
+      'error',        -> $err { die($err) }
+    );
+
+    my $task := nqp::spawnprocasync(
+      $queue, $command[0], $command, nqp::cwd(), nqp::getenvhash(), $config);
+    nqp::permit($task, 1, -1);
+    nqp::permit($task, 2, -1);
+
+    while !$done || !$read-all1 || !$read-all2 {
+        if nqp::shift($queue) -> $item {
+            if nqp::islist($item) {
+                my $code := nqp::shift($item);
+                $code(|$item);
+            }
+            else {
+                $item();
+            }
+        }
+    }
+
+    my $dec := nqp::create(VMDecoder);
+    nqp::decoderconfigure($dec, 'utf8', nqp::hash());
+    for @stdout-bytes -> $bytes {
+        nqp::decoderaddbytes($dec, $bytes);
+    }
+    nqp::decodertakeallchars($dec)
+}
+
+my $out := run-command(nqp::list('/bin/sh', '-c', 'printf moarvm-process-ok'));
+die('process failed') unless $out eq 'moarvm-process-ok';
+
+my $queue := nqp::create(Queue);
+my $timer-fired := 0;
+my $connected := 0;
+my $accepted := 0;
+my $client-handle := nqp::null();
+my $server-handle := nqp::null();
+my $listener := nqp::asynclisten($queue, 'listen', '127.0.0.1', 19092, 1, AsyncTaskHandle);
+my $connector := nqp::asyncconnect($queue, 'connect', '127.0.0.1', 19092, AsyncTaskHandle);
+my $timer := nqp::timer($queue, -> { $timer-fired := 1; }, 50, 0, AsyncTaskHandle);
+
+while !$timer-fired || !$connected || !$accepted {
+    if nqp::shift($queue) -> $item {
+        if nqp::islist($item) {
+            my $kind := nqp::atpos($item, 0);
+            if $kind eq 'listen' {
+                $server-handle := nqp::atpos($item, 1);
+                $accepted := nqp::isconcrete($server-handle);
+            }
+            elsif $kind eq 'connect' {
+                my $err := nqp::atpos($item, 2);
+                die(nqp::unbox_s($err)) if nqp::isconcrete($err);
+                $client-handle := nqp::atpos($item, 1);
+                $connected := nqp::isconcrete($client-handle);
+            }
+            else {
+                die('unexpected queue item');
+            }
+        }
+        else {
+            $item();
+        }
+    }
+}
+
+nqp::cancel($listener);
+nqp::cancel($connector);
+nqp::cancel($timer);
+nqp::closefh($client-handle);
+nqp::closefh($server-handle);
+
+say('moarvm-ok');
+EOF
+  out="$(nqp "$dir/test.nqp")"
   [[ "$out" == "moarvm-ok" ]] || fail "moarvm smoke test failed"
 }
 
