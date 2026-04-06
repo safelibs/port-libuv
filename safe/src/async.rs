@@ -2,8 +2,8 @@ use crate::abi;
 use crate::allocator;
 use crate::bindings::*;
 use crate::handle::{
-    handle_init, handle_start, handle_stop, queue_empty, queue_head, queue_insert_tail,
-    queue_move, queue_remove,
+    handle_init, handle_start, handle_stop, queue_empty, queue_head, queue_insert_tail, queue_move,
+    queue_remove,
 };
 use crate::linux::epoll::{uv__io_init_impl, uv__io_start_impl, uv__io_stop_impl};
 use std::mem::offset_of;
@@ -144,12 +144,11 @@ pub(crate) unsafe extern "C" fn uv__async_close_impl(handle: *mut uv_async_t) {
     handle_stop(handle.cast());
 }
 
-unsafe extern "C" fn uv__async_io(
-    loop_: *mut uv_loop_t,
-    w: *mut uv__io_t,
-    _events: libc::c_uint,
-) {
-    debug_assert!(std::ptr::eq(w, std::ptr::addr_of_mut!((*loop_).async_io_watcher)));
+unsafe extern "C" fn uv__async_io(loop_: *mut uv_loop_t, w: *mut uv__io_t, _events: libc::c_uint) {
+    debug_assert!(std::ptr::eq(
+        w,
+        std::ptr::addr_of_mut!((*loop_).async_io_watcher)
+    ));
 
     let mut value: u64 = 0;
     loop {

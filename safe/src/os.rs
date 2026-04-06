@@ -11,6 +11,13 @@ const NANOSEC: u64 = 1_000_000_000;
 
 unsafe extern "C" {
     static mut environ: *mut *mut libc::c_char;
+
+    #[link_name = "uv_phase5_private_uv_cpumask_size"]
+    fn uv_cpumask_size_private() -> libc::c_int;
+    #[link_name = "uv_phase5_private_uv_get_osfhandle"]
+    fn uv_get_osfhandle_private(fd: libc::c_int) -> uv_os_fd_t;
+    #[link_name = "uv_phase5_private_uv_open_osfhandle"]
+    fn uv_open_osfhandle_private(os_fd: uv_os_fd_t) -> libc::c_int;
 }
 
 unsafe fn open_cloexec(path: *const libc::c_char) -> libc::c_int {
@@ -749,6 +756,16 @@ pub unsafe extern "C" fn uv_os_gethostname(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn uv_get_osfhandle(fd: libc::c_int) -> uv_os_fd_t {
+    uv_get_osfhandle_private(fd)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn uv_open_osfhandle(os_fd: uv_os_fd_t) -> libc::c_int {
+    uv_open_osfhandle_private(os_fd)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn uv_os_getpid() -> uv_pid_t {
     libc::getpid()
 }
@@ -756,6 +773,11 @@ pub unsafe extern "C" fn uv_os_getpid() -> uv_pid_t {
 #[no_mangle]
 pub unsafe extern "C" fn uv_os_getppid() -> uv_pid_t {
     libc::getppid()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn uv_cpumask_size() -> libc::c_int {
+    uv_cpumask_size_private()
 }
 
 #[no_mangle]

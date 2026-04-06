@@ -1,9 +1,7 @@
 use crate::abi::{self, UV_LOOP_BLOCK_SIGPROF, UV__POLLPRI, UV__POLLRDHUP};
 use crate::allocator;
 use crate::bindings::*;
-use crate::handle::{
-    queue_empty, queue_head, queue_init, queue_insert_tail, queue_remove,
-};
+use crate::handle::{queue_empty, queue_head, queue_init, queue_insert_tail, queue_remove};
 use crate::r#loop::{
     metrics_inc_events, metrics_inc_events_waiting, uv__metrics_set_provider_entry_time_impl,
     uv__metrics_update_idle_time_impl,
@@ -110,7 +108,12 @@ unsafe fn apply_watcher_queue(loop_: *mut uv_loop_t) {
         }
 
         if op == libc::EPOLL_CTL_ADD && *allocator::errno_location() == libc::EEXIST {
-            if libc::epoll_ctl((*loop_).backend_fd, libc::EPOLL_CTL_MOD, (*w).fd, &mut event) == 0
+            if libc::epoll_ctl(
+                (*loop_).backend_fd,
+                libc::EPOLL_CTL_MOD,
+                (*w).fd,
+                &mut event,
+            ) == 0
             {
                 continue;
             }
@@ -120,9 +123,7 @@ unsafe fn apply_watcher_queue(loop_: *mut uv_loop_t) {
     }
 }
 
-pub(crate) unsafe extern "C" fn uv__platform_loop_init_impl(
-    loop_: *mut uv_loop_t,
-) -> libc::c_int {
+pub(crate) unsafe extern "C" fn uv__platform_loop_init_impl(loop_: *mut uv_loop_t) -> libc::c_int {
     let lfields = loop_fields(loop_);
 
     (*loop_).inotify_watchers = std::ptr::null_mut();
@@ -155,7 +156,7 @@ pub(crate) unsafe extern "C" fn uv__io_fork_impl(loop_: *mut uv_loop_t) -> libc:
     }
 
     (*loop_).inotify_watchers = inotify_watchers;
-    0
+    crate::linux::inotify::uv__inotify_fork_impl(loop_, inotify_watchers)
 }
 
 pub(crate) unsafe extern "C" fn uv__platform_loop_delete_impl(loop_: *mut uv_loop_t) {
@@ -211,19 +212,14 @@ pub(crate) unsafe extern "C" fn uv__io_check_fd_impl(
         rc = allocator::last_error();
     }
 
-    if rc == 0
-        && libc::epoll_ctl((*loop_).backend_fd, libc::EPOLL_CTL_DEL, fd, &mut event) != 0
-    {
+    if rc == 0 && libc::epoll_ctl((*loop_).backend_fd, libc::EPOLL_CTL_DEL, fd, &mut event) != 0 {
         libc::abort();
     }
 
     rc
 }
 
-pub(crate) unsafe extern "C" fn uv__io_poll_impl(
-    loop_: *mut uv_loop_t,
-    mut timeout: libc::c_int,
-) {
+pub(crate) unsafe extern "C" fn uv__io_poll_impl(loop_: *mut uv_loop_t, mut timeout: libc::c_int) {
     let lfields = loop_fields(loop_);
     let mut events = [epoll_event(0, 0); MAX_EPOLL_EVENTS];
     let mut inv = Invalidate {
@@ -346,7 +342,8 @@ pub(crate) unsafe extern "C" fn uv__io_poll_impl(
                 continue;
             }
 
-            pe.events &= (*w).pevents | libc::POLLERR as libc::c_uint | libc::POLLHUP as libc::c_uint;
+            pe.events &=
+                (*w).pevents | libc::POLLERR as libc::c_uint | libc::POLLHUP as libc::c_uint;
 
             if pe.events == libc::POLLERR as libc::c_uint
                 || pe.events == libc::POLLHUP as libc::c_uint
@@ -425,11 +422,7 @@ pub(crate) unsafe extern "C" fn uv__io_poll_impl(
     }
 }
 
-pub(crate) unsafe extern "C" fn uv__io_init_impl(
-    w: *mut uv__io_t,
-    cb: uv__io_cb,
-    fd: libc::c_int,
-) {
+pub(crate) unsafe extern "C" fn uv__io_init_impl(w: *mut uv__io_t, cb: uv__io_cb, fd: libc::c_int) {
     debug_assert!(cb.is_some());
     debug_assert!(fd >= -1);
 
@@ -447,7 +440,11 @@ pub(crate) unsafe extern "C" fn uv__io_start_impl(
     events: libc::c_uint,
 ) {
     debug_assert_eq!(
-        events & !(libc::POLLIN as libc::c_uint | libc::POLLOUT as libc::c_uint | UV__POLLRDHUP | UV__POLLPRI),
+        events
+            & !(libc::POLLIN as libc::c_uint
+                | libc::POLLOUT as libc::c_uint
+                | UV__POLLRDHUP
+                | UV__POLLPRI),
         0
     );
     debug_assert_ne!(events, 0);
@@ -480,7 +477,11 @@ pub(crate) unsafe extern "C" fn uv__io_stop_impl(
     events: libc::c_uint,
 ) {
     debug_assert_eq!(
-        events & !(libc::POLLIN as libc::c_uint | libc::POLLOUT as libc::c_uint | UV__POLLRDHUP | UV__POLLPRI),
+        events
+            & !(libc::POLLIN as libc::c_uint
+                | libc::POLLOUT as libc::c_uint
+                | UV__POLLRDHUP
+                | UV__POLLPRI),
         0
     );
     debug_assert_ne!(events, 0);
@@ -519,10 +520,7 @@ pub(crate) unsafe extern "C" fn uv__io_close_impl(loop_: *mut uv_loop_t, w: *mut
     uv__io_stop_impl(
         loop_,
         w,
-        libc::POLLIN as libc::c_uint
-            | libc::POLLOUT as libc::c_uint
-            | UV__POLLRDHUP
-            | UV__POLLPRI,
+        libc::POLLIN as libc::c_uint | libc::POLLOUT as libc::c_uint | UV__POLLRDHUP | UV__POLLPRI,
     );
     queue_remove(std::ptr::addr_of_mut!((*w).pending_queue));
 
@@ -545,7 +543,11 @@ pub(crate) unsafe extern "C" fn uv__io_active_impl(
     events: libc::c_uint,
 ) -> libc::c_int {
     debug_assert_eq!(
-        events & !(libc::POLLIN as libc::c_uint | libc::POLLOUT as libc::c_uint | UV__POLLRDHUP | UV__POLLPRI),
+        events
+            & !(libc::POLLIN as libc::c_uint
+                | libc::POLLOUT as libc::c_uint
+                | UV__POLLRDHUP
+                | UV__POLLPRI),
         0
     );
     debug_assert_ne!(events, 0);

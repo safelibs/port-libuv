@@ -147,7 +147,12 @@ pub unsafe extern "C" fn uv_timer_again(handle: *mut uv_timer_t) -> libc::c_int 
 
     if (*handle).repeat != 0 {
         uv_timer_stop(handle);
-        uv_timer_start(handle, (*handle).timer_cb, (*handle).repeat, (*handle).repeat);
+        uv_timer_start(
+            handle,
+            (*handle).timer_cb,
+            (*handle).repeat,
+            (*handle).repeat,
+        );
     }
 
     0

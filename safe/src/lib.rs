@@ -23,26 +23,37 @@ pub use bindings::*;
 mod abi;
 mod accessors;
 mod allocator;
+mod r#async;
 mod dl;
 mod error;
 mod ffi_exports;
+mod fs_event;
+mod fs_poll;
 mod handle;
 mod inet;
 mod legacy;
-mod request;
-mod r#async;
 mod r#loop;
 mod os;
+mod pipe;
+mod poll;
 mod process_title;
+mod request;
+mod signal;
 mod state;
+mod stream;
 mod strings;
+mod tcp;
 mod thread;
 mod timer;
+mod tty;
+mod udp;
 mod version;
 mod watchers;
 
 mod linux {
     pub(crate) mod epoll;
+    pub(crate) mod inotify;
+    pub(crate) mod socket;
 }
 
 pub const BASELINE_SCAFFOLD_PHASE: &str = "impl_01_baseline_capture";

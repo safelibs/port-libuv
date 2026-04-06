@@ -1,6 +1,4 @@
-use crate::abi::{
-    self, UV_LOOP_REAP_CHILDREN, UV_METRICS_IDLE_TIME_FLAG,
-};
+use crate::abi::{self, UV_LOOP_REAP_CHILDREN, UV_METRICS_IDLE_TIME_FLAG};
 use crate::allocator::{self, UV_EBUSY};
 use crate::bindings::*;
 use crate::handle::{
@@ -221,7 +219,9 @@ pub unsafe extern "C" fn uv_loop_init(loop_: *mut uv_loop_t) -> libc::c_int {
     let state_ptr = Box::into_raw(state);
     (*loop_).internal_fields = state_ptr.cast();
 
-    let err = uv_mutex_init(std::ptr::addr_of_mut!((*state_ptr).compat.loop_metrics.lock));
+    let err = uv_mutex_init(std::ptr::addr_of_mut!(
+        (*state_ptr).compat.loop_metrics.lock
+    ));
     if err != 0 {
         drop(Box::from_raw(state_ptr));
         (*loop_).internal_fields = std::ptr::null_mut();
@@ -258,7 +258,9 @@ pub unsafe extern "C" fn uv_loop_init(loop_: *mut uv_loop_t) -> libc::c_int {
 
     let err = crate::linux::epoll::uv__platform_loop_init_impl(loop_);
     if err != 0 {
-        uv_mutex_destroy(std::ptr::addr_of_mut!((*state_ptr).compat.loop_metrics.lock));
+        uv_mutex_destroy(std::ptr::addr_of_mut!(
+            (*state_ptr).compat.loop_metrics.lock
+        ));
         drop(Box::from_raw(state_ptr));
         (*loop_).internal_fields = std::ptr::null_mut();
         return err;
@@ -268,7 +270,9 @@ pub unsafe extern "C" fn uv_loop_init(loop_: *mut uv_loop_t) -> libc::c_int {
     let err = abi::uv__process_init(loop_);
     if err != 0 {
         crate::linux::epoll::uv__platform_loop_delete_impl(loop_);
-        uv_mutex_destroy(std::ptr::addr_of_mut!((*state_ptr).compat.loop_metrics.lock));
+        uv_mutex_destroy(std::ptr::addr_of_mut!(
+            (*state_ptr).compat.loop_metrics.lock
+        ));
         drop(Box::from_raw(state_ptr));
         (*loop_).internal_fields = std::ptr::null_mut();
         return err;
@@ -278,7 +282,9 @@ pub unsafe extern "C" fn uv_loop_init(loop_: *mut uv_loop_t) -> libc::c_int {
     if err != 0 {
         abi::uv__signal_loop_cleanup(loop_);
         crate::linux::epoll::uv__platform_loop_delete_impl(loop_);
-        uv_mutex_destroy(std::ptr::addr_of_mut!((*state_ptr).compat.loop_metrics.lock));
+        uv_mutex_destroy(std::ptr::addr_of_mut!(
+            (*state_ptr).compat.loop_metrics.lock
+        ));
         drop(Box::from_raw(state_ptr));
         (*loop_).internal_fields = std::ptr::null_mut();
         return err;
@@ -289,7 +295,9 @@ pub unsafe extern "C" fn uv_loop_init(loop_: *mut uv_loop_t) -> libc::c_int {
         uv_rwlock_destroy(std::ptr::addr_of_mut!((*loop_).cloexec_lock));
         abi::uv__signal_loop_cleanup(loop_);
         crate::linux::epoll::uv__platform_loop_delete_impl(loop_);
-        uv_mutex_destroy(std::ptr::addr_of_mut!((*state_ptr).compat.loop_metrics.lock));
+        uv_mutex_destroy(std::ptr::addr_of_mut!(
+            (*state_ptr).compat.loop_metrics.lock
+        ));
         drop(Box::from_raw(state_ptr));
         (*loop_).internal_fields = std::ptr::null_mut();
         return err;
@@ -305,7 +313,9 @@ pub unsafe extern "C" fn uv_loop_init(loop_: *mut uv_loop_t) -> libc::c_int {
         uv_rwlock_destroy(std::ptr::addr_of_mut!((*loop_).cloexec_lock));
         abi::uv__signal_loop_cleanup(loop_);
         crate::linux::epoll::uv__platform_loop_delete_impl(loop_);
-        uv_mutex_destroy(std::ptr::addr_of_mut!((*state_ptr).compat.loop_metrics.lock));
+        uv_mutex_destroy(std::ptr::addr_of_mut!(
+            (*state_ptr).compat.loop_metrics.lock
+        ));
         drop(Box::from_raw(state_ptr));
         (*loop_).internal_fields = std::ptr::null_mut();
         return err;
@@ -603,9 +613,7 @@ pub(crate) unsafe extern "C" fn uv__metrics_update_idle_time_impl(loop_: *mut uv
     uv_mutex_unlock(std::ptr::addr_of_mut!((*metrics_state).lock));
 }
 
-pub(crate) unsafe extern "C" fn uv__metrics_set_provider_entry_time_impl(
-    loop_: *mut uv_loop_t,
-) {
+pub(crate) unsafe extern "C" fn uv__metrics_set_provider_entry_time_impl(loop_: *mut uv_loop_t) {
     if !metrics_enabled(loop_) {
         return;
     }

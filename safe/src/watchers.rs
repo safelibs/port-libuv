@@ -71,7 +71,10 @@ pub unsafe extern "C" fn uv_prepare_stop(handle: *mut uv_prepare_t) -> libc::c_i
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uv_check_init(loop_: *mut uv_loop_t, handle: *mut uv_check_t) -> libc::c_int {
+pub unsafe extern "C" fn uv_check_init(
+    loop_: *mut uv_loop_t,
+    handle: *mut uv_check_t,
+) -> libc::c_int {
     handle_init(loop_, handle.cast(), uv_handle_type_UV_CHECK);
     (*handle).check_cb = None;
     queue_init(std::ptr::addr_of_mut!((*handle).queue));
@@ -108,7 +111,10 @@ pub unsafe extern "C" fn uv_check_stop(handle: *mut uv_check_t) -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uv_idle_init(loop_: *mut uv_loop_t, handle: *mut uv_idle_t) -> libc::c_int {
+pub unsafe extern "C" fn uv_idle_init(
+    loop_: *mut uv_loop_t,
+    handle: *mut uv_idle_t,
+) -> libc::c_int {
     handle_init(loop_, handle.cast(), uv_handle_type_UV_IDLE);
     (*handle).idle_cb = None;
     queue_init(std::ptr::addr_of_mut!((*handle).queue));

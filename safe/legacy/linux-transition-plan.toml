@@ -5,7 +5,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/fs-poll.c"
 name = "fs_poll"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -139,7 +139,7 @@ symbols = [
 name = "socket_fileno_helpers"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv__accept",
   "uv__close*",
@@ -201,7 +201,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/linux.c"
 name = "epoll_fs_event_socket_watchers"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv__io_*",
   "uv__platform_*",
@@ -257,7 +257,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/pipe.c"
 name = "pipe"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -267,7 +267,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/poll.c"
 name = "poll"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -337,7 +337,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/signal.c"
 name = "signal"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -347,7 +347,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/stream.c"
 name = "stream"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -357,7 +357,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/tcp.c"
 name = "tcp"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -377,7 +377,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/tty.c"
 name = "tty"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -387,7 +387,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/udp.c"
 name = "udp"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -448,7 +448,7 @@ symbols = [
 name = "stream_io_buffers"
 owner_phase = "impl_05_network_backend"
 retirement_phase = "impl_05_network_backend"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv__count_bufs",
   "uv__udp_*",

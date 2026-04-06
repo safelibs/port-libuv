@@ -7,6 +7,358 @@ use quote::quote;
 use syn::{parse_file, parse_quote, FnArg, ForeignItem, ForeignItemFn, Item, Pat};
 
 const VARIADIC_EXPORTS: &[&str] = &["uv_loop_configure"];
+const PHASE5_RUST_EXPORTS: &[&str] = &[
+    "uv_accept",
+    "uv_fileno",
+    "uv_fs_event_getpath",
+    "uv_fs_event_init",
+    "uv_fs_event_start",
+    "uv_fs_event_stop",
+    "uv_fs_poll_getpath",
+    "uv_fs_poll_init",
+    "uv_fs_poll_start",
+    "uv_fs_poll_stop",
+    "uv_guess_handle",
+    "uv_is_readable",
+    "uv_is_writable",
+    "uv_listen",
+    "uv_pipe",
+    "uv_pipe_bind",
+    "uv_pipe_bind2",
+    "uv_pipe_chmod",
+    "uv_pipe_connect",
+    "uv_pipe_connect2",
+    "uv_pipe_getpeername",
+    "uv_pipe_getsockname",
+    "uv_pipe_init",
+    "uv_pipe_open",
+    "uv_pipe_pending_count",
+    "uv_pipe_pending_instances",
+    "uv_pipe_pending_type",
+    "uv_poll_init",
+    "uv_poll_init_socket",
+    "uv_poll_start",
+    "uv_poll_stop",
+    "uv_read_start",
+    "uv_read_stop",
+    "uv_recv_buffer_size",
+    "uv_send_buffer_size",
+    "uv_shutdown",
+    "uv_signal_init",
+    "uv_signal_start",
+    "uv_signal_start_oneshot",
+    "uv_signal_stop",
+    "uv_socketpair",
+    "uv_stream_set_blocking",
+    "uv_tcp_bind",
+    "uv_tcp_close_reset",
+    "uv_tcp_connect",
+    "uv_tcp_getpeername",
+    "uv_tcp_getsockname",
+    "uv_tcp_init",
+    "uv_tcp_init_ex",
+    "uv_tcp_keepalive",
+    "uv_tcp_nodelay",
+    "uv_tcp_open",
+    "uv_tcp_simultaneous_accepts",
+    "uv_try_write",
+    "uv_try_write2",
+    "uv_tty_get_vterm_state",
+    "uv_tty_get_winsize",
+    "uv_tty_init",
+    "uv_tty_reset_mode",
+    "uv_tty_set_mode",
+    "uv_tty_set_vterm_state",
+    "uv_udp_bind",
+    "uv_udp_connect",
+    "uv_udp_getpeername",
+    "uv_udp_getsockname",
+    "uv_udp_init",
+    "uv_udp_init_ex",
+    "uv_udp_open",
+    "uv_udp_recv_start",
+    "uv_udp_recv_stop",
+    "uv_udp_send",
+    "uv_udp_set_broadcast",
+    "uv_udp_set_membership",
+    "uv_udp_set_multicast_interface",
+    "uv_udp_set_multicast_loop",
+    "uv_udp_set_multicast_ttl",
+    "uv_udp_set_source_membership",
+    "uv_udp_set_ttl",
+    "uv_udp_try_send",
+    "uv_udp_using_recvmmsg",
+    "uv_write",
+    "uv_write2",
+];
+const PHASE5_LEGACY_ALIAS_EXPORTS: &[&str] = &[
+    "uv_accept",
+    "uv_available_parallelism",
+    "uv_backend_fd",
+    "uv_backend_timeout",
+    "uv_chdir",
+    "uv_clock_gettime",
+    "uv_close",
+    "uv_cpumask_size",
+    "uv_cwd",
+    "uv_disable_stdio_inheritance",
+    "uv_fs_poll_getpath",
+    "uv_fs_poll_init",
+    "uv_fs_poll_start",
+    "uv_fs_poll_stop",
+    "uv_get_osfhandle",
+    "uv_getrusage",
+    "uv_gettimeofday",
+    "uv_hrtime",
+    "uv_guess_handle",
+    "uv_is_readable",
+    "uv_is_writable",
+    "uv_is_active",
+    "uv_is_closing",
+    "uv_listen",
+    "uv_loop_alive",
+    "uv_open_osfhandle",
+    "uv_os_environ",
+    "uv_os_getenv",
+    "uv_os_get_group",
+    "uv_os_gethostname",
+    "uv_os_get_passwd",
+    "uv_os_get_passwd2",
+    "uv_os_getpid",
+    "uv_os_getppid",
+    "uv_os_getpriority",
+    "uv_os_homedir",
+    "uv_os_setenv",
+    "uv_os_setpriority",
+    "uv_os_tmpdir",
+    "uv_os_uname",
+    "uv_os_unsetenv",
+    "uv_pipe",
+    "uv_pipe_bind",
+    "uv_pipe_bind2",
+    "uv_pipe_chmod",
+    "uv_pipe_connect",
+    "uv_pipe_connect2",
+    "uv_pipe_getpeername",
+    "uv_pipe_getsockname",
+    "uv_pipe_init",
+    "uv_pipe_open",
+    "uv_pipe_pending_count",
+    "uv_pipe_pending_instances",
+    "uv_pipe_pending_type",
+    "uv_poll_init",
+    "uv_poll_init_socket",
+    "uv_poll_start",
+    "uv_poll_stop",
+    "uv_read_stop",
+    "uv_shutdown",
+    "uv_signal_init",
+    "uv_signal_start",
+    "uv_signal_start_oneshot",
+    "uv_signal_stop",
+    "uv_socketpair",
+    "uv_stream_set_blocking",
+    "uv_run",
+    "uv_sleep",
+    "uv_tcp_close_reset",
+    "uv_tcp_getpeername",
+    "uv_tcp_getsockname",
+    "uv_tcp_init",
+    "uv_tcp_init_ex",
+    "uv_tcp_keepalive",
+    "uv_tcp_nodelay",
+    "uv_tcp_open",
+    "uv_tcp_simultaneous_accepts",
+    "uv_try_write",
+    "uv_try_write2",
+    "uv_tty_get_vterm_state",
+    "uv_tty_get_winsize",
+    "uv_tty_init",
+    "uv_tty_reset_mode",
+    "uv_tty_set_mode",
+    "uv_tty_set_vterm_state",
+    "uv_udp_getpeername",
+    "uv_udp_getsockname",
+    "uv_udp_open",
+    "uv_udp_set_broadcast",
+    "uv_udp_set_membership",
+    "uv_udp_set_multicast_interface",
+    "uv_udp_set_multicast_loop",
+    "uv_udp_set_multicast_ttl",
+    "uv_udp_set_source_membership",
+    "uv_udp_set_ttl",
+    "uv_udp_using_recvmmsg",
+    "uv_translate_sys_error",
+    "uv_update_time",
+    "uv_write",
+    "uv_write2",
+];
+const PHASE5_PRIVATE_SOURCE_EXPORTS: &[(&str, &str, &[&str])] = &[
+    (
+        "core",
+        "../original/src/unix/core.c",
+        &[
+            "uv_backend_fd",
+            "uv_backend_timeout",
+            "uv_chdir",
+            "uv_clock_gettime",
+            "uv_close",
+            "uv_cpumask_size",
+            "uv_cwd",
+            "uv_disable_stdio_inheritance",
+            "uv_fileno",
+            "uv_available_parallelism",
+            "uv_get_osfhandle",
+            "uv_getrusage",
+            "uv_gettimeofday",
+            "uv_hrtime",
+            "uv_is_active",
+            "uv_is_closing",
+            "uv_loop_alive",
+            "uv_open_osfhandle",
+            "uv_os_environ",
+            "uv_os_getenv",
+            "uv_os_get_group",
+            "uv_os_gethostname",
+            "uv_os_get_passwd",
+            "uv_os_get_passwd2",
+            "uv_os_getpid",
+            "uv_os_getppid",
+            "uv_os_getpriority",
+            "uv_os_homedir",
+            "uv_os_setenv",
+            "uv_os_setpriority",
+            "uv_os_tmpdir",
+            "uv_os_uname",
+            "uv_os_unsetenv",
+            "uv_run",
+            "uv_sleep",
+            "uv_thread_getpriority",
+            "uv_thread_setpriority",
+            "uv_translate_sys_error",
+            "uv_update_time",
+            "uv__fd_exists",
+            "uv__io_active",
+            "uv__io_close",
+            "uv__io_feed",
+            "uv__io_init",
+            "uv__io_start",
+            "uv__io_stop",
+        ],
+    ),
+    (
+        "fs-poll",
+        "../original/src/fs-poll.c",
+        &[
+            "uv_fs_poll_getpath",
+            "uv_fs_poll_init",
+            "uv_fs_poll_start",
+            "uv_fs_poll_stop",
+        ],
+    ),
+    (
+        "pipe",
+        "../original/src/unix/pipe.c",
+        &[
+            "uv_pipe",
+            "uv_pipe_bind",
+            "uv_pipe_bind2",
+            "uv_pipe_chmod",
+            "uv_pipe_connect",
+            "uv_pipe_connect2",
+            "uv_pipe_getpeername",
+            "uv_pipe_getsockname",
+            "uv_pipe_init",
+            "uv_pipe_open",
+            "uv_pipe_pending_count",
+            "uv_pipe_pending_instances",
+            "uv_pipe_pending_type",
+        ],
+    ),
+    (
+        "poll",
+        "../original/src/unix/poll.c",
+        &[
+            "uv_poll_init",
+            "uv_poll_init_socket",
+            "uv_poll_start",
+            "uv_poll_stop",
+        ],
+    ),
+    (
+        "signal",
+        "../original/src/unix/signal.c",
+        &[
+            "uv_signal_init",
+            "uv_signal_start",
+            "uv_signal_start_oneshot",
+            "uv_signal_stop",
+        ],
+    ),
+    (
+        "stream",
+        "../original/src/unix/stream.c",
+        &[
+            "uv_accept",
+            "uv_is_readable",
+            "uv_is_writable",
+            "uv_listen",
+            "uv_read_stop",
+            "uv_shutdown",
+            "uv_stream_set_blocking",
+            "uv_try_write",
+            "uv_try_write2",
+            "uv_write",
+            "uv_write2",
+        ],
+    ),
+    (
+        "tcp",
+        "../original/src/unix/tcp.c",
+        &[
+            "uv_socketpair",
+            "uv_tcp_close_reset",
+            "uv_tcp_getpeername",
+            "uv_tcp_getsockname",
+            "uv_tcp_init",
+            "uv_tcp_init_ex",
+            "uv_tcp_keepalive",
+            "uv_tcp_nodelay",
+            "uv_tcp_open",
+            "uv_tcp_simultaneous_accepts",
+        ],
+    ),
+    (
+        "tty",
+        "../original/src/unix/tty.c",
+        &[
+            "uv_guess_handle",
+            "uv_tty_get_vterm_state",
+            "uv_tty_get_winsize",
+            "uv_tty_init",
+            "uv_tty_reset_mode",
+            "uv_tty_set_mode",
+            "uv_tty_set_vterm_state",
+        ],
+    ),
+    (
+        "udp",
+        "../original/src/unix/udp.c",
+        &[
+            "uv_udp_getpeername",
+            "uv_udp_getsockname",
+            "uv_udp_open",
+            "uv_udp_set_broadcast",
+            "uv_udp_set_membership",
+            "uv_udp_set_multicast_interface",
+            "uv_udp_set_multicast_loop",
+            "uv_udp_set_multicast_ttl",
+            "uv_udp_set_source_membership",
+            "uv_udp_set_ttl",
+            "uv_udp_using_recvmmsg",
+        ],
+    ),
+];
 const RUST_EXPORTS: &[&str] = &[
     "uv_async_init",
     "uv_async_send",
@@ -47,6 +399,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_get_available_memory",
     "uv_get_constrained_memory",
     "uv_get_free_memory",
+    "uv_get_osfhandle",
     "uv_get_process_title",
     "uv_get_total_memory",
     "uv_getrusage",
@@ -95,6 +448,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_mutex_unlock",
     "uv_now",
     "uv_once",
+    "uv_open_osfhandle",
     "uv_os_environ",
     "uv_os_free_environ",
     "uv_os_free_group",
@@ -146,6 +500,7 @@ const RUST_EXPORTS: &[&str] = &[
     "uv_stream_get_write_queue_size",
     "uv_strerror",
     "uv_strerror_r",
+    "uv_cpumask_size",
     "uv_timer_again",
     "uv_timer_get_due_in",
     "uv_timer_get_repeat",
@@ -281,6 +636,12 @@ fn main() {
     for source in &legacy_sources {
         println!("cargo:rerun-if-changed={source}");
     }
+    for (_, relative_source, _) in PHASE5_PRIVATE_SOURCE_EXPORTS {
+        println!(
+            "cargo:rerun-if-changed={}",
+            manifest_dir.join(relative_source).display()
+        );
+    }
 
     write_dynamic_list(&dynamic_list_path, &exported_symbols);
     emit_linux_link_args(&version_script, &dynamic_list_path);
@@ -296,8 +657,12 @@ fn main() {
     let generated_production_non_rust_sources: Vec<String> = Vec::new();
     if target_os == "linux" {
         compile_legacy_sources(&manifest_dir, &legacy_sources, &rename_header);
+        let mut phase5_private_sources = compile_phase5_private_sources(&manifest_dir, &out_dir);
         emit_linux_native_link_libs();
         production_non_rust_sources = legacy_sources.clone();
+        production_non_rust_sources.append(&mut phase5_private_sources);
+        production_non_rust_sources.sort();
+        production_non_rust_sources.dedup();
     }
 
     write_build_manifest(
@@ -414,7 +779,11 @@ fn generate_ffi_exports(
     uv_functions: &BTreeMap<String, ForeignItemFn>,
 ) {
     let mut wrappers = Vec::new();
-    let rust_exports = RUST_EXPORTS.iter().copied().collect::<BTreeSet<_>>();
+    let rust_exports = RUST_EXPORTS
+        .iter()
+        .chain(PHASE5_RUST_EXPORTS.iter())
+        .copied()
+        .collect::<BTreeSet<_>>();
 
     for symbol in exported_symbols {
         if VARIADIC_EXPORTS.contains(&symbol.as_str()) {
@@ -458,10 +827,15 @@ fn generate_ffi_exports(
 
 fn generate_ffi_legacy_aliases(output_path: &Path, uv_functions: &BTreeMap<String, ForeignItemFn>) {
     let mut aliases = String::new();
+    let alias_exports = LEGACY_ALIAS_EXPORTS
+        .iter()
+        .chain(PHASE5_LEGACY_ALIAS_EXPORTS.iter())
+        .copied()
+        .collect::<BTreeSet<_>>();
 
-    for symbol in LEGACY_ALIAS_EXPORTS {
+    for symbol in alias_exports {
         uv_functions
-            .get(*symbol)
+            .get(symbol)
             .unwrap_or_else(|| panic!("missing binding declaration for {symbol}"));
         aliases.push_str(&format!(
             ".globl uv_legacy_{symbol}\n\
@@ -522,6 +896,75 @@ fn compile_legacy_sources(manifest_dir: &Path, legacy_sources: &[String], rename
     }
 
     build.compile("uv_legacy");
+}
+
+fn compile_phase5_private_sources(manifest_dir: &Path, out_dir: &Path) -> Vec<String> {
+    let mut compiled_sources = Vec::new();
+
+    for (name, relative_source, symbols) in PHASE5_PRIVATE_SOURCE_EXPORTS {
+        let source = manifest_dir
+            .join(relative_source)
+            .canonicalize()
+            .unwrap_or_else(|error| panic!("failed to resolve {relative_source}: {error}"));
+        let rename_header = out_dir.join(format!("phase5-private-{name}.h"));
+        write_phase5_private_rename_header(&rename_header, name, symbols);
+
+        let mut build = cc::Build::new();
+        build
+            .cargo_metadata(true)
+            .pic(true)
+            .warnings(false)
+            .flag_if_supported("-fno-strict-aliasing")
+            .flag_if_supported("-Wno-unused-parameter")
+            .flag_if_supported("-Wstrict-prototypes")
+            .flag_if_supported("-Wextra")
+            .define("_GNU_SOURCE", Some("1"))
+            .define("_POSIX_C_SOURCE", Some("200112"))
+            .define("_FILE_OFFSET_BITS", Some("64"))
+            .define("_LARGEFILE_SOURCE", None)
+            .define("SAFE_LIBUV_RUST_LOOP_CORE", Some("1"))
+            .flag("-include")
+            .flag(
+                rename_header
+                    .to_str()
+                    .expect("private rename header path must be valid UTF-8"),
+            )
+            .include(manifest_dir.join("include"))
+            .include(manifest_dir.join("../original/include"))
+            .include(manifest_dir.join("../original/src"))
+            .file(&source);
+        build.compile(&format!("uv_phase5_{name}"));
+
+        compiled_sources.push(source.display().to_string());
+    }
+
+    compiled_sources
+}
+
+fn write_phase5_private_rename_header(path: &Path, name: &str, symbols: &[&str]) {
+    let guard = name
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch.to_ascii_uppercase()
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+
+    let mut body = format!(
+        "/* Generated private rename header for phase-5 source delegation. */\n\
+#ifndef SAFE_PHASE5_PRIVATE_{guard}_H_\n\
+#define SAFE_PHASE5_PRIVATE_{guard}_H_\n\n"
+    );
+
+    for symbol in symbols {
+        body.push_str(&format!("#define {symbol} uv_phase5_private_{symbol}\n"));
+    }
+
+    body.push_str("\n#endif\n");
+    fs::write(path, body).expect("failed to write phase-5 private rename header");
 }
 
 fn write_build_manifest(
