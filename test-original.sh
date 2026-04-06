@@ -28,12 +28,13 @@ apt-get install -y --no-install-recommends \
   cmake \
   curl \
   dnsutils \
-  h2o \
   jq \
   knot-resolver \
   libdqlite-dev \
+  libh2o-dev \
   libluv-ocaml-dev \
   libraft-tools \
+  libssl-dev \
   libtensorpipe-dev \
   libwebsockets-evlib-uv \
   lua-luv \
@@ -423,24 +424,87 @@ test_ttyd() {
 
 test_libh2o() {
   local dir="$workdir/libh2o0.13t64"
-  mkdir -p "$dir/root"
-  printf 'h2o-ok\n' >"$dir/root/index.txt"
-  cat >"$dir/h2o.conf" <<EOF
-listen:
-  host: 127.0.0.1
-  port: 18081
-hosts:
-  "default":
-    paths:
-      "/":
-        file.dir: $dir/root
+  mkdir -p "$dir"
+  cat >"$dir/test.c" <<'EOF'
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <h2o/socket.h>
+#include <uv.h>
+
+static uv_loop_t *g_loop;
+static uv_tcp_t g_server;
+static int g_ok = 0;
+static int g_connected = 0;
+static int g_accepted = 0;
+
+static void on_handle_closed(uv_handle_t *handle)
+{
+    if (handle != (uv_handle_t *)&g_server)
+        free(handle);
+}
+
+static void on_connect(h2o_socket_t *sock, const char *err)
+{
+    if (err == NULL) {
+        g_ok = 1;
+    } else {
+        fprintf(stderr, "connect error: %s\n", err);
+    }
+    g_connected = 1;
+    if (sock != NULL)
+        h2o_socket_close(sock);
+}
+
+static void on_accept(uv_stream_t *server, int status)
+{
+    uv_tcp_t *client;
+
+    assert(status == 0);
+    client = malloc(sizeof(*client));
+    assert(client != NULL);
+    assert(uv_tcp_init(g_loop, client) == 0);
+    assert(uv_accept(server, (uv_stream_t *)client) == 0);
+    g_accepted = 1;
+    uv_close((uv_handle_t *)client, on_handle_closed);
+    uv_close((uv_handle_t *)server, on_handle_closed);
+}
+
+int main(void)
+{
+    struct sockaddr_in addr;
+    int namelen;
+
+    g_loop = malloc(sizeof(*g_loop));
+    assert(g_loop != NULL);
+    assert(uv_loop_init(g_loop) == 0);
+    assert(uv_tcp_init(g_loop, &g_server) == 0);
+    assert(uv_ip4_addr("127.0.0.1", 0, &addr) == 0);
+    assert(uv_tcp_bind(&g_server, (const struct sockaddr *)&addr, 0) == 0);
+    assert(uv_listen((uv_stream_t *)&g_server, 1, on_accept) == 0);
+
+    namelen = sizeof(addr);
+    assert(uv_tcp_getsockname(&g_server, (struct sockaddr *)&addr, &namelen) == 0);
+    assert(h2o_socket_connect(g_loop, (struct sockaddr *)&addr, sizeof(addr), on_connect) != NULL);
+
+    while (!g_connected || !g_accepted || uv_loop_alive(g_loop))
+        uv_run(g_loop, UV_RUN_ONCE);
+
+    assert(uv_loop_close(g_loop) == 0);
+    free(g_loop);
+
+    if (!g_ok)
+        return 1;
+    puts("libh2o-ok");
+    return 0;
+}
 EOF
-  h2o -m worker -c "$dir/h2o.conf" >"$dir/h2o.log" 2>&1 &
-  local pid=$!
-  cleanup_pids+=("$pid")
-  wait_for_http "http://127.0.0.1:18081/index.txt" "$dir/out.txt" 20 || fail "h2o did not answer HTTP request"
-  stop_pid "$pid"
-  require_file_contains "$dir/out.txt" "h2o-ok"
+  cc -o "$dir/test" "$dir/test.c" $(pkg-config --cflags --libs libh2o libuv)
+  ldd "$dir/test" >"$dir/ldd.txt"
+  require_file_contains "$dir/ldd.txt" "libh2o.so.0.13"
+  require_file_contains "$dir/ldd.txt" "libuv.so.1 => /usr/local/lib/libuv.so.1"
+  "$dir/test" >"$dir/out.txt"
+  require_file_contains "$dir/out.txt" "libh2o-ok"
 }
 
 test_libwebsockets_evlib_uv() {
