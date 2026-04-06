@@ -21,16 +21,36 @@
 
 #include "task.h"
 
+#include <string.h>
 
-static int resolve_sync(const char* hostname) {
+
+static int resolve_numeric_sync(const char* hostname,
+                                int family,
+                                uv_getaddrinfo_t* req) {
+  struct addrinfo hints;
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = family;
+  hints.ai_flags = AI_NUMERICHOST;
+
+  return uv_getaddrinfo(uv_default_loop(), req, NULL, hostname, NULL, &hints);
+}
+
+
+static void assert_numeric_host(const char* hostname, const char* expected_ip) {
   uv_getaddrinfo_t req;
-  int r;
+  struct sockaddr_in* addr;
+  char ip[sizeof("255.255.255.255")];
 
-  r = uv_getaddrinfo(uv_default_loop(), &req, NULL, hostname, NULL, NULL);
-  if (r == 0)
-    uv_freeaddrinfo(req.addrinfo);
+  ASSERT_OK(resolve_numeric_sync(hostname, AF_INET, &req));
+  ASSERT_NOT_NULL(req.addrinfo);
+  ASSERT_EQ(AF_INET, req.addrinfo->ai_family);
 
-  return r;
+  addr = (struct sockaddr_in*) req.addrinfo->ai_addr;
+  ASSERT_OK(uv_ip4_name(addr, ip, sizeof(ip)));
+  ASSERT_OK(strcmp(expected_ip, ip));
+
+  uv_freeaddrinfo(req.addrinfo);
 }
 
 
@@ -38,8 +58,10 @@ TEST_IMPL(utf8_decode1) {
 #ifdef __MVS__
   RETURN_SKIP("IDNA conversion is not supported on z/OS");
 #else
-  ASSERT_EQ(UV_EINVAL, resolve_sync("\xC0\x80"));
-  ASSERT_EQ(UV_EINVAL, resolve_sync("\xED\xA0\x80"));
+  uv_getaddrinfo_t req;
+
+  ASSERT_EQ(UV_EINVAL, resolve_numeric_sync("\xC0\x80", AF_UNSPEC, &req));
+  ASSERT_EQ(UV_EINVAL, resolve_numeric_sync("\xED\xA0\x80", AF_UNSPEC, &req));
 
   MAKE_VALGRIND_HAPPY(uv_default_loop());
   return 0;
@@ -51,9 +73,11 @@ TEST_IMPL(utf8_decode1_overrun) {
 #ifdef __MVS__
   RETURN_SKIP("IDNA conversion is not supported on z/OS");
 #else
-  ASSERT_EQ(UV_EINVAL, resolve_sync("\xC2"));
-  ASSERT_EQ(UV_EINVAL, resolve_sync("\xE0\xA0"));
-  ASSERT_EQ(UV_EINVAL, resolve_sync("\xF0\x90\x80"));
+  uv_getaddrinfo_t req;
+
+  ASSERT_EQ(UV_EINVAL, resolve_numeric_sync("\xC2", AF_UNSPEC, &req));
+  ASSERT_EQ(UV_EINVAL, resolve_numeric_sync("\xE0\xA0", AF_UNSPEC, &req));
+  ASSERT_EQ(UV_EINVAL, resolve_numeric_sync("\xF0\x90\x80", AF_UNSPEC, &req));
 
   MAKE_VALGRIND_HAPPY(uv_default_loop());
   return 0;
@@ -65,29 +89,21 @@ TEST_IMPL(idna_toascii) {
 #ifdef __MVS__
   RETURN_SKIP("IDNA conversion is not supported on z/OS");
 #else
-  static const char* hostnames[] = {
-    "bücher.com",
-    "mañana.com",
-    "faß.de",
-  };
-  size_t i;
+  uv_getaddrinfo_t req;
 
-  for (i = 0; i < ARRAY_SIZE(hostnames); i++) {
-    int r;
+  assert_numeric_host("127.0.0.1", "127.0.0.1");
+  assert_numeric_host("127。0。0。1", "127.0.0.1");
+  assert_numeric_host("127．0．0．1", "127.0.0.1");
+  assert_numeric_host("127｡0｡0｡1", "127.0.0.1");
 
-    r = resolve_sync(hostnames[i]);
-    if (r == 0) {
-      MAKE_VALGRIND_HAPPY(uv_default_loop());
-      return 0;
-    }
+  ASSERT_EQ(UV_EAI_NONAME,
+            resolve_numeric_sync("mañana.com", AF_UNSPEC, &req));
+  ASSERT_EQ(UV_EAI_NONAME,
+            resolve_numeric_sync("mañana。com", AF_UNSPEC, &req));
+  ASSERT_EQ(UV_EAI_NONAME,
+            resolve_numeric_sync("faß.de", AF_UNSPEC, &req));
 
-    if (r != UV_EAI_AGAIN &&
-        r != UV_EAI_FAIL &&
-        r != UV_EAI_NONAME) {
-      ASSERT_OK(r);
-    }
-  }
-
-  RETURN_SKIP("No resolvable IDN hostnames available in this environment");
+  MAKE_VALGRIND_HAPPY(uv_default_loop());
+  return 0;
 #endif
 }

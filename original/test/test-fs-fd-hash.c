@@ -24,72 +24,124 @@
 #include "uv.h"
 #include "task.h"
 
-TEST_IMPL(fs_fd_hash) {
-  static const char path[] = "test-fs-fd-hash";
-  static const char payload[] = "filemap";
-  uv_fs_t open_req;
-  uv_fs_t write_req;
-  uv_fs_t read_req;
-  uv_fs_t close_req;
-  uv_fs_t unlink_req;
-  uv_file file;
-  uv_buf_t buf;
-  char read_back[sizeof(payload)];
+#define FILE_COUNT 300
+#define PATH_SIZE 64
+#define PAYLOAD_SIZE 64
+
+static void unlink_if_exists(const char* path) {
+  uv_fs_t req;
   int r;
 
-  r = uv_fs_unlink(NULL, &unlink_req, path, NULL);
+  r = uv_fs_unlink(NULL, &req, path, NULL);
   ASSERT(r == 0 || r == UV_ENOENT);
-  uv_fs_req_cleanup(&unlink_req);
+  uv_fs_req_cleanup(&req);
+}
 
-  buf = uv_buf_init((char*) payload, sizeof(payload) - 1);
+static uv_file open_filemap(const char* path) {
+  uv_fs_t req;
+  int r;
+
   r = uv_fs_open(NULL,
-                 &open_req,
+                 &req,
                  path,
-                 UV_FS_O_WRONLY | UV_FS_O_CREAT | UV_FS_O_TRUNC | UV_FS_O_FILEMAP,
+                 UV_FS_O_RDWR | UV_FS_O_CREAT | UV_FS_O_TRUNC | UV_FS_O_FILEMAP,
                  S_IWUSR | S_IRUSR,
                  NULL);
   ASSERT_GE(r, 0);
-  file = r;
-  ASSERT_EQ(file, (uv_file) uv_fs_get_result(&open_req));
-  uv_fs_req_cleanup(&open_req);
+  ASSERT_EQ((int64_t) r, uv_fs_get_result(&req));
+  uv_fs_req_cleanup(&req);
 
-  r = uv_fs_write(NULL, &write_req, file, &buf, 1, 0, NULL);
-  ASSERT_EQ(sizeof(payload) - 1, r);
-  ASSERT_EQ((int64_t) (sizeof(payload) - 1), uv_fs_get_result(&write_req));
-  uv_fs_req_cleanup(&write_req);
+  return r;
+}
 
-  r = uv_fs_close(NULL, &close_req, file, NULL);
+static void close_file(uv_file file) {
+  uv_fs_t req;
+  int r;
+
+  r = uv_fs_close(NULL, &req, file, NULL);
   ASSERT_OK(r);
-  ASSERT_OK(uv_fs_get_result(&close_req));
-  uv_fs_req_cleanup(&close_req);
+  ASSERT_OK(uv_fs_get_result(&req));
+  uv_fs_req_cleanup(&req);
+}
 
-  memset(read_back, 0, sizeof(read_back));
-  buf = uv_buf_init(read_back, sizeof(read_back) - 1);
-  r = uv_fs_open(NULL,
-                 &open_req,
-                 path,
-                 UV_FS_O_RDONLY | UV_FS_O_FILEMAP,
-                 0,
-                 NULL);
+static void write_current(uv_file file, const char* payload) {
+  uv_fs_t req;
+  uv_buf_t buf;
+  size_t len;
+  int r;
+
+  len = strlen(payload);
+  buf = uv_buf_init((char*) payload, len);
+  r = uv_fs_write(NULL, &req, file, &buf, 1, -1, NULL);
+  ASSERT_EQ((int) len, r);
+  ASSERT_EQ((int64_t) len, uv_fs_get_result(&req));
+  uv_fs_req_cleanup(&req);
+}
+
+static void read_at_start(uv_file file, char* actual, size_t actual_size) {
+  uv_fs_t req;
+  uv_buf_t buf;
+  int r;
+
+  memset(actual, 0, actual_size);
+  buf = uv_buf_init(actual, actual_size - 1);
+  r = uv_fs_read(NULL, &req, file, &buf, 1, 0, NULL);
   ASSERT_GE(r, 0);
-  file = r;
-  uv_fs_req_cleanup(&open_req);
+  ASSERT_EQ((int64_t) r, uv_fs_get_result(&req));
+  actual[r] = '\0';
+  uv_fs_req_cleanup(&req);
+}
 
-  r = uv_fs_read(NULL, &read_req, file, &buf, 1, 0, NULL);
-  ASSERT_EQ(sizeof(payload) - 1, r);
-  ASSERT_EQ((int64_t) (sizeof(payload) - 1), uv_fs_get_result(&read_req));
-  ASSERT_OK(memcmp(read_back, payload, sizeof(payload) - 1));
-  uv_fs_req_cleanup(&read_req);
+TEST_IMPL(fs_fd_hash) {
+  uv_file files[FILE_COUNT];
+  char paths[FILE_COUNT][PATH_SIZE];
+  char expected[FILE_COUNT][PAYLOAD_SIZE];
+  char actual[PAYLOAD_SIZE];
+  int i;
 
-  r = uv_fs_close(NULL, &close_req, file, NULL);
-  ASSERT_OK(r);
-  ASSERT_OK(uv_fs_get_result(&close_req));
-  uv_fs_req_cleanup(&close_req);
+  /*
+   * Keep a large number of filemap-backed descriptors live at once to stress
+   * insertion and collision handling, then update some in-place and remove /
+   * recreate others to exercise replacement and cleanup through public APIs.
+   */
+  for (i = 0; i < FILE_COUNT; i++) {
+    snprintf(paths[i], sizeof(paths[i]), "test-fs-fd-hash-%03d", i);
+    unlink_if_exists(paths[i]);
 
-  r = uv_fs_unlink(NULL, &unlink_req, path, NULL);
-  ASSERT_OK(r);
-  ASSERT_OK(uv_fs_get_result(&unlink_req));
-  uv_fs_req_cleanup(&unlink_req);
+    files[i] = open_filemap(paths[i]);
+    snprintf(expected[i], sizeof(expected[i]), "file-%03d", i);
+    write_current(files[i], expected[i]);
+  }
+
+  for (i = 0; i < FILE_COUNT; i++) {
+    read_at_start(files[i], actual, sizeof(actual));
+    ASSERT_OK(strcmp(expected[i], actual));
+  }
+
+  for (i = 0; i < FILE_COUNT; i += 17) {
+    write_current(files[i], "+update");
+    ASSERT_NOT_NULL(strcat(expected[i], "+update"));
+    read_at_start(files[i], actual, sizeof(actual));
+    ASSERT_OK(strcmp(expected[i], actual));
+  }
+
+  for (i = 0; i < FILE_COUNT; i += 3) {
+    close_file(files[i]);
+    unlink_if_exists(paths[i]);
+
+    files[i] = open_filemap(paths[i]);
+    snprintf(expected[i], sizeof(expected[i]), "reopen-%03d", i);
+    write_current(files[i], expected[i]);
+    read_at_start(files[i], actual, sizeof(actual));
+    ASSERT_OK(strcmp(expected[i], actual));
+  }
+
+  for (i = 0; i < FILE_COUNT; i++) {
+    read_at_start(files[i], actual, sizeof(actual));
+    ASSERT_OK(strcmp(expected[i], actual));
+    close_file(files[i]);
+    unlink_if_exists(paths[i]);
+  }
 
   return 0;
 }
