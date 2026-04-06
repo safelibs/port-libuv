@@ -101,7 +101,7 @@ pub(crate) unsafe fn uv_fs_event_init_impl(
     loop_: *mut uv_loop_t,
     handle: *mut uv_fs_event_t,
 ) -> libc::c_int {
-    crate::legacy::uv_fs_event_init(loop_, handle)
+    crate::private_support::uv_fs_event_init(loop_, handle)
 }
 
 pub(crate) unsafe fn uv_fs_event_start_impl(
@@ -110,11 +110,11 @@ pub(crate) unsafe fn uv_fs_event_start_impl(
     path: *const libc::c_char,
     flags: libc::c_uint,
 ) -> libc::c_int {
-    crate::legacy::uv_fs_event_start(handle, cb, path, flags)
+    crate::private_support::uv_fs_event_start(handle, cb, path, flags)
 }
 
 pub(crate) unsafe fn uv_fs_event_stop_impl(handle: *mut uv_fs_event_t) -> libc::c_int {
-    crate::legacy::uv_fs_event_stop(handle)
+    crate::private_support::uv_fs_event_stop(handle)
 }
 
 pub(crate) unsafe fn uv_fs_event_getpath_impl(
@@ -122,5 +122,5 @@ pub(crate) unsafe fn uv_fs_event_getpath_impl(
     buffer: *mut libc::c_char,
     size: *mut usize,
 ) -> libc::c_int {
-    crate::legacy::uv_fs_event_getpath(handle, buffer, size)
+    crate::private_support::uv_fs_event_getpath(handle, buffer, size)
 }

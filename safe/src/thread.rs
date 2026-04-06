@@ -154,7 +154,7 @@ pub unsafe extern "C" fn uv_thread_setaffinity(
     oldmask: *mut libc::c_char,
     mask_size: usize,
 ) -> libc::c_int {
-    let cpumasksize = crate::legacy::uv_cpumask_size();
+    let cpumasksize = crate::private_support::uv_cpumask_size();
     if cpumasksize < 0 {
         return cpumasksize;
     }
@@ -190,7 +190,7 @@ pub unsafe extern "C" fn uv_thread_getaffinity(
     cpumask: *mut libc::c_char,
     mask_size: usize,
 ) -> libc::c_int {
-    let cpumasksize = crate::legacy::uv_cpumask_size();
+    let cpumasksize = crate::private_support::uv_cpumask_size();
     if cpumasksize < 0 {
         return cpumasksize;
     }

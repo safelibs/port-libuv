@@ -40,6 +40,7 @@ mod os;
 mod phase5_private;
 mod pipe;
 mod poll;
+mod private_support;
 mod process_title;
 mod random;
 mod request;

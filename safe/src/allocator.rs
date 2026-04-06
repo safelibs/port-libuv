@@ -135,7 +135,7 @@ pub unsafe extern "C" fn uv_replace_allocator(
         return UV_EINVAL;
     };
 
-    let rc = crate::legacy::uv_replace_allocator(
+    let rc = crate::private_support::uv_replace_allocator(
         Some(malloc_func),
         Some(realloc_func),
         Some(calloc_func),

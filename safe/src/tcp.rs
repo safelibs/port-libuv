@@ -94,7 +94,7 @@ pub unsafe extern "C" fn uv_tcp_bind(
     addr: *const sockaddr,
     flags: libc::c_uint,
 ) -> libc::c_int {
-    crate::legacy::uv_tcp_bind(handle, addr, flags)
+    crate::private_support::uv_tcp_bind(handle, addr, flags)
 }
 
 #[no_mangle]
@@ -130,5 +130,5 @@ pub unsafe extern "C" fn uv_tcp_connect(
     addr: *const sockaddr,
     cb: uv_connect_cb,
 ) -> libc::c_int {
-    crate::legacy::uv_tcp_connect(req, handle, addr, cb)
+    crate::private_support::uv_tcp_connect(req, handle, addr, cb)
 }

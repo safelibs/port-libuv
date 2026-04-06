@@ -85,7 +85,7 @@ pub unsafe extern "C" fn uv_read_start(
     alloc_cb: uv_alloc_cb,
     read_cb: uv_read_cb,
 ) -> libc::c_int {
-    crate::legacy::uv_read_start(stream, alloc_cb, read_cb)
+    crate::private_support::uv_read_start(stream, alloc_cb, read_cb)
 }
 
 #[no_mangle]

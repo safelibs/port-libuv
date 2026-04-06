@@ -390,7 +390,7 @@ pub unsafe extern "C" fn uv_cancel(req: *mut uv_req_t) -> libc::c_int {
         uv_req_type_UV_FS => {
             let fs = req.cast::<uv_fs_t>();
             if !crate::fs::is_rust_fs_request(fs) || (*fs).loop_.is_null() {
-                return crate::legacy::uv_cancel(req);
+                return crate::private_support::uv_cancel(req);
             }
             uv__work_cancel((*fs).loop_, std::ptr::addr_of_mut!((*fs).work_req))
         }

@@ -159,6 +159,26 @@ set_target_properties(
     POSITION_INDEPENDENT_CODE ON
 )
 
+add_library(
+  uv_test_phase5_forwarders
+  STATIC
+    legacy/generated/phase5_private_forwarders.c
+)
+target_compile_options(
+  uv_test_phase5_forwarders
+  PRIVATE
+    ${uv_cflags}
+    -fvisibility=default
+)
+set_target_properties(
+  uv_test_phase5_forwarders
+  PROPERTIES
+    C_VISIBILITY_PRESET default
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    OUTPUT_NAME uv_test_phase5_forwarders
+    POSITION_INDEPENDENT_CODE ON
+)
+
 add_custom_command(
   OUTPUT
     ${STAGED_SHARED_LIBRARY}
@@ -440,6 +460,7 @@ target_link_libraries(
   PRIVATE
     uv_a
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_forwarders>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
     ${uv_test_libraries}
 )
@@ -462,6 +483,7 @@ target_link_libraries(
   PRIVATE
     uv
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_forwarders>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
     uv_a
     ${uv_test_libraries}
@@ -487,6 +509,7 @@ target_link_libraries(
   PRIVATE
     uv_a
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_forwarders>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
     ${uv_test_libraries}
 )
@@ -518,6 +541,7 @@ target_link_libraries(
   PRIVATE
     uv_a
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_forwarders>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
     ${uv_test_libraries}
 )

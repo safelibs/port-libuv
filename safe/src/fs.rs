@@ -199,39 +199,64 @@ unsafe extern "C" fn uv__fs_work(w: *mut uv__work) {
     (*req).cb = None;
 
     let rc = match (*req).fs_type {
-        uv_fs_type_UV_FS_CHMOD => crate::legacy::uv_fs_chmod(loop_, req, path, mode, None),
-        uv_fs_type_UV_FS_CHOWN => crate::legacy::uv_fs_chown(loop_, req, path, uid, gid, None),
-        uv_fs_type_UV_FS_CLOSE => crate::legacy::uv_fs_close(loop_, req, file, None),
-        uv_fs_type_UV_FS_FCHMOD => crate::legacy::uv_fs_fchmod(loop_, req, file, mode, None),
-        uv_fs_type_UV_FS_FCHOWN => crate::legacy::uv_fs_fchown(loop_, req, file, uid, gid, None),
-        uv_fs_type_UV_FS_FDATASYNC => crate::legacy::uv_fs_fdatasync(loop_, req, file, None),
-        uv_fs_type_UV_FS_FSTAT => crate::legacy::uv_fs_fstat(loop_, req, file, None),
-        uv_fs_type_UV_FS_FSYNC => crate::legacy::uv_fs_fsync(loop_, req, file, None),
-        uv_fs_type_UV_FS_FTRUNCATE => crate::legacy::uv_fs_ftruncate(loop_, req, file, off, None),
+        uv_fs_type_UV_FS_CHMOD => crate::private_support::uv_fs_chmod(loop_, req, path, mode, None),
+        uv_fs_type_UV_FS_CHOWN => {
+            crate::private_support::uv_fs_chown(loop_, req, path, uid, gid, None)
+        }
+        uv_fs_type_UV_FS_CLOSE => crate::private_support::uv_fs_close(loop_, req, file, None),
+        uv_fs_type_UV_FS_FCHMOD => {
+            crate::private_support::uv_fs_fchmod(loop_, req, file, mode, None)
+        }
+        uv_fs_type_UV_FS_FCHOWN => {
+            crate::private_support::uv_fs_fchown(loop_, req, file, uid, gid, None)
+        }
+        uv_fs_type_UV_FS_FDATASYNC => {
+            crate::private_support::uv_fs_fdatasync(loop_, req, file, None)
+        }
+        uv_fs_type_UV_FS_FSTAT => crate::private_support::uv_fs_fstat(loop_, req, file, None),
+        uv_fs_type_UV_FS_FSYNC => crate::private_support::uv_fs_fsync(loop_, req, file, None),
+        uv_fs_type_UV_FS_FTRUNCATE => {
+            crate::private_support::uv_fs_ftruncate(loop_, req, file, off, None)
+        }
         uv_fs_type_UV_FS_FUTIME => {
-            crate::legacy::uv_fs_futime(loop_, req, file, atime, mtime, None)
+            crate::private_support::uv_fs_futime(loop_, req, file, atime, mtime, None)
         }
-        uv_fs_type_UV_FS_LINK => crate::legacy::uv_fs_link(loop_, req, path, new_path, None),
-        uv_fs_type_UV_FS_LSTAT => crate::legacy::uv_fs_lstat(loop_, req, path, None),
-        uv_fs_type_UV_FS_MKDIR => crate::legacy::uv_fs_mkdir(loop_, req, path, mode, None),
-        uv_fs_type_UV_FS_OPEN => crate::legacy::uv_fs_open(loop_, req, path, flags, mode, None),
+        uv_fs_type_UV_FS_LINK => {
+            crate::private_support::uv_fs_link(loop_, req, path, new_path, None)
+        }
+        uv_fs_type_UV_FS_LSTAT => crate::private_support::uv_fs_lstat(loop_, req, path, None),
+        uv_fs_type_UV_FS_MKDIR => crate::private_support::uv_fs_mkdir(loop_, req, path, mode, None),
+        uv_fs_type_UV_FS_OPEN => {
+            crate::private_support::uv_fs_open(loop_, req, path, flags, mode, None)
+        }
         uv_fs_type_UV_FS_READ => {
-            crate::legacy::uv_fs_read(loop_, req, file, bufs, nbufs, off, None)
+            crate::private_support::uv_fs_read(loop_, req, file, bufs, nbufs, off, None)
         }
-        uv_fs_type_UV_FS_READLINK => crate::legacy::uv_fs_readlink(loop_, req, path, None),
-        uv_fs_type_UV_FS_REALPATH => crate::legacy::uv_fs_realpath(loop_, req, path, None),
-        uv_fs_type_UV_FS_RENAME => crate::legacy::uv_fs_rename(loop_, req, path, new_path, None),
-        uv_fs_type_UV_FS_SCANDIR => crate::legacy::uv_fs_scandir(loop_, req, path, flags, None),
+        uv_fs_type_UV_FS_READLINK => crate::private_support::uv_fs_readlink(loop_, req, path, None),
+        uv_fs_type_UV_FS_REALPATH => crate::private_support::uv_fs_realpath(loop_, req, path, None),
+        uv_fs_type_UV_FS_RENAME => {
+            crate::private_support::uv_fs_rename(loop_, req, path, new_path, None)
+        }
+        uv_fs_type_UV_FS_SCANDIR => {
+            crate::private_support::uv_fs_scandir(loop_, req, path, flags, None)
+        }
         uv_fs_type_UV_FS_SENDFILE => {
-            crate::legacy::uv_fs_sendfile(loop_, req, file, flags, off, send_len, None)
+            crate::private_support::uv_fs_sendfile(loop_, req, file, flags, off, send_len, None)
         }
-        uv_fs_type_UV_FS_SYMLINK => {
-            crate::legacy::uv_fs_symlink(loop_, req, path, new_path, flags as libc::c_int, None)
+        uv_fs_type_UV_FS_SYMLINK => crate::private_support::uv_fs_symlink(
+            loop_,
+            req,
+            path,
+            new_path,
+            flags as libc::c_int,
+            None,
+        ),
+        uv_fs_type_UV_FS_UNLINK => crate::private_support::uv_fs_unlink(loop_, req, path, None),
+        uv_fs_type_UV_FS_UTIME => {
+            crate::private_support::uv_fs_utime(loop_, req, path, atime, mtime, None)
         }
-        uv_fs_type_UV_FS_UNLINK => crate::legacy::uv_fs_unlink(loop_, req, path, None),
-        uv_fs_type_UV_FS_UTIME => crate::legacy::uv_fs_utime(loop_, req, path, atime, mtime, None),
         uv_fs_type_UV_FS_WRITE => {
-            crate::legacy::uv_fs_write(loop_, req, file, bufs, nbufs, off, None)
+            crate::private_support::uv_fs_write(loop_, req, file, bufs, nbufs, off, None)
         }
         _ => uv_errno_t_UV_ENOSYS,
     };
@@ -345,7 +370,7 @@ pub unsafe extern "C" fn uv_fs_chmod(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_chmod(loop_, req, path, mode, None);
+        return crate::private_support::uv_fs_chmod(loop_, req, path, mode, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_CHMOD);
     if rc != 0 {
@@ -365,7 +390,7 @@ pub unsafe extern "C" fn uv_fs_chown(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_chown(loop_, req, path, uid, gid, None);
+        return crate::private_support::uv_fs_chown(loop_, req, path, uid, gid, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_CHOWN);
     if rc != 0 {
@@ -384,7 +409,7 @@ pub unsafe extern "C" fn uv_fs_close(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_close(loop_, req, file, None);
+        return crate::private_support::uv_fs_close(loop_, req, file, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_CLOSE);
     if rc != 0 {
@@ -403,7 +428,7 @@ pub unsafe extern "C" fn uv_fs_fchmod(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_fchmod(loop_, req, file, mode, None);
+        return crate::private_support::uv_fs_fchmod(loop_, req, file, mode, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_FCHMOD);
     if rc != 0 {
@@ -424,7 +449,7 @@ pub unsafe extern "C" fn uv_fs_fchown(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_fchown(loop_, req, file, uid, gid, None);
+        return crate::private_support::uv_fs_fchown(loop_, req, file, uid, gid, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_FCHOWN);
     if rc != 0 {
@@ -444,7 +469,7 @@ pub unsafe extern "C" fn uv_fs_fdatasync(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_fdatasync(loop_, req, file, None);
+        return crate::private_support::uv_fs_fdatasync(loop_, req, file, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_FDATASYNC);
     if rc != 0 {
@@ -462,7 +487,7 @@ pub unsafe extern "C" fn uv_fs_fstat(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_fstat(loop_, req, file, None);
+        return crate::private_support::uv_fs_fstat(loop_, req, file, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_FSTAT);
     if rc != 0 {
@@ -480,7 +505,7 @@ pub unsafe extern "C" fn uv_fs_fsync(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_fsync(loop_, req, file, None);
+        return crate::private_support::uv_fs_fsync(loop_, req, file, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_FSYNC);
     if rc != 0 {
@@ -499,7 +524,7 @@ pub unsafe extern "C" fn uv_fs_ftruncate(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_ftruncate(loop_, req, file, offset, None);
+        return crate::private_support::uv_fs_ftruncate(loop_, req, file, offset, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_FTRUNCATE);
     if rc != 0 {
@@ -520,7 +545,7 @@ pub unsafe extern "C" fn uv_fs_futime(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_futime(loop_, req, file, atime, mtime, None);
+        return crate::private_support::uv_fs_futime(loop_, req, file, atime, mtime, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_FUTIME);
     if rc != 0 {
@@ -541,7 +566,7 @@ pub unsafe extern "C" fn uv_fs_link(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_link(loop_, req, path, new_path, None);
+        return crate::private_support::uv_fs_link(loop_, req, path, new_path, None);
     }
     let rc = path_pair_request(loop_, req, path, new_path, cb, uv_fs_type_UV_FS_LINK);
     if rc != 0 {
@@ -558,7 +583,7 @@ pub unsafe extern "C" fn uv_fs_lstat(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_lstat(loop_, req, path, None);
+        return crate::private_support::uv_fs_lstat(loop_, req, path, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_LSTAT);
     if rc != 0 {
@@ -576,7 +601,7 @@ pub unsafe extern "C" fn uv_fs_mkdir(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_mkdir(loop_, req, path, mode, None);
+        return crate::private_support::uv_fs_mkdir(loop_, req, path, mode, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_MKDIR);
     if rc != 0 {
@@ -596,7 +621,7 @@ pub unsafe extern "C" fn uv_fs_open(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_open(loop_, req, path, flags, mode, None);
+        return crate::private_support::uv_fs_open(loop_, req, path, flags, mode, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_OPEN);
     if rc != 0 {
@@ -618,7 +643,7 @@ pub unsafe extern "C" fn uv_fs_read(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_read(loop_, req, file, bufs, nbufs, offset, None);
+        return crate::private_support::uv_fs_read(loop_, req, file, bufs, nbufs, offset, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_READ);
     if rc != 0 {
@@ -642,7 +667,7 @@ pub unsafe extern "C" fn uv_fs_readlink(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_readlink(loop_, req, path, None);
+        return crate::private_support::uv_fs_readlink(loop_, req, path, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_READLINK);
     if rc != 0 {
@@ -659,7 +684,7 @@ pub unsafe extern "C" fn uv_fs_realpath(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_realpath(loop_, req, path, None);
+        return crate::private_support::uv_fs_realpath(loop_, req, path, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_REALPATH);
     if rc != 0 {
@@ -677,7 +702,7 @@ pub unsafe extern "C" fn uv_fs_rename(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_rename(loop_, req, path, new_path, None);
+        return crate::private_support::uv_fs_rename(loop_, req, path, new_path, None);
     }
     let rc = path_pair_request(loop_, req, path, new_path, cb, uv_fs_type_UV_FS_RENAME);
     if rc != 0 {
@@ -695,7 +720,7 @@ pub unsafe extern "C" fn uv_fs_scandir(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_scandir(loop_, req, path, flags, None);
+        return crate::private_support::uv_fs_scandir(loop_, req, path, flags, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_SCANDIR);
     if rc != 0 {
@@ -716,7 +741,9 @@ pub unsafe extern "C" fn uv_fs_sendfile(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_sendfile(loop_, req, out_fd, in_fd, offset, length, None);
+        return crate::private_support::uv_fs_sendfile(
+            loop_, req, out_fd, in_fd, offset, length, None,
+        );
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_SENDFILE);
     if rc != 0 {
@@ -737,7 +764,7 @@ pub unsafe extern "C" fn uv_fs_stat(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_stat(loop_, req, path, None);
+        return crate::private_support::uv_fs_stat(loop_, req, path, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_STAT);
     if rc != 0 {
@@ -756,7 +783,7 @@ pub unsafe extern "C" fn uv_fs_symlink(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_symlink(loop_, req, path, new_path, flags, None);
+        return crate::private_support::uv_fs_symlink(loop_, req, path, new_path, flags, None);
     }
     let rc = path_pair_request(loop_, req, path, new_path, cb, uv_fs_type_UV_FS_SYMLINK);
     if rc != 0 {
@@ -774,7 +801,7 @@ pub unsafe extern "C" fn uv_fs_unlink(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_unlink(loop_, req, path, None);
+        return crate::private_support::uv_fs_unlink(loop_, req, path, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_UNLINK);
     if rc != 0 {
@@ -793,7 +820,7 @@ pub unsafe extern "C" fn uv_fs_utime(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_utime(loop_, req, path, atime, mtime, None);
+        return crate::private_support::uv_fs_utime(loop_, req, path, atime, mtime, None);
     }
     let rc = path_request(loop_, req, path, cb, uv_fs_type_UV_FS_UTIME);
     if rc != 0 {
@@ -815,7 +842,7 @@ pub unsafe extern "C" fn uv_fs_write(
     cb: uv_fs_cb,
 ) -> libc::c_int {
     if cb.is_none() {
-        return crate::legacy::uv_fs_write(loop_, req, file, bufs, nbufs, offset, None);
+        return crate::private_support::uv_fs_write(loop_, req, file, bufs, nbufs, offset, None);
     }
     let rc = file_request(loop_, req, cb, uv_fs_type_UV_FS_WRITE);
     if rc != 0 {
@@ -845,5 +872,5 @@ pub unsafe extern "C" fn uv_fs_req_cleanup(req: *mut uv_fs_t) {
         clear_rust_fs_request(req);
     }
 
-    crate::legacy::uv_fs_req_cleanup(req);
+    crate::private_support::uv_fs_req_cleanup(req);
 }

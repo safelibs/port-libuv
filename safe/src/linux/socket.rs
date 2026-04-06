@@ -22,7 +22,7 @@ pub unsafe extern "C" fn uv_send_buffer_size(
     handle: *mut uv_handle_t,
     value: *mut libc::c_int,
 ) -> libc::c_int {
-    crate::legacy::uv_send_buffer_size(handle, value)
+    crate::private_support::uv_send_buffer_size(handle, value)
 }
 
 #[no_mangle]
@@ -30,7 +30,7 @@ pub unsafe extern "C" fn uv_recv_buffer_size(
     handle: *mut uv_handle_t,
     value: *mut libc::c_int,
 ) -> libc::c_int {
-    crate::legacy::uv_recv_buffer_size(handle, value)
+    crate::private_support::uv_recv_buffer_size(handle, value)
 }
 
 #[no_mangle]

@@ -635,6 +635,34 @@ const LEGACY_ALIAS_EXPORTS: &[&str] = &[
     "uv_version",
     "uv_version_string",
 ];
+const PRIVATE_FORWARD_EXPORTS: &[&str] = &[
+    "uv_cpu_info",
+    "uv_free_cpu_info",
+    "uv_free_interface_addresses",
+    "uv_freeaddrinfo",
+    "uv_fs_access",
+    "uv_fs_closedir",
+    "uv_fs_copyfile",
+    "uv_fs_get_system_error",
+    "uv_fs_lchown",
+    "uv_fs_lutime",
+    "uv_fs_mkdtemp",
+    "uv_fs_mkstemp",
+    "uv_fs_opendir",
+    "uv_fs_readdir",
+    "uv_fs_rmdir",
+    "uv_fs_scandir_next",
+    "uv_fs_statfs",
+    "uv_if_indextoiid",
+    "uv_if_indextoname",
+    "uv_interface_addresses",
+    "uv_kill",
+    "uv_library_shutdown",
+    "uv_print_active_handles",
+    "uv_print_all_handles",
+    "uv_process_kill",
+    "uv_spawn",
+];
 
 fn main() {
     let manifest_dir =
@@ -648,6 +676,7 @@ fn main() {
     let rename_header = manifest_dir.join("legacy/generated/legacy_rename.h");
     let bindings_path = out_dir.join("bindings.rs");
     let legacy_bindings_path = out_dir.join("legacy_bindings.rs");
+    let private_bindings_path = out_dir.join("private_bindings.rs");
     let ffi_exports_path = out_dir.join("ffi_exports_generated.rs");
     let ffi_legacy_aliases_path = out_dir.join("ffi_legacy_aliases_generated.rs");
     let build_manifest_path = out_dir.join("libuv-build-manifest.json");
@@ -675,6 +704,7 @@ fn main() {
 
     let uv_functions = parse_uv_functions(&bindings_path);
     generate_legacy_bindings(&legacy_bindings_path, &exported_symbols, &uv_functions);
+    generate_private_bindings(&private_bindings_path, &exported_symbols, &uv_functions);
     generate_ffi_exports(&ffi_exports_path, &exported_symbols, &uv_functions);
     generate_ffi_legacy_aliases(&ffi_legacy_aliases_path, &uv_functions);
 
@@ -793,6 +823,39 @@ fn generate_legacy_bindings(
     fs::write(output_path, tokens.to_string()).expect("failed to write legacy bindings");
 }
 
+fn generate_private_bindings(
+    output_path: &Path,
+    exported_symbols: &[String],
+    uv_functions: &BTreeMap<String, ForeignItemFn>,
+) {
+    let mut declarations = Vec::with_capacity(exported_symbols.len());
+
+    for symbol in exported_symbols {
+        if VARIADIC_EXPORTS.contains(&symbol.as_str()) {
+            continue;
+        }
+
+        let mut function = uv_functions
+            .get(symbol)
+            .unwrap_or_else(|| panic!("missing binding declaration for {symbol}"))
+            .clone();
+        let link_name = syn::LitStr::new(
+            &format!("uv_phase5_private_{symbol}"),
+            proc_macro2::Span::call_site(),
+        );
+        function.attrs = vec![parse_quote!(#[link_name = #link_name])];
+        declarations.push(function);
+    }
+
+    let tokens = quote! {
+        unsafe extern "C" {
+            #(#declarations)*
+        }
+    };
+
+    fs::write(output_path, tokens.to_string()).expect("failed to write private bindings");
+}
+
 fn generate_ffi_exports(
     output_path: &Path,
     exported_symbols: &[String],
@@ -802,6 +865,10 @@ fn generate_ffi_exports(
     let rust_exports = RUST_EXPORTS
         .iter()
         .chain(PHASE5_RUST_EXPORTS.iter())
+        .copied()
+        .collect::<BTreeSet<_>>();
+    let private_forward_exports = PRIVATE_FORWARD_EXPORTS
+        .iter()
         .copied()
         .collect::<BTreeSet<_>>();
 
@@ -830,12 +897,21 @@ fn generate_ffi_exports(
             .map(argument_pattern_ident)
             .collect::<Vec<_>>();
 
-        wrappers.push(quote! {
-            #[no_mangle]
-            pub unsafe extern "C" fn #ident(#inputs) #output {
-                crate::legacy::#ident(#(#args),*)
-            }
-        });
+        if private_forward_exports.contains(symbol.as_str()) {
+            wrappers.push(quote! {
+                #[no_mangle]
+                pub unsafe extern "C" fn #ident(#inputs) #output {
+                    crate::private_support::#ident(#(#args),*)
+                }
+            });
+        } else {
+            wrappers.push(quote! {
+                #[no_mangle]
+                pub unsafe extern "C" fn #ident(#inputs) #output {
+                    crate::legacy::#ident(#(#args),*)
+                }
+            });
+        }
     }
 
     let tokens = quote! {

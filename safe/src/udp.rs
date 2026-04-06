@@ -59,7 +59,7 @@ mod private {
 
 #[no_mangle]
 pub unsafe extern "C" fn uv_udp_init(loop_: *mut uv_loop_t, handle: *mut uv_udp_t) -> libc::c_int {
-    crate::legacy::uv_udp_init(loop_, handle)
+    crate::private_support::uv_udp_init(loop_, handle)
 }
 
 #[no_mangle]
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn uv_udp_init_ex(
     handle: *mut uv_udp_t,
     flags: libc::c_uint,
 ) -> libc::c_int {
-    crate::legacy::uv_udp_init_ex(loop_, handle, flags)
+    crate::private_support::uv_udp_init_ex(loop_, handle, flags)
 }
 
 #[no_mangle]
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn uv_udp_bind(
     addr: *const sockaddr,
     flags: libc::c_uint,
 ) -> libc::c_int {
-    crate::legacy::uv_udp_bind(handle, addr, flags)
+    crate::private_support::uv_udp_bind(handle, addr, flags)
 }
 
 #[no_mangle]
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn uv_udp_connect(
     handle: *mut uv_udp_t,
     addr: *const sockaddr,
 ) -> libc::c_int {
-    crate::legacy::uv_udp_connect(handle, addr)
+    crate::private_support::uv_udp_connect(handle, addr)
 }
 
 #[no_mangle]
@@ -184,7 +184,7 @@ pub unsafe extern "C" fn uv_udp_send(
     addr: *const sockaddr,
     send_cb: uv_udp_send_cb,
 ) -> libc::c_int {
-    crate::legacy::uv_udp_send(req, handle, bufs, nbufs, addr, send_cb)
+    crate::private_support::uv_udp_send(req, handle, bufs, nbufs, addr, send_cb)
 }
 
 #[no_mangle]
@@ -194,7 +194,7 @@ pub unsafe extern "C" fn uv_udp_try_send(
     nbufs: libc::c_uint,
     addr: *const sockaddr,
 ) -> libc::c_int {
-    crate::legacy::uv_udp_try_send(handle, bufs, nbufs, addr)
+    crate::private_support::uv_udp_try_send(handle, bufs, nbufs, addr)
 }
 
 #[no_mangle]
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn uv_udp_recv_start(
     alloc_cb: uv_alloc_cb,
     recv_cb: uv_udp_recv_cb,
 ) -> libc::c_int {
-    crate::legacy::uv_udp_recv_start(handle, alloc_cb, recv_cb)
+    crate::private_support::uv_udp_recv_start(handle, alloc_cb, recv_cb)
 }
 
 #[no_mangle]
@@ -213,5 +213,5 @@ pub unsafe extern "C" fn uv_udp_using_recvmmsg(handle: *const uv_udp_t) -> libc:
 
 #[no_mangle]
 pub unsafe extern "C" fn uv_udp_recv_stop(handle: *mut uv_udp_t) -> libc::c_int {
-    crate::legacy::uv_udp_recv_stop(handle)
+    crate::private_support::uv_udp_recv_stop(handle)
 }
