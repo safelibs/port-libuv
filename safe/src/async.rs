@@ -80,8 +80,7 @@ unsafe fn uv__async_start(loop_: *mut uv_loop_t) -> libc::c_int {
     0
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn uv_async_init(
+pub(crate) unsafe extern "C" fn uv_async_init_impl(
     loop_: *mut uv_loop_t,
     handle: *mut uv_async_t,
     async_cb: uv_async_cb,
@@ -105,7 +104,15 @@ pub unsafe extern "C" fn uv_async_init(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uv_async_send(handle: *mut uv_async_t) -> libc::c_int {
+pub unsafe extern "C" fn uv_async_init(
+    loop_: *mut uv_loop_t,
+    handle: *mut uv_async_t,
+    async_cb: uv_async_cb,
+) -> libc::c_int {
+    uv_async_init_impl(loop_, handle, async_cb)
+}
+
+pub(crate) unsafe extern "C" fn uv_async_send_impl(handle: *mut uv_async_t) -> libc::c_int {
     let pending = pending_atomic(handle);
     let busy = busy_atomic(handle);
 
@@ -120,6 +127,11 @@ pub unsafe extern "C" fn uv_async_send(handle: *mut uv_async_t) -> libc::c_int {
     busy.fetch_sub(1, Ordering::Relaxed);
 
     0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn uv_async_send(handle: *mut uv_async_t) -> libc::c_int {
+    uv_async_send_impl(handle)
 }
 
 unsafe fn uv__async_spin(handle: *mut uv_async_t) {

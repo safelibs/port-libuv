@@ -2,20 +2,6 @@ use std::arch::global_asm;
 
 global_asm!(
     r#"
-.globl uv_phase5_private_uv_close
-.hidden uv_phase5_private_uv_close
-.type uv_phase5_private_uv_close, @function
-uv_phase5_private_uv_close:
-    jmp uv_close
-.size uv_phase5_private_uv_close, .-uv_phase5_private_uv_close
-
-.globl uv_phase5_private_uv_is_active
-.hidden uv_phase5_private_uv_is_active
-.type uv_phase5_private_uv_is_active, @function
-uv_phase5_private_uv_is_active:
-    jmp uv_is_active
-.size uv_phase5_private_uv_is_active, .-uv_phase5_private_uv_is_active
-
 .globl uv_phase5_private_uv__io_init
 .hidden uv_phase5_private_uv__io_init
 .type uv_phase5_private_uv__io_init, @function
