@@ -607,6 +607,7 @@ if(LIBUV_BUILD_TESTS)
        test/test-process-priority.c
        test/test-process-title-threadsafe.c
        test/test-process-title.c
+       test/test-public-api.c
        test/test-queue-foreach-delete.c
        test/test-random.c
        test/test-readable-on-eof.c

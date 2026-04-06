@@ -240,6 +240,7 @@ test_run_tests_SOURCES = test/blackhole-server.c \
                          test/test-process-priority.c \
                          test/test-process-title.c \
                          test/test-process-title-threadsafe.c \
+                         test/test-public-api.c \
                          test/test-queue-foreach-delete.c \
                          test/test-random.c \
                          test/test-readable-on-eof.c \
