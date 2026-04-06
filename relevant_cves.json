@@ -1,0 +1,84 @@
+{
+  "project": "libuv",
+  "generated_at": "2026-04-06T00:37:04-07:00",
+  "input_file": "/home/yans/code/safelibs/ported/libuv/all_cves.json",
+  "selection_policy": "Include CVEs whose root cause or security impact can survive a Rust port of libuv. Exclude CVEs whose primary failure mode is memory corruption that an idiomatic Rust implementation should remove.",
+  "counts": {
+    "input_cves": 6,
+    "relevant_cves": 4,
+    "excluded_memory_corruption_cves": 2
+  },
+  "relevant_cves": [
+    {
+      "cve_id": "CVE-2014-9748",
+      "bug_class": "race condition and incorrect lock ownership semantics",
+      "weaknesses": [
+        "CWE-362"
+      ],
+      "affected_area": "uv_rwlock_t fallback on Windows XP and Server 2003",
+      "fixed_in": "libuv 1.7.4",
+      "description": "The uv_rwlock_t fallback implementation for Windows XP and Server 2003 in libuv before 1.7.4 does not properly prevent threads from releasing the locks of other threads, which allows attackers to cause a denial of service (deadlock) or possibly have unspecified other impact by leveraging a race condition.",
+      "rust_reimplementation_relevance": "Rust removes many memory-safety hazards, but it does not prevent incorrect synchronization semantics. A Rust fallback rwlock implementation could still be vulnerable if it permits unlock-by-non-owner or otherwise mishandles lock ownership.",
+      "inclusion_reason": "This is a non-memory-corruption concurrency bug.",
+      "notes": [
+        "Ubuntu and Debian both note that this issue only affects the Windows fallback path."
+      ]
+    },
+    {
+      "cve_id": "CVE-2015-0278",
+      "bug_class": "privilege management error",
+      "weaknesses": [
+        "CWE-273"
+      ],
+      "affected_area": "Privilege dropping logic",
+      "fixed_in": "libuv 0.10.34",
+      "description": "libuv before 0.10.34 does not properly drop group privileges, which allows context-dependent attackers to gain privileges via unspecified vectors.",
+      "rust_reimplementation_relevance": "Privilege-dropping behavior is a semantic and OS-integration concern, not a memory-safety concern. A Rust port that wraps setuid or setgid incorrectly can preserve the same privilege-escalation risk.",
+      "inclusion_reason": "This is a non-memory-corruption privilege bug."
+    },
+    {
+      "cve_id": "CVE-2024-22017",
+      "bug_class": "incomplete privilege drop across io_uring operations",
+      "weaknesses": [
+        "CWE-250"
+      ],
+      "affected_area": "Internal io_uring operations after setuid()",
+      "fixed_in": "libuv 1.49.0",
+      "description": "setuid() does not affect libuv's internal io_uring operations if initialized before the call to setuid(). This allows the process to perform privileged operations despite presumably having dropped such privileges through a call to setuid().",
+      "rust_reimplementation_relevance": "This is an operating-system semantics issue around retained privileges and async I/O setup. A Rust port that initializes privileged io_uring state before dropping privileges could reproduce the same behavior.",
+      "inclusion_reason": "This is a non-memory-corruption privilege boundary bug."
+    },
+    {
+      "cve_id": "CVE-2024-24806",
+      "bug_class": "hostname truncation leading to address confusion and SSRF",
+      "weaknesses": [
+        "CWE-918"
+      ],
+      "affected_area": "uv_getaddrinfo() hostname handling on Unix and Windows",
+      "fixed_in": "libuv 1.48.0",
+      "description": "The uv_getaddrinfo function truncates hostnames to 256 characters before calling getaddrinfo. This can cause attacker-controlled long hostnames to resolve to unintended addresses, enabling address confusion and SSRF.",
+      "rust_reimplementation_relevance": "The original C bug involved a fixed-size buffer and missing termination, but the externally relevant failure is semantic truncation before name resolution. A Rust port could still reproduce the security issue if it truncates or canonicalizes hostnames incorrectly before resolution.",
+      "inclusion_reason": "The exploit class is SSRF and resolution confusion rather than memory corruption."
+    }
+  ],
+  "excluded_cves": [
+    {
+      "cve_id": "CVE-2020-8252",
+      "bug_class": "buffer overflow",
+      "weaknesses": [
+        "CWE-120"
+      ],
+      "description": "The implementation of realpath in libuv incorrectly determined the buffer size, which can result in a buffer overflow if the resolved path is longer than 256 bytes.",
+      "exclusion_reason": "This is primarily a memory-corruption defect caused by incorrect buffer sizing. An idiomatic Rust implementation using bounds-checked slices or owned strings should remove this bug class rather than preserve it."
+    },
+    {
+      "cve_id": "CVE-2021-22918",
+      "bug_class": "out-of-bounds read",
+      "weaknesses": [
+        "CWE-125"
+      ],
+      "description": "uv__idna_toascii() reads past the end of the buffer, leading to information disclosure or crashes.",
+      "exclusion_reason": "This is primarily a memory-safety defect caused by missing bounds checks. An idiomatic Rust port should eliminate this out-of-bounds read class."
+    }
+  ]
+}
