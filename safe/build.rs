@@ -653,7 +653,6 @@ fn main() {
     let generated_production_non_rust_sources: Vec<String> = Vec::new();
     if target_os == "linux" {
         emit_linux_native_link_libs();
-        emit_linux_runtime_support(&manifest_dir);
     }
 
     write_build_manifest(
@@ -684,24 +683,6 @@ fn emit_linux_native_link_libs() {
     for lib in ["pthread", "dl", "rt"] {
         println!("cargo:rustc-link-lib={lib}");
     }
-}
-
-fn emit_linux_runtime_support(manifest_dir: &Path) {
-    let target = env::var("TARGET").expect("missing TARGET");
-    let support_dir = manifest_dir.join("prebuilt").join(target);
-    let support_archive = support_dir.join("libuv_safe_runtime_support.a");
-    assert!(
-        support_archive.is_file(),
-        "missing prebuilt runtime support archive: {}",
-        support_archive.display()
-    );
-
-    println!("cargo:rerun-if-changed={}", support_archive.display());
-    println!(
-        "cargo:rustc-link-search=native={}",
-        support_dir.display()
-    );
-    println!("cargo:rustc-link-lib=static=uv_safe_runtime_support");
 }
 
 fn generate_bindings(header: &Path, include_dir: &Path, bindings_path: &Path) {
@@ -848,7 +829,6 @@ fn generate_ffi_legacy_aliases(output_path: &Path, uv_functions: &BTreeMap<Strin
             .unwrap_or_else(|| panic!("missing binding declaration for {symbol}"));
         aliases.push_str(&format!(
             ".globl uv_legacy_{symbol}\n\
-             .hidden uv_legacy_{symbol}\n\
              .type uv_legacy_{symbol}, @function\n\
 uv_legacy_{symbol}:\n\
              jmp {symbol}\n\

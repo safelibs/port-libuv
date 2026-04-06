@@ -28,6 +28,9 @@
 #include <stdlib.h>
 
 #define MAX_THREADPOOL_SIZE 1024
+#ifndef SAFE_LIBUV_DEFAULT_THREADPOOL_SIZE
+#define SAFE_LIBUV_DEFAULT_THREADPOOL_SIZE 4
+#endif
 
 static uv_once_t once = UV_ONCE_INIT;
 static uv_cond_t cond;
@@ -36,7 +39,7 @@ static unsigned int idle_threads;
 static unsigned int slow_io_work_running;
 static unsigned int nthreads;
 static uv_thread_t* threads;
-static uv_thread_t default_threads[4];
+static uv_thread_t default_threads[SAFE_LIBUV_DEFAULT_THREADPOOL_SIZE];
 static struct uv__queue exit_message;
 static struct uv__queue wq;
 static struct uv__queue run_slow_work_message;

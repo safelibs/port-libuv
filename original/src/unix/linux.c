@@ -458,6 +458,9 @@ int uv__io_uring_register(int fd, unsigned opcode, void* arg, unsigned nargs) {
 
 
 static int uv__use_io_uring(void) {
+#ifdef SAFE_LIBUV_DISABLE_IO_URING
+  return 0;
+#else
 #if defined(__ANDROID_API__)
   return 0;  /* Possibly available but blocked by seccomp. */
 #elif defined(__arm__) && __SIZEOF_POINTER__ == 4
@@ -495,6 +498,7 @@ static int uv__use_io_uring(void) {
   }
 
   return use > 0;
+#endif
 #endif
 }
 

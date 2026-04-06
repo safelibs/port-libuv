@@ -1,5 +1,5 @@
 use crate::abi::{self, UV_LOOP_REAP_CHILDREN, UV_METRICS_IDLE_TIME_FLAG};
-use crate::allocator::{self, UV_EBUSY};
+use crate::allocator::{self, UV_EBUSY, UV_EINVAL};
 use crate::bindings::*;
 use crate::handle::{
     handle_ref, handle_unref, has_active_handles, has_ref, is_active, is_closing, queue_empty,
@@ -177,6 +177,29 @@ unsafe fn loop_close_internal(loop_: *mut uv_loop_t) {
 #[no_mangle]
 pub unsafe extern "C" fn uv_loop_size() -> usize {
     std::mem::size_of::<uv_loop_t>()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn uv_loop_configure(
+    loop_: *mut uv_loop_t,
+    option: uv_loop_option,
+    arg: libc::c_int,
+) -> libc::c_int {
+    match option {
+        uv_loop_option_UV_METRICS_IDLE_TIME => {
+            (*crate::state::loop_fields(loop_)).flags |= UV_METRICS_IDLE_TIME_FLAG;
+            0
+        }
+        uv_loop_option_UV_LOOP_BLOCK_SIGNAL => {
+            if arg != libc::SIGPROF {
+                UV_EINVAL
+            } else {
+                (*loop_).flags |= crate::abi::UV_LOOP_BLOCK_SIGPROF;
+                0
+            }
+        }
+        _ => uv_errno_t_UV_ENOSYS,
+    }
 }
 
 #[no_mangle]

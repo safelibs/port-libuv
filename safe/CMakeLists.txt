@@ -52,7 +52,9 @@ file(GLOB_RECURSE UV_CARGO_INPUTS CONFIGURE_DEPENDS
   ${PROJECT_SOURCE_DIR}/include/*
   ${PROJECT_SOURCE_DIR}/abi/*
   ${PROJECT_SOURCE_DIR}/legacy/*
-  ${PROJECT_SOURCE_DIR}/prebuilt/*
+)
+file(GLOB_RECURSE UV_LEGACY_INPUTS CONFIGURE_DEPENDS
+  ${PROJECT_SOURCE_DIR}/../original/src/*
 )
 
 configure_file(${PROJECT_SOURCE_DIR}/libuv.pc.in ${CMAKE_BINARY_DIR}/libuv.pc @ONLY)
@@ -61,6 +63,100 @@ configure_file(
   ${PROJECT_SOURCE_DIR}/cmake/libuvConfig.cmake.in
   ${CMAKE_BINARY_DIR}/libuvConfig.cmake
   @ONLY
+)
+
+set(uv_test_legacy_support_sources
+    ../original/src/idna.c
+    ../original/src/random.c
+    ../original/src/threadpool.c
+    ../original/src/uv-common.c
+    ../original/src/unix/fs.c
+    ../original/src/unix/getaddrinfo.c
+    ../original/src/unix/getnameinfo.c
+    ../original/src/unix/linux.c
+    ../original/src/unix/process.c
+    ../original/src/unix/random-devurandom.c
+    ../original/src/unix/random-getrandom.c
+    ../original/src/unix/random-sysctl-linux.c
+)
+
+set(uv_test_phase5_private_support_sources
+    ../original/src/fs-poll.c
+    ../original/src/unix/core.c
+    ../original/src/unix/pipe.c
+    ../original/src/unix/poll.c
+    ../original/src/unix/signal.c
+    ../original/src/unix/stream.c
+    ../original/src/unix/tcp.c
+    ../original/src/unix/tty.c
+    ../original/src/unix/udp.c
+)
+
+add_library(uv_test_legacy_support STATIC ${uv_test_legacy_support_sources})
+target_compile_definitions(
+  uv_test_legacy_support
+  PRIVATE
+    SAFE_LIBUV_DEFAULT_THREADPOOL_SIZE=2
+    ${uv_defines}
+    SAFE_LIBUV_DISABLE_IO_URING=1
+    SAFE_LIBUV_RUST_LOOP_CORE=1
+    uv_loop_configure=uv_test_support_uv_loop_configure
+)
+target_compile_options(
+  uv_test_legacy_support
+  PRIVATE
+    ${uv_cflags}
+    -fvisibility=default
+    -include
+    ${PROJECT_SOURCE_DIR}/legacy/generated/legacy_rename.h
+)
+target_include_directories(
+  uv_test_legacy_support
+  PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/../original/include
+    ${PROJECT_SOURCE_DIR}/../original/src
+)
+target_link_libraries(uv_test_legacy_support PRIVATE ${uv_libraries})
+set_target_properties(
+  uv_test_legacy_support
+  PROPERTIES
+    C_VISIBILITY_PRESET default
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    OUTPUT_NAME uv_test_legacy_support
+    POSITION_INDEPENDENT_CODE ON
+)
+
+add_library(uv_test_phase5_private_support STATIC ${uv_test_phase5_private_support_sources})
+target_compile_definitions(
+  uv_test_phase5_private_support
+  PRIVATE
+    ${uv_defines}
+    SAFE_LIBUV_RUST_LOOP_CORE=1
+)
+target_compile_options(
+  uv_test_phase5_private_support
+  PRIVATE
+    ${uv_cflags}
+    -fvisibility=default
+    -include
+    ${PROJECT_SOURCE_DIR}/legacy/generated/phase5_private_rename.h
+)
+target_include_directories(
+  uv_test_phase5_private_support
+  PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/../original/include
+    ${PROJECT_SOURCE_DIR}/../original/src
+)
+target_link_libraries(uv_test_phase5_private_support PRIVATE ${uv_libraries})
+set_target_properties(
+  uv_test_phase5_private_support
+  PROPERTIES
+    C_VISIBILITY_PRESET default
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    OUTPUT_NAME uv_test_phase5_private_support
+    POSITION_INDEPENDENT_CODE ON
 )
 
 add_custom_command(
@@ -90,6 +186,7 @@ add_custom_command(
      cp -a '${PROJECT_SOURCE_DIR}/include' '${CMAKE_BINARY_DIR}/include'"
   DEPENDS
     ${UV_CARGO_INPUTS}
+    ${UV_LEGACY_INPUTS}
   VERBATIM
 )
 
@@ -337,7 +434,15 @@ add_executable(uv_run_benchmarks_a ${uv_benchmark_sources})
 target_compile_definitions(uv_run_benchmarks_a PRIVATE ${uv_defines})
 target_compile_options(uv_run_benchmarks_a PRIVATE ${uv_cflags})
 target_include_directories(uv_run_benchmarks_a PRIVATE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/test)
-target_link_libraries(uv_run_benchmarks_a PRIVATE uv_a ${uv_test_libraries})
+target_link_options(uv_run_benchmarks_a PRIVATE -Wl,--export-dynamic)
+target_link_libraries(
+  uv_run_benchmarks_a
+  PRIVATE
+    uv_a
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
+    ${uv_test_libraries}
+)
 add_dependencies(uv_run_benchmarks_a uv_artifacts)
 
 add_executable(uv_run_tests ${uv_test_sources})
@@ -351,7 +456,16 @@ target_compile_definitions(
 )
 target_compile_options(uv_run_tests PRIVATE ${uv_cflags})
 target_include_directories(uv_run_tests PRIVATE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/test)
-target_link_libraries(uv_run_tests PRIVATE uv ${uv_test_libraries})
+target_link_options(uv_run_tests PRIVATE -Wl,--export-dynamic)
+target_link_libraries(
+  uv_run_tests
+  PRIVATE
+    uv
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
+    uv_a
+    ${uv_test_libraries}
+)
 target_link_directories(uv_run_tests PRIVATE ${CMAKE_BINARY_DIR})
 set_target_properties(uv_run_tests PROPERTIES BUILD_RPATH ${CMAKE_BINARY_DIR})
 add_dependencies(uv_run_tests uv_artifacts uv_test_idna_intercept)
@@ -367,7 +481,15 @@ target_compile_definitions(
 )
 target_compile_options(uv_run_tests_a PRIVATE ${uv_cflags})
 target_include_directories(uv_run_tests_a PRIVATE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/test)
-target_link_libraries(uv_run_tests_a PRIVATE uv_a ${uv_test_libraries})
+target_link_options(uv_run_tests_a PRIVATE -Wl,--export-dynamic)
+target_link_libraries(
+  uv_run_tests_a
+  PRIVATE
+    uv_a
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
+    ${uv_test_libraries}
+)
 add_dependencies(uv_run_tests_a uv_artifacts uv_test_idna_intercept)
 add_test(NAME uv_test_a COMMAND uv_run_tests_a WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
@@ -390,7 +512,15 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/test
     ${PROJECT_SOURCE_DIR}/test-extra
 )
-target_link_libraries(uv_run_safe_regressions PRIVATE uv_a ${uv_test_libraries})
+target_link_options(uv_run_safe_regressions PRIVATE -Wl,--export-dynamic)
+target_link_libraries(
+  uv_run_safe_regressions
+  PRIVATE
+    uv_a
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_legacy_support>"
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,uv_test_phase5_private_support>"
+    ${uv_test_libraries}
+)
 add_dependencies(uv_run_safe_regressions uv_artifacts)
 add_test(NAME uv_safe_regressions COMMAND uv_run_safe_regressions WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
