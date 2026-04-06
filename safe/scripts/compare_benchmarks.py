@@ -101,16 +101,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", required=True)
     parser.add_argument("--candidate", required=True)
-    parser.add_argument("--selection", required=True)
+    selection_group = parser.add_mutually_exclusive_group(required=True)
+    selection_group.add_argument("--selection")
+    selection_group.add_argument("--bench", action="append")
     parser.add_argument("--thresholds", required=True)
     parser.add_argument("--mode", choices=("baseline-verify", "runtime"), default="runtime")
     parser.add_argument("--output")
     return parser
 
 
+def resolve_selection(args: argparse.Namespace) -> list[str]:
+    if args.selection is not None:
+        return load_selection(Path(args.selection))
+    return args.bench
+
+
 def main() -> int:
     args = build_parser().parse_args()
-    selection = load_selection(Path(args.selection))
+    selection = resolve_selection(args)
     thresholds = load_thresholds(Path(args.thresholds))
     baseline = load_report(Path(args.baseline))
     candidate = load_report(Path(args.candidate))

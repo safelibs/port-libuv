@@ -15,11 +15,19 @@ def load_selection(path: Path) -> list[str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runner", required=True)
-    parser.add_argument("--selection", required=True)
+    selection_group = parser.add_mutually_exclusive_group(required=True)
+    selection_group.add_argument("--selection")
+    selection_group.add_argument("--bench", action="append")
     parser.add_argument("--output", required=True)
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--warmup", type=int, default=1)
     return parser.parse_args()
+
+
+def resolve_selection(args: argparse.Namespace) -> list[str]:
+    if args.selection is not None:
+        return load_selection(Path(args.selection))
+    return args.bench
 
 
 def parse_output(benchmark: str, lines: list[str]) -> dict[str, float]:
@@ -120,9 +128,8 @@ def compute_medians(samples: list[dict]) -> dict[str, float]:
 def main() -> int:
     args = parse_args()
     runner = Path(args.runner).resolve()
-    selection_path = Path(args.selection)
     output_path = Path(args.output)
-    selection = load_selection(selection_path)
+    selection = resolve_selection(args)
 
     report = {
         "runner": str(runner),
