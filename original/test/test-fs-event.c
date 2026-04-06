@@ -39,6 +39,12 @@
 # endif
 #endif
 
+#define RETURN_SKIP_IF_INOTIFY_ENOSPC(r)                                      \
+  do {                                                                        \
+    if ((r) == UV_EMFILE || (r) == UV_ENOSPC)                                 \
+      RETURN_SKIP("inotify resource limit reached in test environment");      \
+  } while (0)
+
 static uv_fs_event_t fs_event;
 static const char file_prefix[] = "fsevent-";
 static const int fs_event_file_count = 16;
@@ -59,6 +65,7 @@ static char fs_event_filename[1024];
 #endif  /* defined(PATH_MAX) */
 static int timer_cb_touch_called;
 static int timer_cb_exact_called;
+static int fs_event_immediate_close_r;
 
 static void fs_event_fail(uv_fs_event_t* handle,
                           const char* filename,
@@ -424,6 +431,7 @@ TEST_IMPL(fs_event_watch_dir) {
   r = uv_fs_event_init(loop, &fs_event);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event, fs_event_cb_dir_multi_file, "watch_dir", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
   r = uv_timer_init(loop, &timer);
   ASSERT_OK(r);
@@ -581,6 +589,7 @@ TEST_IMPL(fs_event_watch_file) {
   r = uv_fs_event_init(loop, &fs_event);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event, fs_event_cb_file, "watch_dir/file2", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
   r = uv_timer_init(loop, &timer);
   ASSERT_OK(r);
@@ -637,6 +646,7 @@ TEST_IMPL(fs_event_watch_file_exact_path) {
   r = uv_fs_event_init(loop, &fs_event);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event, fs_event_fail, "watch_dir/file.jsx", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
   r = uv_timer_init(loop, &timer);
   ASSERT_OK(r);
@@ -663,14 +673,19 @@ TEST_IMPL(fs_event_watch_file_twice) {
   uv_fs_event_t watchers[2];
   uv_timer_t timer;
   uv_loop_t* loop;
+  int r;
 
   loop = uv_default_loop();
   timer.data = watchers;
 
   ASSERT_OK(uv_fs_event_init(loop, watchers + 0));
-  ASSERT_OK(uv_fs_event_start(watchers + 0, fail_cb, path, 0));
+  r = uv_fs_event_start(watchers + 0, fail_cb, path, 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
+  ASSERT_OK(r);
   ASSERT_OK(uv_fs_event_init(loop, watchers + 1));
-  ASSERT_OK(uv_fs_event_start(watchers + 1, fail_cb, path, 0));
+  r = uv_fs_event_start(watchers + 1, fail_cb, path, 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
+  ASSERT_OK(r);
   ASSERT_OK(uv_timer_init(loop, &timer));
   ASSERT_OK(uv_timer_start(&timer, timer_cb_watch_twice, 10, 0));
   ASSERT_OK(uv_run(loop, UV_RUN_DEFAULT));
@@ -706,6 +721,7 @@ TEST_IMPL(fs_event_watch_file_current_dir) {
                         fs_event_cb_file_current_dir,
                         "watch_file",
                         0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
 
@@ -781,6 +797,7 @@ TEST_IMPL(fs_event_no_callback_after_close) {
                         fs_event_cb_file,
                         "watch_dir/file1",
                         0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
 
@@ -819,6 +836,7 @@ TEST_IMPL(fs_event_no_callback_on_close) {
                         fs_event_cb_file,
                         "watch_dir/file1",
                         0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
   uv_close((uv_handle_t*)&fs_event, close_cb);
@@ -843,6 +861,12 @@ static void timer_cb(uv_timer_t* handle) {
   r = uv_fs_event_init(handle->loop, &fs_event);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event, fs_event_fail, ".", 0);
+  fs_event_immediate_close_r = r;
+  if (r == UV_EMFILE || r == UV_ENOSPC) {
+    uv_close((uv_handle_t*) &fs_event, close_cb);
+    uv_close((uv_handle_t*) handle, close_cb);
+    return;
+  }
   ASSERT_OK(r);
 
   uv_close((uv_handle_t*)&fs_event, close_cb);
@@ -859,6 +883,7 @@ TEST_IMPL(fs_event_immediate_close) {
   int r;
 
   loop = uv_default_loop();
+  fs_event_immediate_close_r = 0;
 
   r = uv_timer_init(loop, &timer);
   ASSERT_OK(r);
@@ -868,6 +893,7 @@ TEST_IMPL(fs_event_immediate_close) {
 
   uv_run(loop, UV_RUN_DEFAULT);
 
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(fs_event_immediate_close_r);
   ASSERT_EQ(2, close_cb_called);
 
   MAKE_VALGRIND_HAPPY(loop);
@@ -890,6 +916,7 @@ TEST_IMPL(fs_event_close_with_pending_event) {
   r = uv_fs_event_init(loop, &fs_event);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event, fs_event_fail, "watch_dir", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
   /* Generate an fs event. */
@@ -924,6 +951,7 @@ TEST_IMPL(fs_event_close_with_pending_delete_event) {
   r = uv_fs_event_init(loop, &fs_event);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event, fs_event_fail, "watch_dir/file", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
   /* Generate an fs event. */
@@ -966,6 +994,7 @@ TEST_IMPL(fs_event_close_in_callback) {
   r = uv_fs_event_init(loop, &fs_event);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event, fs_event_cb_close, "watch_dir", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
   r = uv_timer_init(loop, &timer);
@@ -1006,11 +1035,13 @@ TEST_IMPL(fs_event_start_and_close) {
   r = uv_fs_event_init(loop, &fs_event1);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event1, fs_event_cb_dir, "watch_dir", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
   r = uv_fs_event_init(loop, &fs_event2);
   ASSERT_OK(r);
   r = uv_fs_event_start(&fs_event2, fs_event_cb_dir, "watch_dir", 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
   uv_close((uv_handle_t*) &fs_event2, close_cb);
@@ -1053,6 +1084,7 @@ TEST_IMPL(fs_event_getpath) {
     r = uv_fs_event_getpath(&fs_event, buf, &len);
     ASSERT_EQ(r, UV_EINVAL);
     r = uv_fs_event_start(&fs_event, fail_cb, watch_dir[i], 0);
+    RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
     ASSERT_OK(r);
     len = 0;
     r = uv_fs_event_getpath(&fs_event, buf, &len);
@@ -1211,6 +1243,7 @@ TEST_IMPL(fs_event_stop_in_cb) {
   uv_fs_event_t fs;
   uv_timer_t timer;
   char path[] = "fs_event_stop_in_cb.txt";
+  int r;
 
 #if defined(NO_FS_EVENTS)
   RETURN_SKIP(NO_FS_EVENTS);
@@ -1220,7 +1253,9 @@ TEST_IMPL(fs_event_stop_in_cb) {
   create_file(path);
 
   ASSERT_OK(uv_fs_event_init(uv_default_loop(), &fs));
-  ASSERT_OK(uv_fs_event_start(&fs, fs_event_cb_stop, path, 0));
+  r = uv_fs_event_start(&fs, fs_event_cb_stop, path, 0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
+  ASSERT_OK(r);
 
   /* Note: timer_cb_touch() closes the handle. */
   timer.data = path;

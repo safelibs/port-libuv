@@ -34,6 +34,12 @@
 #include "uv.h"
 #include "task.h"
 
+#define RETURN_SKIP_IF_INOTIFY_ENOSPC(r)                                      \
+  do {                                                                        \
+    if ((r) == UV_EMFILE || (r) == UV_ENOSPC)                                 \
+      RETURN_SKIP("inotify resource limit reached in test environment");      \
+  } while (0)
+
 static int timer_cb_called;
 static int socket_cb_called;
 
@@ -481,7 +487,7 @@ static void fs_event_cb_file_current_dir(uv_fs_event_t* handle,
 }
 
 
-static void assert_watch_file_current_dir(uv_loop_t* const loop, int file_or_dir) {
+static int assert_watch_file_current_dir(uv_loop_t* const loop, int file_or_dir) {
   uv_timer_t timer;
   uv_fs_event_t fs_event;
   int r;
@@ -498,6 +504,8 @@ static void assert_watch_file_current_dir(uv_loop_t* const loop, int file_or_dir
                         fs_event_cb_file_current_dir,
                         file_or_dir == 1 ? "." : "watch_file",
                         0);
+  if (r != 0)
+    return r;
   ASSERT_OK(r);
 
   r = uv_timer_init(loop, &timer);
@@ -519,6 +527,7 @@ static void assert_watch_file_current_dir(uv_loop_t* const loop, int file_or_dir
   fs_event_cb_called = 0;
   timer_cb_touch_called = 0;
   uv_run(loop, UV_RUN_DEFAULT); /* flush pending closes */
+  return TEST_OK;
 }
 
 
@@ -529,9 +538,12 @@ static int _do_fork_fs_events_child(int file_or_dir) {
   /* basic fsevents work in the child after a fork */
   pid_t child_pid;
   uv_loop_t loop;
+  int r;
 
   /* Watch in the parent, prime the loop and/or threads. */
-  assert_watch_file_current_dir(uv_default_loop(), file_or_dir);
+  r = assert_watch_file_current_dir(uv_default_loop(), file_or_dir);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
+  ASSERT_OK(r);
 #if defined(__APPLE__) && (TARGET_OS_TV || TARGET_OS_WATCH)
   child_pid = -1;
 #else
@@ -552,7 +564,9 @@ static int _do_fork_fs_events_child(int file_or_dir) {
     printf("Running child\n");
     uv_loop_init(&loop);
     printf("Child first watch\n");
-    assert_watch_file_current_dir(&loop, file_or_dir);
+    r = assert_watch_file_current_dir(&loop, file_or_dir);
+    RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
+    ASSERT_OK(r);
     ASSERT_OK(uv_loop_close(&loop));
     printf("Child second watch default loop\n");
     /* Ee can watch in the default loop. */
@@ -563,7 +577,9 @@ static int _do_fork_fs_events_child(int file_or_dir) {
      * a general race.
      */
     uv_update_time(uv_default_loop());
-    assert_watch_file_current_dir(uv_default_loop(), file_or_dir);
+    r = assert_watch_file_current_dir(uv_default_loop(), file_or_dir);
+    RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
+    ASSERT_OK(r);
 
     /* We can close the parent loop successfully too. This is
        especially important on Apple platforms where if we're not
@@ -637,6 +653,7 @@ TEST_IMPL(fork_fs_events_file_parent_child) {
                         fs_event_cb_file_current_dir,
                         "watch_file",
                         0);
+  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
   ASSERT_OK(r);
 
   r = uv_timer_init(loop, &timer);
