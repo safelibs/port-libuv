@@ -1,0 +1,156 @@
+{
+  "distribution": "Ubuntu 24.04.3 LTS (Noble Numbat)",
+  "library": {
+    "runtime_package": "libuv1t64",
+    "development_package": "libuv1-dev",
+    "version": "1.48.0-1.1build1"
+  },
+  "generated_on": "2026-04-06",
+  "selection_method": "Curated from Ubuntu 24.04 apt binary and source metadata to cover a diverse set of applications, libraries, language runtimes, editors, bindings, servers, and CLI tools that use libuv at runtime, build time, or both.",
+  "dependents": [
+    {
+      "name": "bind9",
+      "source_package": "bind9",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "bind9 Depends: libuv1t64",
+      "build_dependency": "bind9 source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The authoritative DNS server uses libuv for its event loop and asynchronous network handling."
+    },
+    {
+      "name": "nodejs",
+      "source_package": "nodejs",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "nodejs Depends: libnode109; libnode109 Depends: libuv1t64",
+      "build_dependency": "nodejs source Build-Depends: libuv1-dev",
+      "runtime_functionality": "Node.js uses libuv for its core event loop, timers, async filesystem work, signals, networking, and child-process integration."
+    },
+    {
+      "name": "neovim",
+      "source_package": "neovim",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "neovim Depends: libuv1t64 and lua-luv",
+      "build_dependency": "neovim source Build-Depends: libuv1-dev and lua-luv-dev",
+      "runtime_functionality": "Neovim relies on libuv for async jobs, timers, socket-based RPC, and filesystem watching."
+    },
+    {
+      "name": "knot-resolver",
+      "source_package": "knot-resolver",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "knot-resolver Depends: libuv1t64",
+      "build_dependency": "knot-resolver source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The recursive DNS resolver and daemon use libuv for asynchronous resolver and server I/O."
+    },
+    {
+      "name": "python3-uvloop",
+      "source_package": "uvloop",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "python3-uvloop Depends: libuv1t64",
+      "build_dependency": "uvloop source Build-Depends: libuv1-dev",
+      "runtime_functionality": "uvloop is an asyncio event loop implementation built directly on top of libuv."
+    },
+    {
+      "name": "r-cran-httpuv",
+      "source_package": "r-cran-httpuv",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "r-cran-httpuv Depends: libuv1t64",
+      "build_dependency": "r-cran-httpuv source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The package uses libuv to provide HTTP and WebSocket server support inside R."
+    },
+    {
+      "name": "r-cran-fs",
+      "source_package": "r-cran-fs",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "r-cran-fs Depends: libuv1t64",
+      "build_dependency": "r-cran-fs source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The package builds its cross-platform filesystem operations on top of libuv."
+    },
+    {
+      "name": "moarvm",
+      "source_package": "moarvm",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "moarvm Depends: libuv1t64",
+      "build_dependency": "moarvm source Build-Depends: libuv1-dev",
+      "runtime_functionality": "MoarVM uses libuv for asynchronous sockets, timers, processes, and other concurrency features exposed to Rakudo and NQP."
+    },
+    {
+      "name": "lua-luv",
+      "source_package": "lua-luv",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "lua-luv Depends: libuv1t64",
+      "build_dependency": "lua-luv source Build-Depends: libuv1-dev",
+      "runtime_functionality": "This package exposes libuv's event loop and async I/O APIs to Lua programs."
+    },
+    {
+      "name": "libluv-ocaml",
+      "source_package": "ocaml-luv",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "libluv-ocaml Depends: libuv1t64",
+      "build_dependency": "ocaml-luv source Build-Depends: libuv1-dev",
+      "runtime_functionality": "This runtime library exposes libuv's event loop and OS APIs to OCaml code."
+    },
+    {
+      "name": "ttyd",
+      "source_package": "ttyd",
+      "dependency_kind": "runtime-only",
+      "runtime_dependency": "ttyd Depends: libuv1t64 and libwebsockets-evlib-uv",
+      "build_dependency": null,
+      "runtime_functionality": "ttyd uses libuv-backed websocket/event-loop handling to share interactive terminal sessions over the web."
+    },
+    {
+      "name": "libh2o0.13t64",
+      "source_package": "h2o",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "libh2o0.13t64 Depends: libuv1t64",
+      "build_dependency": "h2o source Build-Depends: libuv1-dev",
+      "runtime_functionality": "This is the libuv-linked H2O runtime library; applications linked against it use libuv-backed HTTP event loop integration."
+    },
+    {
+      "name": "libwebsockets-evlib-uv",
+      "source_package": "libwebsockets",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "libwebsockets-evlib-uv Depends: libuv1t64",
+      "build_dependency": "libwebsockets source Build-Depends: libuv1-dev",
+      "runtime_functionality": "This plugin provides the libuv event-loop backend for libwebsockets clients and servers."
+    },
+    {
+      "name": "libraft0",
+      "source_package": "raft",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "libraft0 Depends: libuv1t64",
+      "build_dependency": "raft source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The shared library implements a fully asynchronous Raft consensus engine and uses libuv for its I/O layer."
+    },
+    {
+      "name": "libdqlite0",
+      "source_package": "dqlite",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "libdqlite0 Depends: libuv1t64",
+      "build_dependency": "dqlite source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The distributed SQLite library uses libuv-backed asynchronous networking for clustered replication and failover."
+    },
+    {
+      "name": "libtensorpipe0",
+      "source_package": "tensorpipe",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "libtensorpipe0 Depends: libuv1t64",
+      "build_dependency": "tensorpipe source Build-Depends: libuv1-dev",
+      "runtime_functionality": "TensorPipe uses libuv for event-driven point-to-point communication between machine-learning processes."
+    },
+    {
+      "name": "storj",
+      "source_package": "libstorj",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "storj Depends: libuv1t64 and libstorj0t64",
+      "build_dependency": "libstorj source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The Storj CLI and its underlying library use libuv for asynchronous network and file-transfer operations."
+    },
+    {
+      "name": "siridb-server",
+      "source_package": "siridb-server",
+      "dependency_kind": "runtime+build-time",
+      "runtime_dependency": "siridb-server Depends: libuv1t64",
+      "build_dependency": "siridb-server source Build-Depends: libuv1-dev",
+      "runtime_functionality": "The time-series database server uses libuv for its async event loop and network-facing server work."
+    }
+  ]
+}
