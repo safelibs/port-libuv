@@ -20,7 +20,17 @@ mod bindings {
 
 pub use bindings::*;
 
+mod accessors;
+mod allocator;
+mod dl;
+mod error;
 mod ffi_exports;
+mod inet;
 mod legacy;
+mod os;
+mod process_title;
+mod strings;
+mod thread;
+mod version;
 
 pub const BASELINE_SCAFFOLD_PHASE: &str = "impl_01_baseline_capture";

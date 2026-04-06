@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -7,6 +7,206 @@ use quote::quote;
 use syn::{parse_file, parse_quote, FnArg, ForeignItem, ForeignItemFn, Item, Pat};
 
 const VARIADIC_EXPORTS: &[&str] = &["uv_loop_configure"];
+const RUST_EXPORTS: &[&str] = &[
+    "uv_available_parallelism",
+    "uv_barrier_destroy",
+    "uv_barrier_init",
+    "uv_barrier_wait",
+    "uv_buf_init",
+    "uv_chdir",
+    "uv_clock_gettime",
+    "uv_cond_broadcast",
+    "uv_cond_destroy",
+    "uv_cond_init",
+    "uv_cond_signal",
+    "uv_cond_timedwait",
+    "uv_cond_wait",
+    "uv_cwd",
+    "uv_disable_stdio_inheritance",
+    "uv_dlclose",
+    "uv_dlerror",
+    "uv_dlopen",
+    "uv_dlsym",
+    "uv_err_name",
+    "uv_err_name_r",
+    "uv_exepath",
+    "uv_fs_get_path",
+    "uv_fs_get_ptr",
+    "uv_fs_get_result",
+    "uv_fs_get_statbuf",
+    "uv_fs_get_type",
+    "uv_get_available_memory",
+    "uv_get_constrained_memory",
+    "uv_get_free_memory",
+    "uv_get_process_title",
+    "uv_get_total_memory",
+    "uv_getrusage",
+    "uv_gettimeofday",
+    "uv_handle_get_data",
+    "uv_handle_get_loop",
+    "uv_handle_get_type",
+    "uv_handle_set_data",
+    "uv_handle_size",
+    "uv_handle_type_name",
+    "uv_hrtime",
+    "uv_inet_ntop",
+    "uv_inet_pton",
+    "uv_ip4_addr",
+    "uv_ip4_name",
+    "uv_ip6_addr",
+    "uv_ip6_name",
+    "uv_ip_name",
+    "uv_key_create",
+    "uv_key_delete",
+    "uv_key_get",
+    "uv_key_set",
+    "uv_loadavg",
+    "uv_loop_get_data",
+    "uv_loop_set_data",
+    "uv_mutex_destroy",
+    "uv_mutex_init",
+    "uv_mutex_init_recursive",
+    "uv_mutex_lock",
+    "uv_mutex_trylock",
+    "uv_mutex_unlock",
+    "uv_once",
+    "uv_os_environ",
+    "uv_os_free_environ",
+    "uv_os_free_group",
+    "uv_os_free_passwd",
+    "uv_os_get_group",
+    "uv_os_get_passwd",
+    "uv_os_get_passwd2",
+    "uv_os_getenv",
+    "uv_os_gethostname",
+    "uv_os_getpid",
+    "uv_os_getppid",
+    "uv_os_getpriority",
+    "uv_os_homedir",
+    "uv_os_setenv",
+    "uv_os_setpriority",
+    "uv_os_tmpdir",
+    "uv_os_uname",
+    "uv_os_unsetenv",
+    "uv_process_get_pid",
+    "uv_replace_allocator",
+    "uv_req_get_data",
+    "uv_req_get_type",
+    "uv_req_set_data",
+    "uv_req_size",
+    "uv_req_type_name",
+    "uv_resident_set_memory",
+    "uv_rwlock_destroy",
+    "uv_rwlock_init",
+    "uv_rwlock_rdlock",
+    "uv_rwlock_rdunlock",
+    "uv_rwlock_tryrdlock",
+    "uv_rwlock_trywrlock",
+    "uv_rwlock_wrlock",
+    "uv_rwlock_wrunlock",
+    "uv_sem_destroy",
+    "uv_sem_init",
+    "uv_sem_post",
+    "uv_sem_trywait",
+    "uv_sem_wait",
+    "uv_set_process_title",
+    "uv_setup_args",
+    "uv_sleep",
+    "uv_stream_get_write_queue_size",
+    "uv_strerror",
+    "uv_strerror_r",
+    "uv_thread_create",
+    "uv_thread_create_ex",
+    "uv_thread_equal",
+    "uv_thread_getaffinity",
+    "uv_thread_getcpu",
+    "uv_thread_getpriority",
+    "uv_thread_join",
+    "uv_thread_self",
+    "uv_thread_setaffinity",
+    "uv_thread_setpriority",
+    "uv_translate_sys_error",
+    "uv_udp_get_send_queue_count",
+    "uv_udp_get_send_queue_size",
+    "uv_uptime",
+    "uv_version",
+    "uv_version_string",
+];
+const LEGACY_ALIAS_EXPORTS: &[&str] = &[
+    "uv_barrier_destroy",
+    "uv_barrier_init",
+    "uv_barrier_wait",
+    "uv_cond_broadcast",
+    "uv_cond_destroy",
+    "uv_cond_init",
+    "uv_cond_signal",
+    "uv_cond_timedwait",
+    "uv_cond_wait",
+    "uv_dlclose",
+    "uv_dlerror",
+    "uv_dlopen",
+    "uv_dlsym",
+    "uv_exepath",
+    "uv_fs_get_path",
+    "uv_fs_get_ptr",
+    "uv_fs_get_result",
+    "uv_fs_get_statbuf",
+    "uv_fs_get_type",
+    "uv_get_process_title",
+    "uv_handle_get_data",
+    "uv_handle_get_loop",
+    "uv_handle_get_type",
+    "uv_handle_set_data",
+    "uv_handle_type_name",
+    "uv_inet_ntop",
+    "uv_inet_pton",
+    "uv_key_create",
+    "uv_key_delete",
+    "uv_key_get",
+    "uv_key_set",
+    "uv_loop_get_data",
+    "uv_loop_set_data",
+    "uv_mutex_destroy",
+    "uv_mutex_init",
+    "uv_mutex_init_recursive",
+    "uv_mutex_lock",
+    "uv_mutex_trylock",
+    "uv_mutex_unlock",
+    "uv_once",
+    "uv_process_get_pid",
+    "uv_req_get_data",
+    "uv_req_get_type",
+    "uv_req_set_data",
+    "uv_req_type_name",
+    "uv_rwlock_destroy",
+    "uv_rwlock_init",
+    "uv_rwlock_rdlock",
+    "uv_rwlock_rdunlock",
+    "uv_rwlock_tryrdlock",
+    "uv_rwlock_trywrlock",
+    "uv_rwlock_wrlock",
+    "uv_rwlock_wrunlock",
+    "uv_sem_destroy",
+    "uv_sem_init",
+    "uv_sem_post",
+    "uv_sem_trywait",
+    "uv_sem_wait",
+    "uv_set_process_title",
+    "uv_setup_args",
+    "uv_stream_get_write_queue_size",
+    "uv_thread_create",
+    "uv_thread_create_ex",
+    "uv_thread_equal",
+    "uv_thread_getaffinity",
+    "uv_thread_getcpu",
+    "uv_thread_join",
+    "uv_thread_self",
+    "uv_thread_setaffinity",
+    "uv_udp_get_send_queue_count",
+    "uv_udp_get_send_queue_size",
+    "uv_version",
+    "uv_version_string",
+];
 
 fn main() {
     let manifest_dir =
@@ -21,6 +221,7 @@ fn main() {
     let bindings_path = out_dir.join("bindings.rs");
     let legacy_bindings_path = out_dir.join("legacy_bindings.rs");
     let ffi_exports_path = out_dir.join("ffi_exports_generated.rs");
+    let ffi_legacy_aliases_path = out_dir.join("ffi_legacy_aliases_generated.rs");
     let build_manifest_path = out_dir.join("libuv-build-manifest.json");
     let legacy_sources = read_legacy_sources(&legacy_manifest);
     let exported_symbols = read_sorted_lines(&exported_symbols_path);
@@ -45,6 +246,7 @@ fn main() {
     let uv_functions = parse_uv_functions(&bindings_path);
     generate_legacy_bindings(&legacy_bindings_path, &exported_symbols, &uv_functions);
     generate_ffi_exports(&ffi_exports_path, &exported_symbols, &uv_functions);
+    generate_ffi_legacy_aliases(&ffi_legacy_aliases_path, &uv_functions);
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let mut production_non_rust_sources = Vec::new();
@@ -165,9 +367,13 @@ fn generate_ffi_exports(
     uv_functions: &BTreeMap<String, ForeignItemFn>,
 ) {
     let mut wrappers = Vec::new();
+    let rust_exports = RUST_EXPORTS.iter().copied().collect::<BTreeSet<_>>();
 
     for symbol in exported_symbols {
         if VARIADIC_EXPORTS.contains(&symbol.as_str()) {
+            continue;
+        }
+        if rust_exports.contains(symbol.as_str()) {
             continue;
         }
 
@@ -201,6 +407,28 @@ fn generate_ffi_exports(
     };
 
     fs::write(output_path, tokens.to_string()).expect("failed to write ffi exports");
+}
+
+fn generate_ffi_legacy_aliases(output_path: &Path, uv_functions: &BTreeMap<String, ForeignItemFn>) {
+    let mut aliases = String::new();
+
+    for symbol in LEGACY_ALIAS_EXPORTS {
+        uv_functions
+            .get(*symbol)
+            .unwrap_or_else(|| panic!("missing binding declaration for {symbol}"));
+        aliases.push_str(&format!(
+            ".globl uv_legacy_{symbol}\n\
+             .hidden uv_legacy_{symbol}\n\
+             .type uv_legacy_{symbol}, @function\n\
+uv_legacy_{symbol}:\n\
+             jmp {symbol}\n\
+             .size uv_legacy_{symbol}, .-uv_legacy_{symbol}\n"
+        ));
+    }
+
+    let tokens = format!("use std::arch::global_asm;\n\nglobal_asm!(r#\"\n{aliases}\"#);\n");
+
+    fs::write(output_path, tokens.to_string()).expect("failed to write ffi legacy aliases");
 }
 
 fn argument_pattern_ident(argument: &FnArg) -> syn::Ident {

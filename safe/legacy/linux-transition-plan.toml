@@ -25,7 +25,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/inet.c"
 name = "inet"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -45,7 +45,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/strscpy.c"
 name = "strscpy"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -55,7 +55,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/strtok.c"
 name = "strtok"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -65,7 +65,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/thread-common.c"
 name = "thread_common"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -119,7 +119,7 @@ symbols = [
 name = "os_helpers_and_env"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv_available_parallelism",
   "uv_chdir",
@@ -161,7 +161,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/dl.c"
 name = "dl"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -287,7 +287,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/procfs-exepath
 name = "procfs_exepath"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -297,7 +297,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/proctitle.c"
 name = "proctitle"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -367,7 +367,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/unix/thread.c"
 name = "thread"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -408,7 +408,7 @@ symbols = [
 name = "helpers_accessors"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = [
   "uv_buf_init",
   "uv_err_name*",
@@ -466,7 +466,7 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/uv-data-getter-sett
 name = "data_getter_setters"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
 
 [[unit]]
@@ -476,5 +476,5 @@ source = "/home/yans/code/safelibs/ported/libuv/original/src/version.c"
 name = "version"
 owner_phase = "impl_03_helpers_threads_os"
 retirement_phase = "impl_03_helpers_threads_os"
-status = "legacy"
+status = "rust"
 symbols = ["*"]
