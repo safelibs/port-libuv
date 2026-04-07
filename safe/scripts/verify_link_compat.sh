@@ -35,6 +35,60 @@ require_file "$safe_build_dir/libuv.a"
 mkdir -p "$out_dir"
 rm -f "$out_dir"/uv_run_tests "$out_dir"/uv_run_tests_a "$out_dir"/uv_run_benchmarks_a
 
+prepare_run_dir() {
+  local dir="$1"
+
+  rm -rf "$dir"
+  mkdir -p "$dir"
+  ln -s "$safe_dir/test" "$dir/test"
+}
+
+run_tap_suite() {
+  local suite_name="$1"
+  local expected_list="$2"
+  local run_dir="$3"
+  local log_file="$4"
+  shift 4
+
+  local expected_count
+  local header
+  local result_count
+  local not_ok_count
+  local last_result
+  local exit_code
+
+  expected_count="$(wc -l < "$expected_list")"
+
+  set +e
+  (
+    cd "$run_dir"
+    "$@" >"$log_file" 2>&1
+  )
+  exit_code=$?
+  set -e
+
+  printf '%s\n' "$exit_code" >"$log_file.exit_code"
+
+  header="$(grep -m1 -E '^1\.\.[0-9]+$' "$log_file" || true)"
+  [[ "$header" == "1..$expected_count" ]] || \
+    fail "$suite_name did not emit the expected TAP plan (wanted 1..$expected_count, got ${header:-<missing>})"
+
+  result_count="$(grep -Ec '^(ok|not ok) [0-9]+ - ' "$log_file" || true)"
+  [[ "$result_count" -eq "$expected_count" ]] || \
+    fail "$suite_name did not report every TAP result (expected $expected_count, saw $result_count)"
+
+  last_result="$(grep -E '^(ok|not ok) [0-9]+ - ' "$log_file" | tail -n1 | awk '{print $2}')"
+  [[ "$last_result" == "$expected_count" ]] || \
+    fail "$suite_name ended early (last TAP result $last_result, expected $expected_count)"
+
+  not_ok_count="$(grep -Ec '^not ok [0-9]+ - ' "$log_file" || true)"
+  [[ "$exit_code" -eq "$not_ok_count" ]] || \
+    fail "$suite_name exit code $exit_code did not match TAP failure count $not_ok_count"
+
+  printf '==> %s completed (%s failures across %s TAP results)\n' \
+    "$suite_name" "$not_ok_count" "$expected_count"
+}
+
 build_runner() {
   local mode="$1"
   local link_manifest="$2"
@@ -165,25 +219,44 @@ if grep -F "$build_check_dir" "$out_dir/uv_run_tests.ldd.txt" >/dev/null; then
   fail "ldd resolved a dependency from build-check"
 fi
 
-(
-  cd "$safe_dir"
+shared_run_dir="$out_dir/run-shared"
+static_run_dir="$out_dir/run-static"
+prepare_run_dir "$shared_run_dir"
+prepare_run_dir "$static_run_dir"
 
+(
+  cd "$shared_run_dir"
   env LD_LIBRARY_PATH="$safe_build_dir" \
     "$out_dir/uv_run_tests" --list >"$out_dir/uv_run_tests.list.txt"
-  diff -u "$abi_dir/linux-test-list.txt" "$out_dir/uv_run_tests.list.txt"
-
-  "$out_dir/uv_run_tests_a" --list >"$out_dir/uv_run_tests_a.list.txt"
-  diff -u "$abi_dir/linux-test-list-static.txt" "$out_dir/uv_run_tests_a.list.txt"
-
-  env LD_LIBRARY_PATH="$safe_build_dir" \
-    UV_TEST_TIMEOUT_MULTIPLIER=2 \
-    "$out_dir/uv_run_tests" >"$out_dir/uv_run_tests.run.log" 2>&1
-
-  UV_TEST_TIMEOUT_MULTIPLIER=2 \
-    "$out_dir/uv_run_tests_a" >"$out_dir/uv_run_tests_a.run.log" 2>&1
-
-  "$out_dir/uv_run_benchmarks_a" sizes | grep '^# ' >"$out_dir/uv_run_benchmarks_a.sizes.txt"
-  diff -u "$abi_dir/linux-struct-sizes.txt" "$out_dir/uv_run_benchmarks_a.sizes.txt"
 )
+diff -u "$abi_dir/linux-test-list.txt" "$out_dir/uv_run_tests.list.txt"
+
+(
+  cd "$static_run_dir"
+  "$out_dir/uv_run_tests_a" --list >"$out_dir/uv_run_tests_a.list.txt"
+)
+diff -u "$abi_dir/linux-test-list-static.txt" "$out_dir/uv_run_tests_a.list.txt"
+
+run_tap_suite \
+  uv_run_tests \
+  "$abi_dir/linux-test-list.txt" \
+  "$shared_run_dir" \
+  "$out_dir/uv_run_tests.run.log" \
+  env LD_LIBRARY_PATH="$safe_build_dir" UV_TEST_TIMEOUT_MULTIPLIER=2 \
+  "$out_dir/uv_run_tests"
+
+run_tap_suite \
+  uv_run_tests_a \
+  "$abi_dir/linux-test-list-static.txt" \
+  "$static_run_dir" \
+  "$out_dir/uv_run_tests_a.run.log" \
+  env UV_TEST_TIMEOUT_MULTIPLIER=2 \
+  "$out_dir/uv_run_tests_a"
+
+(
+  cd "$static_run_dir"
+  "$out_dir/uv_run_benchmarks_a" sizes | grep '^# ' >"$out_dir/uv_run_benchmarks_a.sizes.txt"
+)
+diff -u "$abi_dir/linux-struct-sizes.txt" "$out_dir/uv_run_benchmarks_a.sizes.txt"
 
 printf 'link compatibility verified in %s\n' "$out_dir"
