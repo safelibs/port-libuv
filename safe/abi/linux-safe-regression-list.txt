@@ -1,0 +1,4 @@
+getaddrinfo_long_hostname
+io_uring_privdrop_regression
+safe_regression_sanity
+supplementary_groups_dropped

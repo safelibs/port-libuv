@@ -1,0 +1,16 @@
+uv_run_tests exit_code=7
+uv_run_tests fail fs_copyfile
+uv_run_tests fail fs_event_watch_file_twice
+uv_run_tests fail fs_read_bufs
+uv_run_tests fail fs_readdir_file
+uv_run_tests fail fs_scandir_early_exit
+uv_run_tests fail fs_scandir_file
+uv_run_tests fail pipe_connect_to_file
+uv_run_tests_a exit_code=7
+uv_run_tests_a fail fs_copyfile
+uv_run_tests_a fail fs_event_watch_file_twice
+uv_run_tests_a fail fs_read_bufs
+uv_run_tests_a fail fs_readdir_file
+uv_run_tests_a fail fs_scandir_early_exit
+uv_run_tests_a fail fs_scandir_file
+uv_run_tests_a fail pipe_connect_to_file

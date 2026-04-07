@@ -68,6 +68,21 @@ configure_file(
   @ONLY
 )
 
+function(uv_normalize_absolute_source_list output_var)
+  set(result)
+  foreach(source IN LISTS ARGN)
+    if(IS_ABSOLUTE "${source}")
+      set(abs_source "${source}")
+    else()
+      get_filename_component(abs_source "${source}" ABSOLUTE BASE_DIR "${PROJECT_SOURCE_DIR}")
+    endif()
+    list(APPEND result "${abs_source}")
+  endforeach()
+  list(REMOVE_DUPLICATES result)
+  list(SORT result)
+  set(${output_var} "${result}" PARENT_SCOPE)
+endfunction()
+
 set(uv_test_legacy_support_sources
     ../original/src/idna.c
     ../original/src/random.c
@@ -182,6 +197,18 @@ set_target_properties(
     POSITION_INDEPENDENT_CODE ON
 )
 
+uv_normalize_absolute_source_list(
+  uv_production_non_rust_sources
+  ${uv_test_legacy_support_sources}
+  ${uv_test_phase5_private_support_sources}
+)
+uv_normalize_absolute_source_list(
+  uv_generated_production_non_rust_sources
+  legacy/generated/phase5_private_forwarders.c
+)
+list(JOIN uv_production_non_rust_sources ";" UV_PRODUCTION_NON_RUST_SOURCES_ENV)
+list(JOIN uv_generated_production_non_rust_sources ";" UV_GENERATED_PRODUCTION_NON_RUST_SOURCES_ENV)
+
 add_custom_command(
   OUTPUT
     ${STAGED_SHARED_LIBRARY}
@@ -192,6 +219,8 @@ add_custom_command(
   COMMAND
     ${CMAKE_COMMAND} -E env
       CARGO_TARGET_DIR=${CARGO_TARGET_DIR}
+      "SAFE_LIBUV_PRODUCTION_NON_RUST_SOURCES=${UV_PRODUCTION_NON_RUST_SOURCES_ENV}"
+      "SAFE_LIBUV_GENERATED_PRODUCTION_NON_RUST_SOURCES=${UV_GENERATED_PRODUCTION_NON_RUST_SOURCES_ENV}"
       cargo build --manifest-path ${PROJECT_SOURCE_DIR}/Cargo.toml ${CARGO_BUILD_ARGS}
   COMMAND
     /bin/bash -lc

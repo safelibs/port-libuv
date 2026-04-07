@@ -7,6 +7,12 @@ use quote::quote;
 use syn::{parse_file, parse_quote, FnArg, ForeignItem, ForeignItemFn, Item, Pat};
 
 const VARIADIC_EXPORTS: &[&str] = &["uv_loop_configure"];
+const BUILD_MANIFEST_SCHEMA_VERSION: u32 = 2;
+const PRODUCTION_NON_RUST_SOURCES_ENV: &str = "SAFE_LIBUV_PRODUCTION_NON_RUST_SOURCES";
+const GENERATED_PRODUCTION_NON_RUST_SOURCES_ENV: &str =
+    "SAFE_LIBUV_GENERATED_PRODUCTION_NON_RUST_SOURCES";
+const DEFAULT_GENERATED_PRODUCTION_NON_RUST_SOURCES: &[&str] =
+    &["legacy/generated/phase5_private_forwarders.c"];
 const PHASE5_RUST_EXPORTS: &[&str] = &[
     "uv_accept",
     "uv_fileno",
@@ -694,6 +700,8 @@ fn main() {
     println!("cargo:rerun-if-changed={}", legacy_manifest.display());
     println!("cargo:rerun-if-changed={}", exported_symbols_path.display());
     println!("cargo:rerun-if-changed={}", rename_header.display());
+    println!("cargo:rerun-if-env-changed={PRODUCTION_NON_RUST_SOURCES_ENV}");
+    println!("cargo:rerun-if-env-changed={GENERATED_PRODUCTION_NON_RUST_SOURCES_ENV}");
     for source in &legacy_sources {
         println!("cargo:rerun-if-changed={source}");
     }
@@ -708,8 +716,14 @@ fn main() {
     generate_ffi_support_aliases(&ffi_support_aliases_path, &uv_functions);
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    let production_non_rust_sources: Vec<String> = Vec::new();
-    let generated_production_non_rust_sources: Vec<String> = Vec::new();
+    let (production_non_rust_sources, generated_production_non_rust_sources) =
+        resolve_production_non_rust_sources(&manifest_dir, &legacy_sources, &target_os);
+    for source in production_non_rust_sources
+        .iter()
+        .chain(generated_production_non_rust_sources.iter())
+    {
+        println!("cargo:rerun-if-changed={source}");
+    }
     if target_os == "linux" {
         emit_linux_native_link_libs();
     }
@@ -742,6 +756,73 @@ fn emit_linux_native_link_libs() {
     for lib in ["pthread", "dl", "rt"] {
         println!("cargo:rustc-link-lib={lib}");
     }
+}
+
+fn resolve_production_non_rust_sources(
+    manifest_dir: &Path,
+    legacy_sources: &[String],
+    target_os: &str,
+) -> (Vec<String>, Vec<String>) {
+    let production_non_rust_sources =
+        read_manifest_source_env(manifest_dir, PRODUCTION_NON_RUST_SOURCES_ENV)
+            .unwrap_or_else(|| {
+                if target_os == "linux" {
+                    legacy_sources.to_vec()
+                } else {
+                    Vec::new()
+                }
+            });
+    let generated_production_non_rust_sources =
+        read_manifest_source_env(manifest_dir, GENERATED_PRODUCTION_NON_RUST_SOURCES_ENV)
+            .unwrap_or_else(|| {
+                if target_os == "linux" {
+                    DEFAULT_GENERATED_PRODUCTION_NON_RUST_SOURCES
+                        .iter()
+                        .map(|path| normalize_source_path(manifest_dir, path))
+                        .collect()
+                } else {
+                    Vec::new()
+                }
+            });
+
+    (
+        normalize_source_list(production_non_rust_sources),
+        normalize_source_list(generated_production_non_rust_sources),
+    )
+}
+
+fn read_manifest_source_env(manifest_dir: &Path, env_name: &str) -> Option<Vec<String>> {
+    match env::var(env_name) {
+        Ok(value) => Some(
+            value
+                .split(';')
+                .filter(|entry| !entry.is_empty())
+                .map(|entry| normalize_source_path(manifest_dir, entry))
+                .collect(),
+        ),
+        Err(env::VarError::NotPresent) => None,
+        Err(env::VarError::NotUnicode(_)) => {
+            panic!("environment variable {env_name} must contain valid UTF-8 paths")
+        }
+    }
+}
+
+fn normalize_source_path(manifest_dir: &Path, path: &str) -> String {
+    let path = Path::new(path);
+    let abs_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        manifest_dir.join(path)
+    };
+    abs_path.display().to_string()
+}
+
+fn normalize_source_list(values: Vec<String>) -> Vec<String> {
+    values
+        .into_iter()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 fn generate_bindings(header: &Path, include_dir: &Path, bindings_path: &Path) {
@@ -936,11 +1017,13 @@ fn write_build_manifest(
     let json = format!(
         concat!(
             "{{\n",
+            "  \"schema_version\": {},\n",
             "  \"generated_production_non_rust_sources\": {},\n",
             "  \"legacy_manifest_sources\": {},\n",
             "  \"production_non_rust_sources\": {}\n",
             "}}\n"
         ),
+        BUILD_MANIFEST_SCHEMA_VERSION,
         json_array(generated_production_non_rust_sources),
         json_array(legacy_manifest_sources),
         json_array(production_non_rust_sources),
