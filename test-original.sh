@@ -3,6 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$script_dir"
+libuv_impl="${LIBUV_IMPL:-original}"
 
 if ! command -v docker >/dev/null 2>&1; then
   printf 'docker is required\n' >&2
@@ -11,6 +12,7 @@ fi
 
 docker run --rm -i \
   --pull=missing \
+  -e LIBUV_IMPL="$libuv_impl" \
   -v "$repo_root:/work" \
   -w /work \
   ubuntu:24.04 \
@@ -57,18 +59,41 @@ apt-get install -y --no-install-recommends \
   ttyd
 
 multiarch="$(gcc -print-multiarch)"
-libuv_prefix="/usr/local"
-libuv_pkgconfig="$libuv_prefix/lib/$multiarch/pkgconfig"
-libuv_libdir="$libuv_prefix/lib/$multiarch"
+case "${LIBUV_IMPL}" in
+  original)
+    libuv_prefix="/usr/local"
+    libuv_pkgconfig="$libuv_prefix/lib/$multiarch/pkgconfig"
+    libuv_libdir="$libuv_prefix/lib/$multiarch"
 
-cmake -S /work/original -B /tmp/libuv-build -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DBUILD_TESTING=OFF \
-  -DLIBUV_BUILD_TESTS=OFF \
-  -DLIBUV_BUILD_BENCH=OFF
-cmake --build /tmp/libuv-build -j"$(nproc)"
-cmake --install /tmp/libuv-build --prefix "$libuv_prefix"
-ldconfig
+    cmake -S /work/original -B /tmp/libuv-build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_TESTING=OFF \
+      -DLIBUV_BUILD_TESTS=OFF \
+      -DLIBUV_BUILD_BENCH=OFF
+    cmake --build /tmp/libuv-build -j"$(nproc)"
+    cmake --install /tmp/libuv-build --prefix "$libuv_prefix"
+    ldconfig
+    ;;
+  safe)
+    shopt -s nullglob
+    runtime_debs=(/work/safe/dist/libuv1t64_*.deb)
+    dev_debs=(/work/safe/dist/libuv1-dev_*.deb)
+    shopt -u nullglob
+    if [[ ${#runtime_debs[@]} -ne 1 || ${#dev_debs[@]} -ne 1 ]]; then
+      printf 'expected exactly one libuv1t64 and one libuv1-dev package in /work/safe/dist\n' >&2
+      exit 1
+    fi
+    apt-get install -y --allow-downgrades --reinstall "${runtime_debs[0]}" "${dev_debs[0]}"
+    ldconfig
+    libuv_prefix="/usr"
+    libuv_pkgconfig="/usr/lib/$multiarch/pkgconfig"
+    libuv_libdir="/usr/lib/$multiarch"
+    ;;
+  *)
+    printf 'unsupported LIBUV_IMPL=%s\n' "${LIBUV_IMPL}" >&2
+    exit 1
+    ;;
+esac
 
 export PKG_CONFIG_PATH="$libuv_pkgconfig:$libuv_prefix/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 export LD_LIBRARY_PATH="$libuv_libdir:$libuv_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -610,7 +635,7 @@ EOF
   cc -o "$dir/test" "$dir/test.c" $(pkg-config --cflags --libs libh2o libuv)
   ldd "$dir/test" >"$dir/ldd.txt"
   require_file_contains "$dir/ldd.txt" "libh2o.so.0.13"
-  require_file_contains "$dir/ldd.txt" "libuv.so.1 => /usr/local/lib/libuv.so.1"
+  require_file_contains "$dir/ldd.txt" "libuv.so.1 => $libuv_libdir/libuv.so.1"
   "$dir/test" >"$dir/out.txt"
   require_file_contains "$dir/out.txt" "libh2o-ok"
 }

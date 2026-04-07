@@ -1,4 +1,4 @@
-LIBUV_1.0 {
+{
   global:
     uv_accept;
     uv_async_init;
