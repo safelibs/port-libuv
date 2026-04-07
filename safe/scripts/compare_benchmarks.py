@@ -101,27 +101,54 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", required=True)
     parser.add_argument("--candidate", required=True)
-    selection_group = parser.add_mutually_exclusive_group(required=True)
+    selection_group = parser.add_mutually_exclusive_group(required=False)
     selection_group.add_argument("--selection")
     selection_group.add_argument("--bench", action="append")
     parser.add_argument("--thresholds", required=True)
     parser.add_argument("--mode", choices=("baseline-verify", "runtime"), default="runtime")
     parser.add_argument("--output")
+    parser.add_argument("--report")
     return parser
 
 
-def resolve_selection(args: argparse.Namespace) -> list[str]:
+def resolve_selection(args: argparse.Namespace, baseline: dict, candidate: dict) -> list[str]:
     if args.selection is not None:
         return load_selection(Path(args.selection))
-    return args.bench
+    if args.bench is not None:
+        return args.bench
+
+    candidate_selection = candidate.get("selection")
+    baseline_selection = baseline.get("selection")
+    if candidate_selection is None:
+        raise ValueError("candidate report must record selection when --selection is omitted")
+    if baseline_selection != candidate_selection:
+        raise ValueError("baseline and candidate selections differ; pass --selection explicitly")
+    return candidate_selection
+
+
+def render_markdown(mode: str, summary: list[dict]) -> str:
+    lines = [
+        f"# Benchmark Compare Report ({mode})",
+        "",
+        "| Benchmark | Metric | Baseline | Candidate | Regression % | Status |",
+        "| --- | --- | ---: | ---: | ---: | --- |",
+    ]
+    for row in summary:
+        lines.append(
+            "| {benchmark} | {metric} | {baseline:.6f} | {candidate:.6f} | {regression_pct:.2f} | {status} |".format(
+                **row
+            )
+        )
+    lines.append("")
+    return "\n".join(lines)
 
 
 def main() -> int:
     args = build_parser().parse_args()
-    selection = resolve_selection(args)
-    thresholds = load_thresholds(Path(args.thresholds))
     baseline = load_report(Path(args.baseline))
     candidate = load_report(Path(args.candidate))
+    selection = resolve_selection(args, baseline, candidate)
+    thresholds = load_thresholds(Path(args.thresholds))
 
     summary, failures = compare_reports(
         baseline,
@@ -132,10 +159,13 @@ def main() -> int:
     )
     payload = {"mode": args.mode, "comparisons": summary}
     rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    markdown = render_markdown(args.mode, summary)
 
     if args.output:
         Path(args.output).write_text(rendered)
-    else:
+    if args.report:
+        Path(args.report).write_text(markdown)
+    if not args.output and not args.report:
         sys.stdout.write(rendered)
 
     if failures:

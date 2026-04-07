@@ -1,13 +1,13 @@
 /* Runner-only forwarders that let the production Rust library target the
  * phase-private symbol surface while the test binaries still satisfy those
- * symbols from the retained legacy support archive.
+ * symbols from the retained test-support archive.
  */
 
 #define FORWARD(sym) \
   ".globl uv_phase5_private_" #sym "\n" \
   ".type uv_phase5_private_" #sym ", @function\n" \
   "uv_phase5_private_" #sym ":\n" \
-  "  jmp uv_legacy_" #sym "\n" \
+  "  jmp uv_test_support_" #sym "\n" \
   ".size uv_phase5_private_" #sym ", .-uv_phase5_private_" #sym "\n"
 
 __asm__(

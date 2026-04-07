@@ -208,7 +208,7 @@ pub unsafe extern "C" fn uv_default_loop() -> *mut uv_loop_t {
         return DEFAULT_LOOP_PTR;
     }
 
-    let loop_ = DEFAULT_LOOP_STORAGE.as_mut_ptr();
+    let loop_ = std::ptr::addr_of_mut!(DEFAULT_LOOP_STORAGE).cast::<uv_loop_t>();
     if uv_loop_init(loop_) != 0 {
         return std::ptr::null_mut();
     }

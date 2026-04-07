@@ -12,6 +12,8 @@ impl Default for LoopState {
         Self {
             compat: uv__loop_internal_fields_s {
                 flags: 0,
+                // SAFETY: `uv__loop_metrics_s` is a plain C metrics record and
+                // libuv initializes it from all-zero storage.
                 loop_metrics: unsafe { std::mem::zeroed::<uv__loop_metrics_s>() },
                 current_timeout: 0,
                 ctl: uv__iou::default(),

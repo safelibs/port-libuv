@@ -34,7 +34,6 @@ mod fs_poll;
 mod handle;
 mod idna;
 mod inet;
-mod legacy;
 mod r#loop;
 mod os;
 mod phase5_private;

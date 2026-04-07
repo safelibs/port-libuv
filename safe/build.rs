@@ -663,6 +663,7 @@ const PRIVATE_FORWARD_EXPORTS: &[&str] = &[
     "uv_print_active_handles",
     "uv_print_all_handles",
 ];
+const TEST_SUPPORT_ALIAS_PREFIX: &str = "uv_test_support_";
 
 fn main() {
     let manifest_dir =
@@ -675,10 +676,9 @@ fn main() {
     let exported_symbols_path = manifest_dir.join("abi/linux-exported-symbols.txt");
     let rename_header = manifest_dir.join("legacy/generated/legacy_rename.h");
     let bindings_path = out_dir.join("bindings.rs");
-    let legacy_bindings_path = out_dir.join("legacy_bindings.rs");
     let private_bindings_path = out_dir.join("private_bindings.rs");
     let ffi_exports_path = out_dir.join("ffi_exports_generated.rs");
-    let ffi_legacy_aliases_path = out_dir.join("ffi_legacy_aliases_generated.rs");
+    let ffi_support_aliases_path = out_dir.join("ffi_support_aliases_generated.rs");
     let build_manifest_path = out_dir.join("libuv-build-manifest.json");
     let dynamic_list_path = out_dir.join("libuv-dynamic-list.txt");
     let legacy_sources = read_legacy_sources(&legacy_manifest);
@@ -703,10 +703,9 @@ fn main() {
     generate_bindings(&header, &include_dir, &bindings_path);
 
     let uv_functions = parse_uv_functions(&bindings_path);
-    generate_legacy_bindings(&legacy_bindings_path, &exported_symbols, &uv_functions);
     generate_private_bindings(&private_bindings_path, &exported_symbols, &uv_functions);
     generate_ffi_exports(&ffi_exports_path, &exported_symbols, &uv_functions);
-    generate_ffi_legacy_aliases(&ffi_legacy_aliases_path, &uv_functions);
+    generate_ffi_support_aliases(&ffi_support_aliases_path, &uv_functions);
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let production_non_rust_sources: Vec<String> = Vec::new();
@@ -788,39 +787,6 @@ fn parse_uv_functions(bindings_path: &Path) -> BTreeMap<String, ForeignItemFn> {
         }
     }
     functions
-}
-
-fn generate_legacy_bindings(
-    output_path: &Path,
-    exported_symbols: &[String],
-    uv_functions: &BTreeMap<String, ForeignItemFn>,
-) {
-    let mut declarations = Vec::with_capacity(exported_symbols.len());
-
-    for symbol in exported_symbols {
-        if VARIADIC_EXPORTS.contains(&symbol.as_str()) {
-            continue;
-        }
-
-        let mut function = uv_functions
-            .get(symbol)
-            .unwrap_or_else(|| panic!("missing binding declaration for {symbol}"))
-            .clone();
-        let link_name = syn::LitStr::new(
-            &format!("uv_legacy_{symbol}"),
-            proc_macro2::Span::call_site(),
-        );
-        function.attrs = vec![parse_quote!(#[link_name = #link_name])];
-        declarations.push(function);
-    }
-
-    let tokens = quote! {
-        unsafe extern "C" {
-            #(#declarations)*
-        }
-    };
-
-    fs::write(output_path, tokens.to_string()).expect("failed to write legacy bindings");
 }
 
 fn generate_private_bindings(
@@ -921,7 +887,7 @@ fn generate_ffi_exports(
     fs::write(output_path, tokens.to_string()).expect("failed to write ffi exports");
 }
 
-fn generate_ffi_legacy_aliases(output_path: &Path, uv_functions: &BTreeMap<String, ForeignItemFn>) {
+fn generate_ffi_support_aliases(output_path: &Path, uv_functions: &BTreeMap<String, ForeignItemFn>) {
     let mut aliases = String::new();
     let alias_exports = LEGACY_ALIAS_EXPORTS
         .iter()
@@ -934,17 +900,17 @@ fn generate_ffi_legacy_aliases(output_path: &Path, uv_functions: &BTreeMap<Strin
             .get(symbol)
             .unwrap_or_else(|| panic!("missing binding declaration for {symbol}"));
         aliases.push_str(&format!(
-            ".globl uv_legacy_{symbol}\n\
-             .type uv_legacy_{symbol}, @function\n\
-uv_legacy_{symbol}:\n\
+            ".globl {TEST_SUPPORT_ALIAS_PREFIX}{symbol}\n\
+             .type {TEST_SUPPORT_ALIAS_PREFIX}{symbol}, @function\n\
+{TEST_SUPPORT_ALIAS_PREFIX}{symbol}:\n\
              jmp {symbol}\n\
-             .size uv_legacy_{symbol}, .-uv_legacy_{symbol}\n"
+             .size {TEST_SUPPORT_ALIAS_PREFIX}{symbol}, .-{TEST_SUPPORT_ALIAS_PREFIX}{symbol}\n"
         ));
     }
 
     let tokens = format!("std::arch::global_asm!(r#\"\n{aliases}\"#);\n");
 
-    fs::write(output_path, tokens.to_string()).expect("failed to write ffi legacy aliases");
+    fs::write(output_path, tokens.to_string()).expect("failed to write support aliases");
 }
 
 fn argument_pattern_ident(argument: &FnArg) -> syn::Ident {

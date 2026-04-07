@@ -46,12 +46,12 @@ unsafe fn abort() -> ! {
 
 #[inline]
 unsafe fn pool_cond() -> *mut uv_cond_t {
-    COND.as_mut_ptr()
+    std::ptr::addr_of_mut!(COND).cast::<uv_cond_t>()
 }
 
 #[inline]
 unsafe fn pool_mutex() -> *mut uv_mutex_t {
-    MUTEX.as_mut_ptr()
+    std::ptr::addr_of_mut!(MUTEX).cast::<uv_mutex_t>()
 }
 
 #[inline]
@@ -90,6 +90,13 @@ unsafe fn slow_work_thread_threshold() -> u32 {
 
 unsafe extern "C" fn uv__cancelled(_w: *mut uv__work) {
     abort()
+}
+
+#[inline]
+unsafe fn is_cancelled_work(work: Option<unsafe extern "C" fn(*mut uv__work)>) -> bool {
+    work.is_some_and(|callback| {
+        std::ptr::fn_addr_eq(callback, uv__cancelled as unsafe extern "C" fn(*mut uv__work))
+    })
 }
 
 unsafe extern "C" fn worker(arg: *mut libc::c_void) {
@@ -201,13 +208,13 @@ unsafe fn init_threads() {
         NTHREADS = MAX_THREADPOOL_SIZE as u32;
     }
 
-    THREADS = DEFAULT_THREADS.as_mut_ptr();
+    THREADS = std::ptr::addr_of_mut!(DEFAULT_THREADS).cast::<uv_thread_t>();
     if NTHREADS as usize > DEFAULT_THREADPOOL_SIZE {
         THREADS = allocator::malloc(NTHREADS as usize * std::mem::size_of::<uv_thread_t>())
             .cast::<uv_thread_t>();
         if THREADS.is_null() {
             NTHREADS = DEFAULT_THREADPOOL_SIZE as u32;
-            THREADS = DEFAULT_THREADS.as_mut_ptr();
+            THREADS = std::ptr::addr_of_mut!(DEFAULT_THREADS).cast::<uv_thread_t>();
         }
     }
 
@@ -313,7 +320,7 @@ pub(crate) unsafe extern "C" fn uv__work_done_impl(handle: *mut uv_async_t) {
         queue_remove(q);
 
         let w = work_from_queue(q);
-        let err = if (*w).work == Some(uv__cancelled) {
+        let err = if is_cancelled_work((*w).work) {
             uv_errno_t_UV_ECANCELED
         } else {
             0
