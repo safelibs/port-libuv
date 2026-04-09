@@ -1,17 +1,6 @@
-use serde::Deserialize;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-#[derive(Debug, Deserialize)]
-struct AbiBaseline {
-    linux_x86_64: LinuxX8664Baseline,
-}
-
-#[derive(Debug, Deserialize)]
-struct LinuxX8664Baseline {
-    soname: String,
-}
 
 fn main() {
     assert_supported_target();
@@ -20,12 +9,9 @@ fn main() {
     let abi_baseline = manifest_dir.join("tools/abi-baseline.json");
     println!("cargo:rerun-if-changed={}", abi_baseline.display());
 
-    let baseline = load_abi_baseline(&abi_baseline);
+    let soname = load_soname(&abi_baseline);
 
-    println!(
-        "cargo:rustc-cdylib-link-arg=-Wl,-soname,{}",
-        baseline.linux_x86_64.soname
-    );
+    println!("cargo:rustc-cdylib-link-arg=-Wl,-soname,{soname}");
     println!("cargo:rustc-link-lib=pthread");
     println!("cargo:rustc-link-lib=dl");
     println!("cargo:rustc-link-lib=rt");
@@ -39,7 +25,23 @@ fn assert_supported_target() {
     }
 }
 
-fn load_abi_baseline(path: &Path) -> AbiBaseline {
+fn load_soname(path: &Path) -> String {
     let contents = fs::read_to_string(path).expect("abi baseline json");
-    serde_json::from_str(&contents).expect("parse abi baseline json")
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("\"soname\"") {
+            continue;
+        }
+
+        let value = trimmed
+            .split_once(':')
+            .map(|(_, rest)| rest.trim())
+            .and_then(|rest| rest.strip_prefix('"'))
+            .and_then(|rest| rest.split('"').next())
+            .filter(|value| !value.is_empty())
+            .expect("parse soname from abi baseline");
+        return value.to_owned();
+    }
+
+    panic!("abi baseline missing linux_x86_64.soname");
 }
