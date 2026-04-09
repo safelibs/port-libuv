@@ -54,6 +54,7 @@ int ipc_send_recv_helper(void);
 int ipc_helper_bind_twice(void);
 int ipc_helper_send_zero(void);
 int stdio_over_pipes_helper(void);
+int strtok_helper(void);
 void spawn_stdin_stdout(void);
 void process_title_big_argv(void);
 int spawn_tcp_server_helper(void);
@@ -125,6 +126,10 @@ static int maybe_run_test(int argc, char **argv) {
 
   if (strcmp(argv[1], "stdio_over_pipes_helper") == 0) {
     return stdio_over_pipes_helper();
+  }
+
+  if (strcmp(argv[1], "strtok_helper") == 0) {
+    return strtok_helper();
   }
 
   if (strcmp(argv[1], "spawn_helper1") == 0) {
