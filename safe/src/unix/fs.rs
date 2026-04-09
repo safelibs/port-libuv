@@ -585,6 +585,165 @@ unsafe fn run_sendfile(req: *mut abi::uv_fs_t) -> isize {
     }
 }
 
+unsafe fn close_fd(fd: c_int) -> c_int {
+    let rc = unsafe { libc::close(fd) };
+    if rc == 0 {
+        0
+    } else {
+        let err = last_errno();
+        if err == libc::EINTR || err == libc::EINPROGRESS {
+            0
+        } else {
+            uv_err(err)
+        }
+    }
+}
+
+unsafe fn is_cifs_or_smb(fd: c_int) -> bool {
+    let mut st: libc::statfs = unsafe { zeroed() };
+    if unsafe { libc::fstatfs(fd, &mut st) } != 0 {
+        return false;
+    }
+
+    matches!(
+        st.f_type as u64,
+        0x0000_517B | 0xFE53_4D42 | 0xFF53_4D42
+    )
+}
+
+unsafe fn copy_regular_data(srcfd: c_int, dstfd: c_int, size: libc::off_t) -> c_int {
+    let mut offset: libc::off_t = 0;
+    let mut remaining = size;
+    let mut buffer = [0u8; 65_536];
+
+    while remaining > 0 {
+        let chunk = min(remaining as usize, buffer.len());
+        let read_rc = loop {
+            let rc = unsafe { libc::pread(srcfd, buffer.as_mut_ptr().cast(), chunk, offset) };
+            if rc < 0 && last_errno() == libc::EINTR {
+                continue;
+            }
+            break rc;
+        };
+
+        if read_rc < 0 {
+            return uv_err(last_errno());
+        }
+        if read_rc == 0 {
+            break;
+        }
+
+        let mut written = 0usize;
+        while written < read_rc as usize {
+            let write_rc = loop {
+                let rc = unsafe {
+                    libc::write(
+                        dstfd,
+                        buffer[written..read_rc as usize].as_ptr().cast(),
+                        read_rc as usize - written,
+                    )
+                };
+                if rc < 0 && last_errno() == libc::EINTR {
+                    continue;
+                }
+                break rc;
+            };
+
+            if write_rc < 0 {
+                return uv_err(last_errno());
+            }
+            written += write_rc as usize;
+        }
+
+        offset += read_rc as libc::off_t;
+        remaining -= read_rc as libc::off_t;
+    }
+
+    0
+}
+
+unsafe fn finish_copyfile(srcfd: c_int, dstfd: c_int, mut err: c_int) -> isize {
+    if dstfd >= 0 {
+        let close_err = unsafe { close_fd(dstfd) };
+        if err == 0 {
+            err = close_err;
+        }
+    }
+    if srcfd >= 0 {
+        let close_err = unsafe { close_fd(srcfd) };
+        if err == 0 {
+            err = close_err;
+        }
+    }
+    err as isize
+}
+
+unsafe fn run_copyfile(req: *mut abi::uv_fs_t) -> isize {
+    let mut srcfd = -1;
+    let mut dstfd = -1;
+    let mut src_stat: abi::stat = unsafe { zeroed() };
+    let mut dst_stat: abi::stat = unsafe { zeroed() };
+
+    srcfd = unsafe { libc::open((*req).path, libc::O_RDONLY) };
+    if srcfd < 0 {
+        return uv_err(last_errno()) as isize;
+    }
+
+    if unsafe { libc::fstat(srcfd, (&mut src_stat as *mut abi::stat).cast()) } != 0 {
+        return unsafe { finish_copyfile(srcfd, dstfd, uv_err(last_errno())) };
+    }
+
+    let mut dst_flags = libc::O_WRONLY | libc::O_CREAT;
+    if unsafe { (*req).flags } & abi::UV_FS_COPYFILE_EXCL as c_int != 0 {
+        dst_flags |= libc::O_EXCL;
+    }
+
+    dstfd = unsafe { libc::open((*req).new_path, dst_flags, src_stat.st_mode as libc::mode_t) };
+    if dstfd < 0 {
+        return unsafe { finish_copyfile(srcfd, dstfd, uv_err(last_errno())) };
+    }
+
+    if unsafe { (*req).flags } & abi::UV_FS_COPYFILE_EXCL as c_int == 0 {
+        if unsafe { libc::fstat(dstfd, (&mut dst_stat as *mut abi::stat).cast()) } != 0 {
+            return unsafe { finish_copyfile(srcfd, dstfd, uv_err(last_errno())) };
+        }
+
+        if src_stat.st_dev == dst_stat.st_dev && src_stat.st_ino == dst_stat.st_ino {
+            return unsafe { finish_copyfile(srcfd, dstfd, 0) };
+        }
+
+        if unsafe { libc::ftruncate(dstfd, 0) } != 0 {
+            let err = uv_err(last_errno());
+            if err != abi::uv_errno_t_UV_EACCES || dst_stat.st_size > 0 {
+                return unsafe { finish_copyfile(srcfd, dstfd, err) };
+            }
+        }
+    }
+
+    if unsafe { libc::fchmod(dstfd, src_stat.st_mode as libc::mode_t) } != 0 {
+        let err = uv_err(last_errno());
+        if err != abi::uv_errno_t_UV_EPERM || unsafe { !is_cifs_or_smb(dstfd) } {
+            return unsafe { finish_copyfile(srcfd, dstfd, err) };
+        }
+    }
+
+    if unsafe { (*req).flags }
+        & (abi::UV_FS_COPYFILE_FICLONE as c_int | abi::UV_FS_COPYFILE_FICLONE_FORCE as c_int)
+        != 0
+    {
+        if unsafe { libc::ioctl(dstfd, libc::FICLONE, srcfd) } == 0 {
+            return unsafe { finish_copyfile(srcfd, dstfd, 0) };
+        }
+
+        if unsafe { (*req).flags } & abi::UV_FS_COPYFILE_FICLONE_FORCE as c_int != 0 {
+            return unsafe { finish_copyfile(srcfd, dstfd, uv_err(last_errno())) };
+        }
+    }
+
+    let err = unsafe { copy_regular_data(srcfd, dstfd, src_stat.st_size as libc::off_t) };
+    unsafe { finish_copyfile(srcfd, dstfd, err) }
+}
+
 unsafe fn run_read(req: *mut abi::uv_fs_t) -> isize {
     let bufs = unsafe { slice::from_raw_parts((*req).bufs, (*req).nbufs as usize) };
     let nbufs = min(bufs.len(), get_iovmax());
@@ -707,6 +866,7 @@ unsafe fn execute_fs(req: *mut abi::uv_fs_t) {
         abi::uv_fs_type_UV_FS_READ => unsafe { run_read(req) },
         abi::uv_fs_type_UV_FS_WRITE => unsafe { run_write_all(req) },
         abi::uv_fs_type_UV_FS_SENDFILE => unsafe { run_sendfile(req) },
+        abi::uv_fs_type_UV_FS_COPYFILE => unsafe { run_copyfile(req) },
         abi::uv_fs_type_UV_FS_STAT => {
             let mut st: abi::stat = unsafe { zeroed() };
             let rc = unsafe { libc::stat((*req).path, (&mut st as *mut abi::stat).cast()) };
@@ -1757,16 +1917,43 @@ pub(crate) unsafe fn statfs(
 pub(crate) unsafe fn copyfile(
     loop_: *mut abi::uv_loop_t,
     req: *mut abi::uv_fs_t,
-    _path: *const c_char,
-    _new_path: *const c_char,
-    _flags: c_int,
-    _cb: abi::uv_fs_cb,
+    path: *const c_char,
+    new_path: *const c_char,
+    flags: c_int,
+    cb: abi::uv_fs_cb,
 ) -> c_int {
-    let _ = loop_;
     if req.is_null() {
         return abi::uv_errno_t_UV_EINVAL;
     }
-    abi::uv_errno_t_UV_ENOSYS
+
+    unsafe {
+        fs_req_init(loop_, req, abi::uv_fs_type_UV_FS_COPYFILE, cb);
+    }
+
+    let allowed_flags = abi::UV_FS_COPYFILE_EXCL as c_int
+        | abi::UV_FS_COPYFILE_FICLONE as c_int
+        | abi::UV_FS_COPYFILE_FICLONE_FORCE as c_int;
+    if path.is_null() || new_path.is_null() || (flags & !allowed_flags) != 0 {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+
+    let rc = if cb.is_none() {
+        unsafe {
+            (*req).path = path;
+            (*req).new_path = new_path;
+        }
+        0
+    } else {
+        unsafe { clone_paths(req, path, new_path) }
+    };
+    if rc != 0 {
+        return rc;
+    }
+
+    unsafe {
+        (*req).flags = flags;
+    }
+    unsafe { run_or_submit(loop_, req) }
 }
 
 pub(crate) unsafe fn opendir(

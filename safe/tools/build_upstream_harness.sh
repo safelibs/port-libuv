@@ -197,6 +197,7 @@ selected_tests = [
     "fs_async_dir",
     "fs_async_sendfile",
     "fs_async_sendfile_nodata",
+    "fs_copyfile",
     "fs_mkdtemp",
     "fs_mkstemp",
     "fs_fstat",
