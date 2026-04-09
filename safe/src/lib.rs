@@ -14,6 +14,7 @@ pub mod core;
 mod exports;
 pub mod stub;
 pub mod threading;
+pub mod unix;
 #[path = "unix/async.rs"]
 pub(crate) mod unix_async;
 pub mod version;

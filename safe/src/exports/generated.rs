@@ -1,11 +1,11 @@
-use crate::{abi::linux_x86_64 as abi, core, stub};
+use crate::{abi::linux_x86_64 as abi, core, stub, unix};
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_accept(
     server: *mut abi::uv_stream_t,
     client: *mut abi::uv_stream_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_accept")
+    unsafe { unix::stream::accept(server, client) }
 }
 
 #[unsafe(no_mangle)]
@@ -62,7 +62,7 @@ pub unsafe extern "C" fn uv_check_init(
     arg1: *mut abi::uv_loop_t,
     check: *mut abi::uv_check_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_check_init")
+    unsafe { unix::loop_watcher::check_init(arg1, check) }
 }
 
 #[unsafe(no_mangle)]
@@ -70,12 +70,12 @@ pub unsafe extern "C" fn uv_check_start(
     check: *mut abi::uv_check_t,
     cb: abi::uv_check_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_check_start")
+    unsafe { unix::loop_watcher::check_start(check, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_check_stop(check: *mut abi::uv_check_t) -> ::std::os::raw::c_int {
-    stub::status("uv_check_stop")
+    unsafe { unix::loop_watcher::check_stop(check) }
 }
 
 #[unsafe(no_mangle)]
@@ -88,9 +88,7 @@ pub unsafe extern "C" fn uv_clock_gettime(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_close(handle: *mut abi::uv_handle_t, close_cb: abi::uv_close_cb) {
-    unsafe {
-        core::handle::close(handle, close_cb);
-    }
+    unsafe { unix::epoll::close(handle, close_cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -153,12 +151,12 @@ pub unsafe extern "C" fn uv_cwd(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_default_loop() -> *mut abi::uv_loop_t {
-    unsafe { core::default_loop::default_loop() }
+    unsafe { unix::epoll::default_loop() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_disable_stdio_inheritance() {
-    stub::void("uv_disable_stdio_inheritance");
+    unsafe { unix::fd::disable_stdio_inheritance() }
 }
 
 #[unsafe(no_mangle)]
@@ -207,7 +205,7 @@ pub unsafe extern "C" fn uv_exepath(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_exepath")
+    unsafe { unix::fd::exepath(buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -215,7 +213,7 @@ pub unsafe extern "C" fn uv_fileno(
     handle: *const abi::uv_handle_t,
     fd: *mut abi::uv_os_fd_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fileno")
+    unsafe { unix::fd::fileno(handle, fd) }
 }
 
 #[unsafe(no_mangle)]
@@ -231,7 +229,7 @@ pub unsafe extern "C" fn uv_free_interface_addresses(
     addresses: *mut abi::uv_interface_address_t,
     count: ::std::os::raw::c_int,
 ) {
-    stub::void("uv_free_interface_addresses");
+    unsafe { unix::fd::free_interface_addresses(addresses, count) }
 }
 
 #[unsafe(no_mangle)]
@@ -557,7 +555,7 @@ pub unsafe extern "C" fn uv_fs_read(
     offset: i64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_read")
+    unsafe { unix::fd::fs_read(loop_, req, file, bufs, nbufs, offset, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -603,9 +601,7 @@ pub unsafe extern "C" fn uv_fs_rename(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_fs_req_cleanup(req: *mut abi::uv_fs_t) {
-    unsafe {
-        crate::threading::threadpool::fs_req_cleanup(req);
-    }
+    unsafe { unix::fd::fs_req_cleanup(req) }
 }
 
 #[unsafe(no_mangle)]
@@ -689,7 +685,7 @@ pub unsafe extern "C" fn uv_fs_unlink(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::threading::threadpool::fs_unlink(loop_, req, path, cb) }
+    unsafe { unix::fd::fs_unlink(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -785,7 +781,7 @@ pub unsafe extern "C" fn uv_gettimeofday(tv: *mut abi::uv_timeval64_t) -> ::std:
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_guess_handle(file: abi::uv_file) -> abi::uv_handle_type {
-    unsafe { stub::zeroed::<abi::uv_handle_type>("uv_guess_handle") }
+    unsafe { unix::fd::guess_handle(file) }
 }
 
 #[unsafe(no_mangle)]
@@ -798,7 +794,7 @@ pub unsafe extern "C" fn uv_idle_init(
     arg1: *mut abi::uv_loop_t,
     idle: *mut abi::uv_idle_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::handle::idle_init(arg1, idle) }
+    unsafe { unix::loop_watcher::idle_init(arg1, idle) }
 }
 
 #[unsafe(no_mangle)]
@@ -806,12 +802,12 @@ pub unsafe extern "C" fn uv_idle_start(
     idle: *mut abi::uv_idle_t,
     cb: abi::uv_idle_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::handle::idle_start(idle, cb) }
+    unsafe { unix::loop_watcher::idle_start(idle, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_idle_stop(idle: *mut abi::uv_idle_t) -> ::std::os::raw::c_int {
-    unsafe { core::handle::idle_stop(idle) }
+    unsafe { unix::loop_watcher::idle_stop(idle) }
 }
 
 #[unsafe(no_mangle)]
@@ -839,7 +835,7 @@ pub unsafe extern "C" fn uv_inet_ntop(
     dst: *mut ::std::os::raw::c_char,
     size: usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_inet_ntop")
+    unsafe { unix::fd::inet_ntop(af, src, dst, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -848,7 +844,7 @@ pub unsafe extern "C" fn uv_inet_pton(
     src: *const ::std::os::raw::c_char,
     dst: *mut ::std::os::raw::c_void,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_inet_pton")
+    unsafe { unix::fd::inet_pton(af, src, dst) }
 }
 
 #[unsafe(no_mangle)]
@@ -856,7 +852,7 @@ pub unsafe extern "C" fn uv_interface_addresses(
     addresses: *mut *mut abi::uv_interface_address_t,
     count: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_interface_addresses")
+    unsafe { unix::fd::interface_addresses(addresses, count) }
 }
 
 #[unsafe(no_mangle)]
@@ -865,7 +861,7 @@ pub unsafe extern "C" fn uv_ip4_addr(
     port: ::std::os::raw::c_int,
     addr: *mut abi::sockaddr_in,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_ip4_addr")
+    unsafe { unix::fd::ip4_addr(ip, port, addr) }
 }
 
 #[unsafe(no_mangle)]
@@ -874,7 +870,7 @@ pub unsafe extern "C" fn uv_ip4_name(
     dst: *mut ::std::os::raw::c_char,
     size: usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_ip4_name")
+    unsafe { unix::fd::ip4_name(src, dst, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -883,7 +879,7 @@ pub unsafe extern "C" fn uv_ip6_addr(
     port: ::std::os::raw::c_int,
     addr: *mut abi::sockaddr_in6,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_ip6_addr")
+    unsafe { unix::fd::ip6_addr(ip, port, addr) }
 }
 
 #[unsafe(no_mangle)]
@@ -892,7 +888,7 @@ pub unsafe extern "C" fn uv_ip6_name(
     dst: *mut ::std::os::raw::c_char,
     size: usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_ip6_name")
+    unsafe { unix::fd::ip6_name(src, dst, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -901,7 +897,7 @@ pub unsafe extern "C" fn uv_ip_name(
     dst: *mut ::std::os::raw::c_char,
     size: usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_ip_name")
+    unsafe { unix::fd::ip_name(src, dst, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -949,7 +945,7 @@ pub unsafe extern "C" fn uv_listen(
     backlog: ::std::os::raw::c_int,
     cb: abi::uv_connection_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_listen")
+    unsafe { unix::stream::listen(stream, backlog, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -959,7 +955,7 @@ pub unsafe extern "C" fn uv_loadavg(avg: *mut f64) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_close(loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
-    unsafe { core::loop_::loop_close(loop_) }
+    unsafe { unix::epoll::loop_close(loop_) }
 }
 
 #[unsafe(no_mangle)]
@@ -985,7 +981,7 @@ pub unsafe extern "C" fn uv_loop_fork(loop_: *mut abi::uv_loop_t) -> ::std::os::
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_init(loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
-    unsafe { core::loop_::loop_init(loop_) }
+    unsafe { unix::epoll::loop_init(loop_) }
 }
 
 #[unsafe(no_mangle)]
@@ -1125,7 +1121,7 @@ pub unsafe extern "C" fn uv_os_gethostname(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_getpid() -> abi::uv_pid_t {
-    unsafe { stub::zeroed::<abi::uv_pid_t>("uv_os_getpid") }
+    unsafe { unix::fd::os_getpid() }
 }
 
 #[unsafe(no_mangle)]
@@ -1191,7 +1187,7 @@ pub unsafe extern "C" fn uv_pipe(
     read_flags: ::std::os::raw::c_int,
     write_flags: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe")
+    unsafe { unix::fd::pipe(fds, read_flags, write_flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1199,7 +1195,7 @@ pub unsafe extern "C" fn uv_pipe_bind(
     handle: *mut abi::uv_pipe_t,
     name: *const ::std::os::raw::c_char,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_bind")
+    unsafe { unix::pipe::bind(handle, name) }
 }
 
 #[unsafe(no_mangle)]
@@ -1209,7 +1205,7 @@ pub unsafe extern "C" fn uv_pipe_bind2(
     namelen: usize,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_bind2")
+    unsafe { unix::pipe::bind2(handle, name, namelen, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1217,7 +1213,7 @@ pub unsafe extern "C" fn uv_pipe_chmod(
     handle: *mut abi::uv_pipe_t,
     flags: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_chmod")
+    unsafe { unix::pipe::chmod(handle, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1227,7 +1223,7 @@ pub unsafe extern "C" fn uv_pipe_connect(
     name: *const ::std::os::raw::c_char,
     cb: abi::uv_connect_cb,
 ) {
-    stub::void("uv_pipe_connect");
+    unsafe { unix::pipe::connect(req, handle, name, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1239,7 +1235,7 @@ pub unsafe extern "C" fn uv_pipe_connect2(
     flags: ::std::os::raw::c_uint,
     cb: abi::uv_connect_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_connect2")
+    unsafe { unix::pipe::connect2(req, handle, name, namelen, flags, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1248,7 +1244,7 @@ pub unsafe extern "C" fn uv_pipe_getpeername(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_getpeername")
+    unsafe { unix::pipe::getpeername(handle, buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -1257,7 +1253,7 @@ pub unsafe extern "C" fn uv_pipe_getsockname(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_getsockname")
+    unsafe { unix::pipe::getsockname(handle, buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -1266,7 +1262,7 @@ pub unsafe extern "C" fn uv_pipe_init(
     handle: *mut abi::uv_pipe_t,
     ipc: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_init")
+    unsafe { unix::pipe::init(arg1, handle, ipc) }
 }
 
 #[unsafe(no_mangle)]
@@ -1274,7 +1270,7 @@ pub unsafe extern "C" fn uv_pipe_open(
     arg1: *mut abi::uv_pipe_t,
     file: abi::uv_file,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_pipe_open")
+    unsafe { unix::pipe::open(arg1, file) }
 }
 
 #[unsafe(no_mangle)]
@@ -1282,12 +1278,12 @@ pub unsafe extern "C" fn uv_pipe_pending_instances(
     handle: *mut abi::uv_pipe_t,
     count: ::std::os::raw::c_int,
 ) {
-    stub::void("uv_pipe_pending_instances");
+    unsafe { unix::pipe::pending_instances(handle, count) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_pipe_pending_type(handle: *mut abi::uv_pipe_t) -> abi::uv_handle_type {
-    unsafe { stub::zeroed::<abi::uv_handle_type>("uv_pipe_pending_type") }
+    unsafe { unix::pipe::pending_type(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1296,7 +1292,7 @@ pub unsafe extern "C" fn uv_poll_init(
     handle: *mut abi::uv_poll_t,
     fd: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_poll_init")
+    unsafe { unix::poll::init(loop_, handle, fd) }
 }
 
 #[unsafe(no_mangle)]
@@ -1305,7 +1301,7 @@ pub unsafe extern "C" fn uv_poll_init_socket(
     handle: *mut abi::uv_poll_t,
     socket: abi::uv_os_sock_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_poll_init_socket")
+    unsafe { unix::poll::init_socket(loop_, handle, socket) }
 }
 
 #[unsafe(no_mangle)]
@@ -1314,12 +1310,12 @@ pub unsafe extern "C" fn uv_poll_start(
     events: ::std::os::raw::c_int,
     cb: abi::uv_poll_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_poll_start")
+    unsafe { unix::poll::start(handle, events, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_poll_stop(handle: *mut abi::uv_poll_t) -> ::std::os::raw::c_int {
-    stub::status("uv_poll_stop")
+    unsafe { unix::poll::stop(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1327,7 +1323,7 @@ pub unsafe extern "C" fn uv_prepare_init(
     arg1: *mut abi::uv_loop_t,
     prepare: *mut abi::uv_prepare_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::handle::prepare_init(arg1, prepare) }
+    unsafe { unix::loop_watcher::prepare_init(arg1, prepare) }
 }
 
 #[unsafe(no_mangle)]
@@ -1335,12 +1331,12 @@ pub unsafe extern "C" fn uv_prepare_start(
     prepare: *mut abi::uv_prepare_t,
     cb: abi::uv_prepare_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::handle::prepare_start(prepare, cb) }
+    unsafe { unix::loop_watcher::prepare_start(prepare, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_prepare_stop(prepare: *mut abi::uv_prepare_t) -> ::std::os::raw::c_int {
-    unsafe { core::handle::prepare_stop(prepare) }
+    unsafe { unix::loop_watcher::prepare_stop(prepare) }
 }
 
 #[unsafe(no_mangle)]
@@ -1365,7 +1361,7 @@ pub unsafe extern "C" fn uv_process_kill(
     arg1: *mut abi::uv_process_t,
     signum: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_process_kill")
+    unsafe { unix::fd::process_kill(arg1, signum) }
 }
 
 #[unsafe(no_mangle)]
@@ -1396,12 +1392,12 @@ pub unsafe extern "C" fn uv_read_start(
     alloc_cb: abi::uv_alloc_cb,
     read_cb: abi::uv_read_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_read_start")
+    unsafe { unix::stream::read_start(arg1, alloc_cb, read_cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_read_stop(arg1: *mut abi::uv_stream_t) -> ::std::os::raw::c_int {
-    stub::status("uv_read_stop")
+    unsafe { unix::stream::read_stop(arg1) }
 }
 
 #[unsafe(no_mangle)]
@@ -1414,9 +1410,7 @@ pub unsafe extern "C" fn uv_recv_buffer_size(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_ref(arg1: *mut abi::uv_handle_t) {
-    unsafe {
-        core::handle::handle_ref(arg1);
-    }
+    unsafe { unix::epoll::handle_ref(arg1) }
 }
 
 #[unsafe(no_mangle)]
@@ -1439,7 +1433,7 @@ pub unsafe extern "C" fn uv_run(
     arg1: *mut abi::uv_loop_t,
     mode: abi::uv_run_mode,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::loop_::run(arg1, mode) }
+    unsafe { unix::epoll::run(arg1, mode) }
 }
 
 #[unsafe(no_mangle)]
@@ -1551,7 +1545,7 @@ pub unsafe extern "C" fn uv_shutdown(
     handle: *mut abi::uv_stream_t,
     cb: abi::uv_shutdown_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_shutdown")
+    unsafe { unix::stream::shutdown(req, handle, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1600,7 +1594,7 @@ pub unsafe extern "C" fn uv_socketpair(
     flags0: ::std::os::raw::c_int,
     flags1: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_socketpair")
+    unsafe { unix::fd::socketpair(type_, protocol, socket_vector, flags0, flags1) }
 }
 
 #[unsafe(no_mangle)]
@@ -1609,14 +1603,12 @@ pub unsafe extern "C" fn uv_spawn(
     handle: *mut abi::uv_process_t,
     options: *const abi::uv_process_options_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_spawn")
+    unsafe { unix::fd::spawn(loop_, handle, options) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_stop(arg1: *mut abi::uv_loop_t) {
-    unsafe {
-        core::loop_::stop(arg1);
-    }
+    unsafe { unix::epoll::stop(arg1) }
 }
 
 #[unsafe(no_mangle)]
@@ -1624,7 +1616,7 @@ pub unsafe extern "C" fn uv_stream_set_blocking(
     handle: *mut abi::uv_stream_t,
     blocking: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_stream_set_blocking")
+    unsafe { unix::stream::set_blocking(handle, blocking) }
 }
 
 #[unsafe(no_mangle)]
@@ -1647,7 +1639,7 @@ pub unsafe extern "C" fn uv_tcp_bind(
     addr: *const abi::sockaddr,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_bind")
+    unsafe { unix::tcp::bind(handle, addr, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1655,7 +1647,7 @@ pub unsafe extern "C" fn uv_tcp_close_reset(
     handle: *mut abi::uv_tcp_t,
     close_cb: abi::uv_close_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_close_reset")
+    unsafe { unix::tcp::close_reset(handle, close_cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1665,7 +1657,7 @@ pub unsafe extern "C" fn uv_tcp_connect(
     addr: *const abi::sockaddr,
     cb: abi::uv_connect_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_connect")
+    unsafe { unix::tcp::connect(req, handle, addr, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1674,7 +1666,7 @@ pub unsafe extern "C" fn uv_tcp_getpeername(
     name: *mut abi::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_getpeername")
+    unsafe { unix::tcp::getpeername(handle, name, namelen) }
 }
 
 #[unsafe(no_mangle)]
@@ -1683,7 +1675,7 @@ pub unsafe extern "C" fn uv_tcp_getsockname(
     name: *mut abi::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_getsockname")
+    unsafe { unix::tcp::getsockname(handle, name, namelen) }
 }
 
 #[unsafe(no_mangle)]
@@ -1691,7 +1683,7 @@ pub unsafe extern "C" fn uv_tcp_init(
     arg1: *mut abi::uv_loop_t,
     handle: *mut abi::uv_tcp_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_init")
+    unsafe { unix::tcp::init(arg1, handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1700,7 +1692,7 @@ pub unsafe extern "C" fn uv_tcp_init_ex(
     handle: *mut abi::uv_tcp_t,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_init_ex")
+    unsafe { unix::tcp::init_ex(arg1, handle, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1709,7 +1701,7 @@ pub unsafe extern "C" fn uv_tcp_keepalive(
     enable: ::std::os::raw::c_int,
     delay: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_keepalive")
+    unsafe { unix::tcp::keepalive(handle, enable, delay) }
 }
 
 #[unsafe(no_mangle)]
@@ -1717,7 +1709,7 @@ pub unsafe extern "C" fn uv_tcp_nodelay(
     handle: *mut abi::uv_tcp_t,
     enable: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_nodelay")
+    unsafe { unix::tcp::nodelay(handle, enable) }
 }
 
 #[unsafe(no_mangle)]
@@ -1725,7 +1717,7 @@ pub unsafe extern "C" fn uv_tcp_open(
     handle: *mut abi::uv_tcp_t,
     sock: abi::uv_os_sock_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_open")
+    unsafe { unix::tcp::open(handle, sock) }
 }
 
 #[unsafe(no_mangle)]
@@ -1733,7 +1725,7 @@ pub unsafe extern "C" fn uv_tcp_simultaneous_accepts(
     handle: *mut abi::uv_tcp_t,
     enable: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tcp_simultaneous_accepts")
+    unsafe { unix::tcp::simultaneous_accepts(handle, enable) }
 }
 
 #[unsafe(no_mangle)]
@@ -1802,7 +1794,7 @@ pub unsafe extern "C" fn uv_thread_setpriority(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_timer_again(handle: *mut abi::uv_timer_t) -> ::std::os::raw::c_int {
-    unsafe { core::timer::timer_again(handle) }
+    unsafe { unix::epoll::timer_again(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1810,7 +1802,7 @@ pub unsafe extern "C" fn uv_timer_init(
     arg1: *mut abi::uv_loop_t,
     handle: *mut abi::uv_timer_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::timer::timer_init(arg1, handle) }
+    unsafe { unix::epoll::timer_init(arg1, handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1820,12 +1812,12 @@ pub unsafe extern "C" fn uv_timer_start(
     timeout: u64,
     repeat: u64,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::timer::timer_start(handle, cb, timeout, repeat) }
+    unsafe { unix::epoll::timer_start(handle, cb, timeout, repeat) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_timer_stop(handle: *mut abi::uv_timer_t) -> ::std::os::raw::c_int {
-    unsafe { core::timer::timer_stop(handle) }
+    unsafe { unix::epoll::timer_stop(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1841,7 +1833,7 @@ pub unsafe extern "C" fn uv_try_write(
     bufs: *const abi::uv_buf_t,
     nbufs: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_try_write")
+    unsafe { unix::stream::try_write(handle, bufs, nbufs) }
 }
 
 #[unsafe(no_mangle)]
@@ -1851,14 +1843,14 @@ pub unsafe extern "C" fn uv_try_write2(
     nbufs: ::std::os::raw::c_uint,
     send_handle: *mut abi::uv_stream_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_try_write2")
+    unsafe { unix::stream::try_write2(handle, bufs, nbufs, send_handle) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_tty_get_vterm_state(
     state: *mut abi::uv_tty_vtermstate_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tty_get_vterm_state")
+    unsafe { unix::tty::get_vterm_state(state) }
 }
 
 #[unsafe(no_mangle)]
@@ -1867,7 +1859,7 @@ pub unsafe extern "C" fn uv_tty_get_winsize(
     width: *mut ::std::os::raw::c_int,
     height: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tty_get_winsize")
+    unsafe { unix::tty::get_winsize(arg1, width, height) }
 }
 
 #[unsafe(no_mangle)]
@@ -1877,12 +1869,12 @@ pub unsafe extern "C" fn uv_tty_init(
     fd: abi::uv_file,
     readable: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tty_init")
+    unsafe { unix::tty::init(arg1, arg2, fd, readable) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_tty_reset_mode() -> ::std::os::raw::c_int {
-    stub::status("uv_tty_reset_mode")
+    unsafe { unix::tty::reset_mode() }
 }
 
 #[unsafe(no_mangle)]
@@ -1890,12 +1882,12 @@ pub unsafe extern "C" fn uv_tty_set_mode(
     arg1: *mut abi::uv_tty_t,
     mode: abi::uv_tty_mode_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_tty_set_mode")
+    unsafe { unix::tty::set_mode(arg1, mode) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_tty_set_vterm_state(state: abi::uv_tty_vtermstate_t) {
-    stub::void("uv_tty_set_vterm_state");
+    unsafe { unix::tty::set_vterm_state(state) }
 }
 
 #[unsafe(no_mangle)]
@@ -1904,7 +1896,7 @@ pub unsafe extern "C" fn uv_udp_bind(
     addr: *const abi::sockaddr,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_bind")
+    unsafe { unix::udp::bind(handle, addr, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1912,7 +1904,7 @@ pub unsafe extern "C" fn uv_udp_connect(
     handle: *mut abi::uv_udp_t,
     addr: *const abi::sockaddr,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_connect")
+    unsafe { unix::udp::connect(handle, addr) }
 }
 
 #[unsafe(no_mangle)]
@@ -1921,7 +1913,7 @@ pub unsafe extern "C" fn uv_udp_getpeername(
     name: *mut abi::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_getpeername")
+    unsafe { unix::udp::getpeername(handle, name, namelen) }
 }
 
 #[unsafe(no_mangle)]
@@ -1930,7 +1922,7 @@ pub unsafe extern "C" fn uv_udp_getsockname(
     name: *mut abi::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_getsockname")
+    unsafe { unix::udp::getsockname(handle, name, namelen) }
 }
 
 #[unsafe(no_mangle)]
@@ -1938,7 +1930,7 @@ pub unsafe extern "C" fn uv_udp_init(
     arg1: *mut abi::uv_loop_t,
     handle: *mut abi::uv_udp_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_init")
+    unsafe { unix::udp::init(arg1, handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1947,7 +1939,7 @@ pub unsafe extern "C" fn uv_udp_init_ex(
     handle: *mut abi::uv_udp_t,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_init_ex")
+    unsafe { unix::udp::init_ex(arg1, handle, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1955,7 +1947,7 @@ pub unsafe extern "C" fn uv_udp_open(
     handle: *mut abi::uv_udp_t,
     sock: abi::uv_os_sock_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_open")
+    unsafe { unix::udp::open(handle, sock) }
 }
 
 #[unsafe(no_mangle)]
@@ -1964,12 +1956,12 @@ pub unsafe extern "C" fn uv_udp_recv_start(
     alloc_cb: abi::uv_alloc_cb,
     recv_cb: abi::uv_udp_recv_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_recv_start")
+    unsafe { unix::udp::recv_start(handle, alloc_cb, recv_cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_udp_recv_stop(handle: *mut abi::uv_udp_t) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_recv_stop")
+    unsafe { unix::udp::recv_stop(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1981,7 +1973,7 @@ pub unsafe extern "C" fn uv_udp_send(
     addr: *const abi::sockaddr,
     send_cb: abi::uv_udp_send_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_send")
+    unsafe { unix::udp::send(req, handle, bufs, nbufs, addr, send_cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1989,7 +1981,7 @@ pub unsafe extern "C" fn uv_udp_set_broadcast(
     handle: *mut abi::uv_udp_t,
     on: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_set_broadcast")
+    unsafe { unix::udp::set_broadcast(handle, on) }
 }
 
 #[unsafe(no_mangle)]
@@ -1999,7 +1991,7 @@ pub unsafe extern "C" fn uv_udp_set_membership(
     interface_addr: *const ::std::os::raw::c_char,
     membership: abi::uv_membership,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_set_membership")
+    unsafe { unix::udp::set_membership(handle, multicast_addr, interface_addr, membership) }
 }
 
 #[unsafe(no_mangle)]
@@ -2007,7 +1999,7 @@ pub unsafe extern "C" fn uv_udp_set_multicast_interface(
     handle: *mut abi::uv_udp_t,
     interface_addr: *const ::std::os::raw::c_char,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_set_multicast_interface")
+    unsafe { unix::udp::set_multicast_interface(handle, interface_addr) }
 }
 
 #[unsafe(no_mangle)]
@@ -2015,7 +2007,7 @@ pub unsafe extern "C" fn uv_udp_set_multicast_loop(
     handle: *mut abi::uv_udp_t,
     on: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_set_multicast_loop")
+    unsafe { unix::udp::set_multicast_loop(handle, on) }
 }
 
 #[unsafe(no_mangle)]
@@ -2023,7 +2015,7 @@ pub unsafe extern "C" fn uv_udp_set_multicast_ttl(
     handle: *mut abi::uv_udp_t,
     ttl: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_set_multicast_ttl")
+    unsafe { unix::udp::set_multicast_ttl(handle, ttl) }
 }
 
 #[unsafe(no_mangle)]
@@ -2034,7 +2026,15 @@ pub unsafe extern "C" fn uv_udp_set_source_membership(
     source_addr: *const ::std::os::raw::c_char,
     membership: abi::uv_membership,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_set_source_membership")
+    unsafe {
+        unix::udp::set_source_membership(
+            handle,
+            multicast_addr,
+            interface_addr,
+            source_addr,
+            membership,
+        )
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -2042,7 +2042,7 @@ pub unsafe extern "C" fn uv_udp_set_ttl(
     handle: *mut abi::uv_udp_t,
     ttl: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_set_ttl")
+    unsafe { unix::udp::set_ttl(handle, ttl) }
 }
 
 #[unsafe(no_mangle)]
@@ -2052,14 +2052,12 @@ pub unsafe extern "C" fn uv_udp_try_send(
     nbufs: ::std::os::raw::c_uint,
     addr: *const abi::sockaddr,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_udp_try_send")
+    unsafe { unix::udp::try_send(handle, bufs, nbufs, addr) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_unref(arg1: *mut abi::uv_handle_t) {
-    unsafe {
-        core::handle::handle_unref(arg1);
-    }
+    unsafe { unix::epoll::handle_unref(arg1) }
 }
 
 #[unsafe(no_mangle)]
@@ -2093,7 +2091,7 @@ pub unsafe extern "C" fn uv_write(
     nbufs: ::std::os::raw::c_uint,
     cb: abi::uv_write_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_write")
+    unsafe { unix::stream::write(req, handle, bufs, nbufs, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -2105,5 +2103,5 @@ pub unsafe extern "C" fn uv_write2(
     send_handle: *mut abi::uv_stream_t,
     cb: abi::uv_write_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_write2")
+    unsafe { unix::stream::write2(req, handle, bufs, nbufs, send_handle, cb) }
 }

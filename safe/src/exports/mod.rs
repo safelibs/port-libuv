@@ -1,4 +1,4 @@
-use crate::{abi::linux_x86_64 as abi, core, version};
+use crate::{abi::linux_x86_64 as abi, core, unix, version};
 use std::mem::size_of;
 use std::os::raw::{c_char, c_int, c_uint};
 
@@ -238,32 +238,32 @@ pub unsafe extern "C" fn uv_now(loop_: *const abi::uv_loop_t) -> u64 {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_backend_fd(loop_: *const abi::uv_loop_t) -> c_int {
-    unsafe { core::loop_::backend_fd(loop_) }
+    unsafe { unix::epoll::backend_fd(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_backend_timeout(loop_: *const abi::uv_loop_t) -> c_int {
-    unsafe { core::loop_::backend_timeout(loop_) }
+    unsafe { unix::epoll::backend_timeout(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_is_active(handle: *const abi::uv_handle_t) -> c_int {
-    unsafe { core::handle::is_active_int(handle) }
+    unsafe { unix::epoll::is_active(handle) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_is_closing(handle: *const abi::uv_handle_t) -> c_int {
-    unsafe { core::handle::is_closing_int(handle) }
+    unsafe { unix::epoll::is_closing(handle) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_is_readable(_handle: *const abi::uv_stream_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_is_readable(handle: *const abi::uv_stream_t) -> c_int {
+    unsafe { unix::stream::is_readable(handle) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_is_writable(_handle: *const abi::uv_stream_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_is_writable(handle: *const abi::uv_stream_t) -> c_int {
+    unsafe { unix::stream::is_writable(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -272,13 +272,13 @@ pub unsafe extern "C" fn uv_has_ref(handle: *const abi::uv_handle_t) -> c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_udp_using_recvmmsg(_handle: *const abi::uv_udp_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_udp_using_recvmmsg(handle: *const abi::uv_udp_t) -> c_int {
+    unsafe { unix::udp::using_recvmmsg(handle) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_pipe_pending_count(_handle: *mut abi::uv_pipe_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_pipe_pending_count(handle: *mut abi::uv_pipe_t) -> c_int {
+    unsafe { unix::pipe::pending_count(handle) }
 }
 
 #[unsafe(no_mangle)]

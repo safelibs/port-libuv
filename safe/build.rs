@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use std::env;
 use std::fs;
-use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -12,6 +11,7 @@ struct AbiBaseline {
 
 #[derive(Debug, Deserialize)]
 struct LinuxX8664Baseline {
+    dynamic_exports: Vec<String>,
     soname: String,
 }
 
@@ -42,13 +42,52 @@ fn main() {
     let shared_link_contents = fs::read_to_string(&shared_link_txt).expect("shared link.txt");
     let static_link_contents = fs::read_to_string(&static_link_txt).expect("static link.txt");
 
-    validate_link_contract(&baseline.linux_x86_64.soname, &shared_link_contents, &static_link_contents);
+    let soname_flag = format!("-Wl,-soname,{}", baseline.linux_x86_64.soname);
+    if !shared_link_contents.contains(&soname_flag) {
+        panic!("baseline shared linker contract no longer carries {soname_flag}");
+    }
+
+    for lib in ["pthread", "dl", "rt"] {
+        let link_flag = format!("-l{lib}");
+        if !shared_link_contents.contains(&link_flag) {
+            panic!("baseline shared linker contract no longer carries {link_flag}");
+        }
+        println!("cargo:rustc-link-lib={lib}");
+    }
+
+    let static_object_count = count_baseline_objects(&static_link_contents);
+    if static_object_count == 0 {
+        panic!("baseline static archive contract contains no object members");
+    }
+    println!("cargo:rustc-env=LIBUV_STATIC_BASELINE_OBJECT_COUNT={static_object_count}");
 
     build_upstream(&build_dir);
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));
-    let profile_dir = cargo_profile_dir(&out_dir);
-    stage_upstream_artifacts(&build_dir, &profile_dir);
+    let version_script = out_dir.join("libuv.map");
+    let rename_map = out_dir.join("libuv-internal-rename.map");
+    let internal_archive = out_dir.join("libuv_internal.a");
+
+    fs::write(
+        &version_script,
+        render_version_script(&baseline.linux_x86_64.dynamic_exports),
+    )
+    .expect("write version script");
+    fs::write(
+        &rename_map,
+        render_rename_map(&baseline.linux_x86_64.dynamic_exports),
+    )
+    .expect("write rename map");
+
+    build_internal_archive(&build_dir, &out_dir, &shared_link_contents, &rename_map, &internal_archive);
+
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
+    println!("cargo:rustc-link-lib=static=uv_internal");
+    println!("cargo:rustc-cdylib-link-arg={soname_flag}");
+    println!(
+        "cargo:rustc-cdylib-link-arg=-Wl,--version-script={}",
+        version_script.display()
+    );
 }
 
 fn assert_supported_target() {
@@ -62,25 +101,6 @@ fn assert_supported_target() {
 fn load_abi_baseline(path: &Path) -> AbiBaseline {
     let contents = fs::read_to_string(path).expect("abi baseline json");
     serde_json::from_str(&contents).expect("parse abi baseline json")
-}
-
-fn validate_link_contract(soname: &str, shared_link_txt: &str, static_link_txt: &str) {
-    let soname_flag = format!("-Wl,-soname,{soname}");
-    if !shared_link_txt.contains(&soname_flag) {
-        panic!("baseline shared linker contract no longer carries {soname_flag}");
-    }
-
-    for lib in ["pthread", "dl", "rt"] {
-        let link_flag = format!("-l{lib}");
-        if !shared_link_txt.contains(&link_flag) {
-            panic!("baseline shared linker contract no longer carries {link_flag}");
-        }
-    }
-
-    let static_object_count = count_baseline_objects(static_link_txt);
-    if static_object_count == 0 {
-        panic!("baseline static archive contract contains no object members");
-    }
 }
 
 fn count_baseline_objects(link_txt: &str) -> usize {
@@ -99,50 +119,77 @@ fn build_upstream(build_dir: &Path) {
         .arg("uv_a"));
 }
 
-fn cargo_profile_dir(out_dir: &Path) -> PathBuf {
-    out_dir
-        .ancestors()
-        .nth(3)
-        .expect("target profile dir")
-        .to_path_buf()
+fn render_version_script(exports: &[String]) -> String {
+    let mut map = String::from("Base {\n  global:\n");
+    for symbol in exports {
+        map.push_str("    ");
+        map.push_str(symbol);
+        map.push_str(";\n");
+    }
+    map.push_str("  local:\n    *;\n};\n");
+    map
 }
 
-fn stage_upstream_artifacts(build_dir: &Path, profile_dir: &Path) {
-    let shared_src = build_dir.join("libuv.so.1.0.0");
-    let static_src = build_dir.join("libuv.a");
-    let shared_dst = profile_dir.join("libuv.so.1.0.0");
-    let static_dst = profile_dir.join("libuv.a");
+fn render_rename_map(exports: &[String]) -> String {
+    let mut map = String::new();
+    for symbol in exports {
+        map.push_str(symbol);
+        map.push(' ');
+        map.push_str("uv_internal_");
+        map.push_str(symbol);
+        map.push('\n');
+    }
+    map
+}
 
-    if !shared_src.is_file() || !static_src.is_file() {
-        panic!(
-            "upstream build did not produce expected artifacts in {}",
-            build_dir.display()
+fn build_internal_archive(
+    build_dir: &Path,
+    out_dir: &Path,
+    shared_link_txt: &str,
+    rename_map: &Path,
+    internal_archive: &Path,
+) {
+    let object_dir = out_dir.join("uv-internal-objects");
+    if object_dir.exists() {
+        fs::remove_dir_all(&object_dir).expect("remove stale internal object dir");
+    }
+    fs::create_dir_all(&object_dir).expect("create internal object dir");
+
+    let mut objects = Vec::new();
+    for rel in parse_object_paths(shared_link_txt) {
+        let src = build_dir.join(&rel);
+        let dst = object_dir.join(&rel);
+        if let Some(parent) = dst.parent() {
+            fs::create_dir_all(parent).expect("create internal object subdir");
+        }
+        run(
+            Command::new("objcopy")
+                .arg(format!("--redefine-syms={}", rename_map.display()))
+                .arg(&src)
+                .arg(&dst),
         );
+        objects.push(dst);
     }
 
-    fs::create_dir_all(profile_dir).expect("create target profile dir");
-    copy_file(&static_src, &static_dst);
-    copy_file(&shared_src, &shared_dst);
-    recreate_symlink(&profile_dir.join("libuv.so.1"), "libuv.so.1.0.0");
-    recreate_symlink(&profile_dir.join("libuv.so"), "libuv.so.1");
+    if internal_archive.exists() {
+        fs::remove_file(internal_archive).expect("remove stale internal archive");
+    }
+
+    let mut ar = Command::new("ar");
+    ar.arg("crs").arg(internal_archive);
+    for object in &objects {
+        ar.arg(object);
+    }
+    run(&mut ar);
 }
 
-fn copy_file(src: &Path, dst: &Path) {
-    if dst.exists() {
-        fs::remove_file(dst).expect("remove stale file");
-    }
-    fs::copy(src, dst).unwrap_or_else(|err| {
-        panic!("copy {} -> {}: {err}", src.display(), dst.display());
-    });
-}
-
-fn recreate_symlink(path: &Path, target: &str) {
-    if path.exists() || path.is_symlink() {
-        fs::remove_file(path).expect("remove stale symlink");
-    }
-    symlink(target, path).unwrap_or_else(|err| {
-        panic!("symlink {} -> {}: {err}", path.display(), target);
-    });
+fn parse_object_paths(link_txt: &str) -> Vec<PathBuf> {
+    link_txt
+        .split_whitespace()
+        .map(|token| token.trim_matches('"'))
+        .filter(|token| token.ends_with(".o"))
+        .map(PathBuf::from)
+        .collect()
 }
 
 fn run(command: &mut Command) {
