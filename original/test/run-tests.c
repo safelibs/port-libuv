@@ -54,7 +54,7 @@ int ipc_send_recv_helper(void);
 int ipc_helper_bind_twice(void);
 int ipc_helper_send_zero(void);
 int stdio_over_pipes_helper(void);
-#ifndef _WIN32
+#if defined(_AIX) || defined(__PASE__) || defined(__MVS__)
 int strtok_helper(void);
 #endif
 void spawn_stdin_stdout(void);
@@ -130,7 +130,7 @@ static int maybe_run_test(int argc, char **argv) {
     return stdio_over_pipes_helper();
   }
 
-#ifndef _WIN32
+#if defined(_AIX) || defined(__PASE__) || defined(__MVS__)
   if (strcmp(argv[1], "strtok_helper") == 0) {
     return strtok_helper();
   }

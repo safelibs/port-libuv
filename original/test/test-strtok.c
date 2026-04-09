@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _WIN32
+#if defined(_AIX) || defined(__PASE__) || defined(__MVS__)
 
 #define EXEPATH_MAX 4096
 
@@ -107,11 +107,11 @@ int strtok_helper(void) {
   return 0;
 }
 
-#endif  /* !_WIN32 */
+#endif  /* defined(_AIX) || defined(__PASE__) || defined(__MVS__) */
 
 TEST_IMPL(strtok) {
-#ifdef _WIN32
-  RETURN_SKIP("Test exercises Unix PATH tokenization through uv_exepath.");
+#if !defined(_AIX) && !defined(__PASE__) && !defined(__MVS__)
+  RETURN_SKIP("No public libuv API reaches uv__strtok on this platform.");
 #else
   uv_loop_t loop;
   uv_process_options_t options;
@@ -198,5 +198,5 @@ TEST_IMPL(strtok) {
 
   MAKE_VALGRIND_HAPPY(&loop);
   return 0;
-#endif
+#endif  /* defined(_AIX) || defined(__PASE__) || defined(__MVS__) */
 }
