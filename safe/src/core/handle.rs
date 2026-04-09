@@ -4,6 +4,7 @@ use crate::core::{
     HandleRecord, LoopStateInner, UV_HANDLE_ACTIVE, UV_HANDLE_CLOSED, UV_HANDLE_CLOSING,
     UV_HANDLE_INTERNAL, UV_HANDLE_REF,
 };
+use crate::unix_async;
 use std::mem::offset_of;
 use std::os::raw::{c_char, c_int};
 
@@ -487,6 +488,9 @@ pub(crate) unsafe fn close(handle: *mut abi::uv_handle_t, close_cb: abi::uv_clos
         abi::uv_handle_type_UV_IDLE => {
             let _ = unsafe { idle_stop(handle.cast()) };
         }
+        abi::uv_handle_type_UV_ASYNC => unsafe {
+            unix_async::close(handle.cast());
+        },
         _ => unsafe {
             handle_stop(handle);
         },

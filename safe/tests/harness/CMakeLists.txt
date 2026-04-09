@@ -42,13 +42,23 @@ set(UPSTREAM_CORE_TEST_SOURCES
   "${GENERATED_DIR}/uv-safe-run-tests.c"
   "${ORIGINAL_TEST_DIR}/runner.c"
   "${ORIGINAL_TEST_DIR}/runner-unix.c"
+  "${ORIGINAL_TEST_DIR}/test-async.c"
+  "${ORIGINAL_TEST_DIR}/test-barrier.c"
+  "${ORIGINAL_TEST_DIR}/test-condvar.c"
   "${ORIGINAL_TEST_DIR}/test-getters-setters.c"
   "${ORIGINAL_TEST_DIR}/test-loop-alive.c"
   "${ORIGINAL_TEST_DIR}/test-loop-close.c"
   "${ORIGINAL_TEST_DIR}/test-loop-configure.c"
   "${ORIGINAL_TEST_DIR}/test-loop-stop.c"
+  "${ORIGINAL_TEST_DIR}/test-metrics.c"
+  "${ORIGINAL_TEST_DIR}/test-mutexes.c"
+  "${ORIGINAL_TEST_DIR}/test-random.c"
   "${ORIGINAL_TEST_DIR}/test-run-once.c"
   "${ORIGINAL_TEST_DIR}/test-run-nowait.c"
+  "${ORIGINAL_TEST_DIR}/test-semaphore.c"
+  "${ORIGINAL_TEST_DIR}/test-thread.c"
+  "${ORIGINAL_TEST_DIR}/test-threadpool-cancel.c"
+  "${ORIGINAL_TEST_DIR}/test-threadpool.c"
 )
 
 function(add_safe_runner name linkage)

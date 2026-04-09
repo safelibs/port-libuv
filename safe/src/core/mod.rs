@@ -7,8 +7,10 @@ pub mod error;
 pub mod handle;
 #[path = "loop.rs"]
 pub mod loop_impl;
+pub mod metrics;
 pub mod queue;
 pub mod request;
+pub mod time;
 pub mod timer;
 
 pub use loop_impl as loop_;
@@ -29,6 +31,7 @@ pub(crate) enum HandleKind {
     Timer = 1,
     Prepare = 2,
     Idle = 3,
+    Async = 4,
 }
 
 #[repr(u8)]
@@ -69,11 +72,11 @@ pub(crate) struct LoopStateInner {
     pub timer_heap: *mut TimerHeapEntry,
     pub timer_len: usize,
     pub timer_cap: usize,
-    pub metrics_flags: u32,
 }
 
 pub(crate) struct LoopState {
     pub inner: Mutex<LoopStateInner>,
+    pub metrics: Mutex<metrics::LoopMetricsState>,
     pub wake: Condvar,
 }
 
@@ -86,8 +89,8 @@ impl LoopState {
                 timer_heap: std::ptr::null_mut(),
                 timer_len: 0,
                 timer_cap: 0,
-                metrics_flags: 0,
             }),
+            metrics: Mutex::new(metrics::LoopMetricsState::new()),
             wake: Condvar::new(),
         }
     }

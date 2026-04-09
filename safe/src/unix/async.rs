@@ -1,0 +1,364 @@
+use crate::abi::linux_x86_64 as abi;
+use crate::core::{handle, loop_state, metrics, queue, HandleKind, UV_HANDLE_INTERNAL};
+use libc::{self, c_int};
+use std::mem::offset_of;
+use std::sync::atomic::{AtomicI32, Ordering};
+
+#[inline]
+fn pending_atomic<'a>(handle: *mut abi::uv_async_t) -> &'a AtomicI32 {
+    unsafe { &*(std::ptr::addr_of!((*handle).pending).cast::<AtomicI32>()) }
+}
+
+#[inline]
+fn busy_atomic<'a>(handle: *mut abi::uv_async_t) -> &'a AtomicI32 {
+    unsafe { &*(std::ptr::addr_of!((*handle).u.fd).cast::<AtomicI32>()) }
+}
+
+#[inline]
+unsafe fn async_handle_from_queue(node: *mut abi::uv__queue) -> *mut abi::uv_async_t {
+    unsafe {
+        node.cast::<u8>()
+            .sub(offset_of!(abi::uv_async_t, queue))
+            .cast::<abi::uv_async_t>()
+    }
+}
+
+unsafe fn drain_wakeup_fd(loop_: *mut abi::uv_loop_t) {
+    let fd = unsafe { (*loop_).async_io_watcher.fd };
+    if fd < 0 {
+        return;
+    }
+
+    if unsafe { (*loop_).async_wfd } == -1 {
+        let mut value = 0u64;
+        loop {
+            let rc = unsafe {
+                libc::read(
+                    fd,
+                    std::ptr::addr_of_mut!(value).cast(),
+                    std::mem::size_of::<u64>(),
+                )
+            };
+            if rc == -1 {
+                let err = unsafe { *libc::__errno_location() };
+                if err == libc::EINTR {
+                    continue;
+                }
+                if err == libc::EAGAIN || err == libc::EWOULDBLOCK {
+                    break;
+                }
+                unsafe {
+                    libc::abort();
+                }
+            }
+            break;
+        }
+        return;
+    }
+
+    let mut buf = [0u8; 1024];
+    loop {
+        let rc = unsafe { libc::read(fd, buf.as_mut_ptr().cast(), buf.len()) };
+        if rc as usize == buf.len() {
+            continue;
+        }
+        if rc == -1 {
+            let err = unsafe { *libc::__errno_location() };
+            if err == libc::EINTR {
+                continue;
+            }
+            if err == libc::EAGAIN || err == libc::EWOULDBLOCK {
+                break;
+            }
+            unsafe {
+                libc::abort();
+            }
+        }
+        break;
+    }
+}
+
+fn set_nonblocking_cloexec(fd: c_int) -> bool {
+    unsafe {
+        if libc::fcntl(fd, libc::F_SETFL, libc::O_NONBLOCK) != 0 {
+            return false;
+        }
+        if libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) != 0 {
+            return false;
+        }
+    }
+    true
+}
+
+unsafe fn open_pipe_fallback(loop_: *mut abi::uv_loop_t) -> c_int {
+    let mut fds = [0; 2];
+    let rc = unsafe { libc::pipe(fds.as_mut_ptr()) };
+    if rc != 0 {
+        return -unsafe { *libc::__errno_location() };
+    }
+
+    if !set_nonblocking_cloexec(fds[0]) || !set_nonblocking_cloexec(fds[1]) {
+        unsafe {
+            libc::close(fds[0]);
+            libc::close(fds[1]);
+        }
+        return -unsafe { *libc::__errno_location() };
+    }
+
+    unsafe {
+        (*loop_).async_io_watcher.fd = fds[0];
+        (*loop_).async_wfd = fds[1];
+    }
+    0
+}
+
+pub(crate) unsafe fn ensure_backend(loop_: *mut abi::uv_loop_t) -> c_int {
+    if loop_.is_null() {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+    if unsafe { (*loop_).async_io_watcher.fd } != -1 {
+        return 0;
+    }
+
+    let eventfd = unsafe { libc::eventfd(0, libc::EFD_CLOEXEC | libc::EFD_NONBLOCK) };
+    if eventfd >= 0 {
+        unsafe {
+            (*loop_).async_io_watcher.fd = eventfd;
+            (*loop_).async_wfd = -1;
+        }
+        return 0;
+    }
+
+    unsafe { open_pipe_fallback(loop_) }
+}
+
+pub(crate) unsafe fn init_internal(loop_: *mut abi::uv_loop_t) -> c_int {
+    let rc = unsafe { ensure_backend(loop_) };
+    if rc != 0 {
+        return rc;
+    }
+
+    unsafe {
+        std::ptr::write_bytes(std::ptr::addr_of_mut!((*loop_).wq_async), 0, 1);
+        (*loop_).wq_async.loop_ = loop_;
+        (*loop_).wq_async.type_ = abi::uv_handle_type_UV_ASYNC;
+        (*loop_).wq_async.flags = UV_HANDLE_INTERNAL;
+        (*loop_).wq_async.async_cb = Some(crate::threading::threadpool::loop_wq_async_cb);
+        queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.queue));
+        queue::insert_tail(
+            std::ptr::addr_of_mut!((*loop_).async_handles),
+            std::ptr::addr_of_mut!((*loop_).wq_async.queue),
+        );
+    }
+
+    0
+}
+
+pub(crate) unsafe fn init(loop_: *mut abi::uv_loop_t, handle_ptr: *mut abi::uv_async_t, cb: abi::uv_async_cb) -> c_int {
+    if loop_.is_null() || handle_ptr.is_null() {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+
+    let rc = unsafe { ensure_backend(loop_) };
+    if rc != 0 {
+        return rc;
+    }
+
+    let rc = unsafe {
+        handle::handle_init(
+            loop_,
+            handle_ptr.cast(),
+            abi::uv_handle_type_UV_ASYNC,
+            HandleKind::Async,
+        )
+    };
+    if rc != 0 {
+        return rc;
+    }
+
+    unsafe {
+        (*handle_ptr).async_cb = cb;
+        (*handle_ptr).pending = 0;
+        (*handle_ptr).u.fd = 0;
+        queue::init(std::ptr::addr_of_mut!((*handle_ptr).queue));
+        queue::insert_tail(
+            std::ptr::addr_of_mut!((*loop_).async_handles),
+            std::ptr::addr_of_mut!((*handle_ptr).queue),
+        );
+        handle::handle_start(handle_ptr.cast());
+    }
+
+    0
+}
+
+fn send_wakeup(loop_: *mut abi::uv_loop_t) {
+    let mut buf_ptr: *const libc::c_void = b"\0".as_ptr().cast();
+    let mut len = 1usize;
+    let mut fd = unsafe { (*loop_).async_wfd };
+
+    if fd == -1 {
+        static VALUE: u64 = 1;
+        buf_ptr = std::ptr::addr_of!(VALUE).cast();
+        len = std::mem::size_of::<u64>();
+        fd = unsafe { (*loop_).async_io_watcher.fd };
+    }
+
+    loop {
+        let rc = unsafe { libc::write(fd, buf_ptr, len) };
+        if rc == len as isize {
+            break;
+        }
+        if rc == -1 {
+            let err = unsafe { *libc::__errno_location() };
+            if err == libc::EINTR {
+                continue;
+            }
+            if err == libc::EAGAIN || err == libc::EWOULDBLOCK {
+                break;
+            }
+        }
+        unsafe {
+            libc::abort();
+        }
+    }
+
+    let state_ptr = unsafe { loop_state(loop_) };
+    if !state_ptr.is_null() {
+        unsafe {
+            (*state_ptr).wake.notify_one();
+        }
+    }
+}
+
+pub(crate) unsafe fn send(handle_ptr: *mut abi::uv_async_t) -> c_int {
+    if handle_ptr.is_null() {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+
+    let pending = pending_atomic(handle_ptr);
+    let busy = busy_atomic(handle_ptr);
+
+    if pending.load(Ordering::Relaxed) != 0 {
+        return 0;
+    }
+
+    busy.fetch_add(1, Ordering::AcqRel);
+    if pending.swap(1, Ordering::AcqRel) == 0 {
+        send_wakeup(unsafe { (*handle_ptr).loop_ });
+    }
+    busy.fetch_sub(1, Ordering::AcqRel);
+
+    0
+}
+
+fn spin_until_idle(handle_ptr: *mut abi::uv_async_t) {
+    let pending = pending_atomic(handle_ptr);
+    let busy = busy_atomic(handle_ptr);
+    pending.store(1, Ordering::Release);
+
+    loop {
+        if busy.load(Ordering::Acquire) == 0 {
+            return;
+        }
+        std::hint::spin_loop();
+    }
+}
+
+pub(crate) unsafe fn close(handle_ptr: *mut abi::uv_async_t) {
+    if handle_ptr.is_null() {
+        return;
+    }
+    spin_until_idle(handle_ptr);
+    unsafe {
+        queue::remove(std::ptr::addr_of_mut!((*handle_ptr).queue));
+        queue::init(std::ptr::addr_of_mut!((*handle_ptr).queue));
+        handle::handle_stop(handle_ptr.cast());
+    }
+}
+
+pub(crate) unsafe fn has_pending(loop_: *mut abi::uv_loop_t) -> bool {
+    if loop_.is_null() {
+        return false;
+    }
+    let head = unsafe { std::ptr::addr_of!((*loop_).async_handles) };
+    let mut node = unsafe { (*head).next };
+    while !std::ptr::eq(node, head.cast_mut()) {
+        let handle_ptr = unsafe { async_handle_from_queue(node) };
+        if pending_atomic(handle_ptr).load(Ordering::Acquire) != 0 {
+            return true;
+        }
+        node = unsafe { (*node).next };
+    }
+    false
+}
+
+pub(crate) unsafe fn run(loop_: *mut abi::uv_loop_t) {
+    if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
+        return;
+    }
+
+    unsafe {
+        drain_wakeup_fd(loop_);
+    }
+
+    let mut local = abi::uv__queue::default();
+    unsafe {
+        queue::move_queue(
+            std::ptr::addr_of_mut!((*loop_).async_handles),
+            std::ptr::addr_of_mut!(local),
+        );
+    }
+
+    while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
+        let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
+        let handle_ptr = unsafe { async_handle_from_queue(node) };
+        unsafe {
+            queue::remove(node);
+            queue::insert_tail(
+                std::ptr::addr_of_mut!((*loop_).async_handles),
+                std::ptr::addr_of_mut!((*handle_ptr).queue),
+            );
+        }
+
+        if pending_atomic(handle_ptr).swap(0, Ordering::AcqRel) == 0 {
+            continue;
+        }
+
+        unsafe {
+            metrics::record_event(loop_, 1);
+        }
+
+        if let Some(cb) = unsafe { (*handle_ptr).async_cb } {
+            unsafe {
+                cb(handle_ptr);
+            }
+        }
+    }
+}
+
+pub(crate) unsafe fn shutdown(loop_: *mut abi::uv_loop_t) {
+    if loop_.is_null() {
+        return;
+    }
+
+    let fd = unsafe { (*loop_).async_io_watcher.fd };
+    if fd != -1 {
+        unsafe {
+            libc::close(fd);
+            (*loop_).async_io_watcher.fd = -1;
+        }
+    }
+
+    let wfd = unsafe { (*loop_).async_wfd };
+    if wfd != -1 {
+        unsafe {
+            libc::close(wfd);
+            (*loop_).async_wfd = -1;
+        }
+    }
+
+    unsafe {
+        queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.queue));
+        queue::init(std::ptr::addr_of_mut!((*loop_).async_handles));
+    }
+}

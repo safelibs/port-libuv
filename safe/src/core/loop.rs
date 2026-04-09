@@ -1,38 +1,14 @@
 use crate::abi::linux_x86_64 as abi;
 use crate::core::{
-    allocator, default_loop, handle, loop_state, queue, request, timer, LoopState,
-    UV_LOOP_BLOCK_SIGPROF, UV_LOOP_REAP_CHILDREN, UV_METRICS_IDLE_TIME_FLAG,
+    allocator, default_loop, handle, loop_state, metrics, queue, request, time, timer,
+    LoopState, UV_LOOP_BLOCK_SIGPROF, UV_LOOP_REAP_CHILDREN,
 };
+use crate::threading::sync;
+use crate::unix_async;
 use std::ffi::c_void;
 use std::os::raw::c_int;
 use std::time::Duration;
-
-#[repr(C)]
-struct Timespec {
-    tv_sec: i64,
-    tv_nsec: i64,
-}
-
-unsafe extern "C" {
-    fn clock_gettime(clock_id: c_int, tp: *mut Timespec) -> c_int;
-}
-
-const CLOCK_MONOTONIC: c_int = 1;
 const SIGPROF_LINUX_X86_64: c_int = 27;
-
-fn monotonic_now_ms() -> u64 {
-    let mut ts = Timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    let rc = unsafe { clock_gettime(CLOCK_MONOTONIC, &mut ts) };
-    if rc != 0 {
-        return 0;
-    }
-    (ts.tv_sec as u64)
-        .saturating_mul(1_000)
-        .saturating_add((ts.tv_nsec as u64) / 1_000_000)
-}
 
 unsafe fn alloc_loop_state() -> *mut LoopState {
     unsafe { allocator::alloc_value(LoopState::new()) }
@@ -43,7 +19,7 @@ pub(crate) unsafe fn update_time(loop_: *mut abi::uv_loop_t) {
         return;
     }
     unsafe {
-        (*loop_).time = monotonic_now_ms();
+        (*loop_).time = time::monotonic_now_ms();
     }
 }
 
@@ -105,6 +81,34 @@ pub(crate) unsafe fn loop_init(loop_: *mut abi::uv_loop_t) -> c_int {
         (*loop_).flags = 0;
         (*loop_).stop_flag = 0;
     }
+
+    let rc = unsafe { sync::mutex_init_raw(std::ptr::addr_of_mut!((*loop_).wq_mutex), false) };
+    if rc != 0 {
+        unsafe {
+            free_loop_state(loop_);
+        }
+        return rc;
+    }
+
+    let rc = unsafe { sync::rwlock_init_raw(std::ptr::addr_of_mut!((*loop_).cloexec_lock)) };
+    if rc != 0 {
+        unsafe {
+            sync::mutex_destroy_raw(std::ptr::addr_of_mut!((*loop_).wq_mutex));
+            free_loop_state(loop_);
+        }
+        return rc;
+    }
+
+    let rc = unsafe { unix_async::init_internal(loop_) };
+    if rc != 0 {
+        unsafe {
+            sync::rwlock_destroy_raw(std::ptr::addr_of_mut!((*loop_).cloexec_lock));
+            sync::mutex_destroy_raw(std::ptr::addr_of_mut!((*loop_).wq_mutex));
+            free_loop_state(loop_);
+        }
+        return rc;
+    }
+
     unsafe {
         update_time(loop_);
     }
@@ -183,6 +187,9 @@ pub(crate) unsafe fn loop_close(loop_: *mut abi::uv_loop_t) -> c_int {
     }
 
     unsafe {
+        unix_async::shutdown(loop_);
+        sync::rwlock_destroy_raw(std::ptr::addr_of_mut!((*loop_).cloexec_lock));
+        sync::mutex_destroy_raw(std::ptr::addr_of_mut!((*loop_).wq_mutex));
         free_loop_state(loop_);
     }
 
@@ -246,12 +253,12 @@ pub(crate) unsafe fn loop_configure(
     }
 
     let state = unsafe { &*loop_state(loop_) };
-    let mut inner = state.inner.lock().unwrap();
     if option == abi::uv_loop_option_UV_METRICS_IDLE_TIME {
-        inner.metrics_flags |= UV_METRICS_IDLE_TIME_FLAG;
+        unsafe {
+            metrics::enable_idle_time(loop_);
+        }
         return 0;
     }
-    drop(inner);
 
     if option != abi::uv_loop_option_UV_LOOP_BLOCK_SIGNAL {
         return abi::uv_errno_t_UV_ENOSYS;
@@ -304,6 +311,7 @@ unsafe fn wait_for_events(loop_: *mut abi::uv_loop_t, timeout_ms: c_int) {
     let mut guard = state.inner.lock().unwrap();
     if timeout_ms < 0 {
         while unsafe { queue::is_empty(std::ptr::addr_of!((*loop_).pending_queue)) }
+            && !unsafe { unix_async::has_pending(loop_) }
             && unsafe { (*loop_).stop_flag == 0 }
         {
             guard = state.wake.wait(guard).unwrap();
@@ -312,6 +320,7 @@ unsafe fn wait_for_events(loop_: *mut abi::uv_loop_t, timeout_ms: c_int) {
     }
 
     if unsafe { queue::is_empty(std::ptr::addr_of!((*loop_).pending_queue)) }
+        && !unsafe { unix_async::has_pending(loop_) }
         && unsafe { (*loop_).stop_flag == 0 }
     {
         let _ = state
@@ -370,18 +379,28 @@ pub(crate) unsafe fn run(loop_: *mut abi::uv_loop_t, mode: abi::uv_run_mode) -> 
             timeout = unsafe { backend_timeout_inner(loop_) };
         }
 
+        if unsafe { unix_async::has_pending(loop_) } || !pending_queue_empty(loop_) {
+            timeout = 0;
+        }
+
+        unsafe {
+            metrics::increment_loop_count(loop_);
+            metrics::set_current_timeout(loop_, timeout);
+        }
         unsafe { wait_for_events(loop_, timeout) };
 
         for _ in 0..8 {
-            if pending_queue_empty(loop_) {
+            if pending_queue_empty(loop_) && !unsafe { unix_async::has_pending(loop_) } {
                 break;
             }
             unsafe {
                 request::run_pending(loop_);
+                unix_async::run(loop_);
             }
         }
 
         unsafe {
+            metrics::update_idle_time(loop_);
             handle::run_closing_handles(loop_);
             update_time(loop_);
             timer::run_timers(loop_);
@@ -403,7 +422,9 @@ pub(crate) unsafe fn run(loop_: *mut abi::uv_loop_t, mode: abi::uv_run_mode) -> 
 }
 
 pub(crate) unsafe fn metrics_idle_time(_loop_: *mut abi::uv_loop_t) -> u64 {
-    0
+    unsafe { metrics::metrics_idle_time(_loop_) }
 }
 
-pub(crate) unsafe fn library_shutdown() {}
+pub(crate) unsafe fn library_shutdown() {
+    crate::threading::threadpool::cleanup();
+}

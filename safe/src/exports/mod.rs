@@ -283,7 +283,7 @@ pub unsafe extern "C" fn uv_pipe_pending_count(_handle: *mut abi::uv_pipe_t) -> 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_cpumask_size() -> c_int {
-    0
+    crate::threading::thread::cpumask_size()
 }
 
 #[unsafe(no_mangle)]
@@ -291,15 +291,12 @@ pub unsafe extern "C" fn uv_thread_equal(
     t1: *const abi::uv_thread_t,
     t2: *const abi::uv_thread_t,
 ) -> c_int {
-    if t1.is_null() || t2.is_null() {
-        return 0;
-    }
-    unsafe { (*t1 == *t2) as c_int }
+    unsafe { crate::threading::thread::equal(t1, t2) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_thread_getcpu() -> c_int {
-    0
+    unsafe { crate::threading::thread::getcpu() }
 }
 
 #[unsafe(no_mangle)]

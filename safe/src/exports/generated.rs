@@ -14,22 +14,24 @@ pub unsafe extern "C" fn uv_async_init(
     async_: *mut abi::uv_async_t,
     async_cb: abi::uv_async_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_async_init")
+    unsafe { crate::unix_async::init(arg1, async_, async_cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_async_send(async_: *mut abi::uv_async_t) -> ::std::os::raw::c_int {
-    stub::status("uv_async_send")
+    unsafe { crate::unix_async::send(async_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_available_parallelism() -> ::std::os::raw::c_uint {
-    unsafe { stub::zeroed::<::std::os::raw::c_uint>("uv_available_parallelism") }
+    crate::core::time::available_parallelism_export()
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_barrier_destroy(barrier: *mut abi::uv_barrier_t) {
-    stub::void("uv_barrier_destroy");
+    unsafe {
+        crate::threading::sync::barrier_destroy(barrier);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -37,17 +39,17 @@ pub unsafe extern "C" fn uv_barrier_init(
     barrier: *mut abi::uv_barrier_t,
     count: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_barrier_init")
+    unsafe { crate::threading::sync::barrier_init(barrier, count) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_barrier_wait(barrier: *mut abi::uv_barrier_t) -> ::std::os::raw::c_int {
-    stub::status("uv_barrier_wait")
+    unsafe { crate::threading::sync::barrier_wait(barrier) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_cancel(req: *mut abi::uv_req_t) -> ::std::os::raw::c_int {
-    stub::status("uv_cancel")
+    unsafe { crate::threading::threadpool::cancel(req) }
 }
 
 #[unsafe(no_mangle)]
@@ -81,7 +83,7 @@ pub unsafe extern "C" fn uv_clock_gettime(
     clock_id: abi::uv_clock_id,
     ts: *mut abi::uv_timespec64_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_clock_gettime")
+    unsafe { crate::core::time::clock_gettime_export(clock_id, ts) }
 }
 
 #[unsafe(no_mangle)]
@@ -93,22 +95,28 @@ pub unsafe extern "C" fn uv_close(handle: *mut abi::uv_handle_t, close_cb: abi::
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_cond_broadcast(cond: *mut abi::uv_cond_t) {
-    stub::void("uv_cond_broadcast");
+    unsafe {
+        crate::threading::sync::cond_broadcast(cond);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_cond_destroy(cond: *mut abi::uv_cond_t) {
-    stub::void("uv_cond_destroy");
+    unsafe {
+        crate::threading::sync::cond_destroy(cond);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_cond_init(cond: *mut abi::uv_cond_t) -> ::std::os::raw::c_int {
-    stub::status("uv_cond_init")
+    unsafe { crate::threading::sync::cond_init(cond) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_cond_signal(cond: *mut abi::uv_cond_t) {
-    stub::void("uv_cond_signal");
+    unsafe {
+        crate::threading::sync::cond_signal(cond);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -117,12 +125,14 @@ pub unsafe extern "C" fn uv_cond_timedwait(
     mutex: *mut abi::uv_mutex_t,
     timeout: u64,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_cond_timedwait")
+    unsafe { crate::threading::sync::cond_timedwait(cond, mutex, timeout) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_cond_wait(cond: *mut abi::uv_cond_t, mutex: *mut abi::uv_mutex_t) {
-    stub::void("uv_cond_wait");
+    unsafe {
+        crate::threading::sync::cond_wait(cond, mutex);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -226,7 +236,9 @@ pub unsafe extern "C" fn uv_free_interface_addresses(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_freeaddrinfo(ai: *mut abi::addrinfo) {
-    stub::void("uv_freeaddrinfo");
+    unsafe {
+        crate::threading::threadpool::freeaddrinfo(ai);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -270,7 +282,7 @@ pub unsafe extern "C" fn uv_fs_close(
     file: abi::uv_file,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_close")
+    unsafe { crate::threading::threadpool::fs_close(loop_, req, file, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -490,7 +502,7 @@ pub unsafe extern "C" fn uv_fs_open(
     mode: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_open")
+    unsafe { crate::threading::threadpool::fs_open(loop_, req, path, flags, mode, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -591,7 +603,9 @@ pub unsafe extern "C" fn uv_fs_rename(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_fs_req_cleanup(req: *mut abi::uv_fs_t) {
-    stub::void("uv_fs_req_cleanup");
+    unsafe {
+        crate::threading::threadpool::fs_req_cleanup(req);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -643,7 +657,7 @@ pub unsafe extern "C" fn uv_fs_stat(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_stat")
+    unsafe { crate::threading::threadpool::fs_stat(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -675,7 +689,7 @@ pub unsafe extern "C" fn uv_fs_unlink(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_unlink")
+    unsafe { crate::threading::threadpool::fs_unlink(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -700,7 +714,7 @@ pub unsafe extern "C" fn uv_fs_write(
     offset: i64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_write")
+    unsafe { crate::threading::threadpool::fs_write(loop_, req, file, bufs, nbufs as _, offset, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -745,7 +759,7 @@ pub unsafe extern "C" fn uv_getaddrinfo(
     service: *const ::std::os::raw::c_char,
     hints: *const abi::addrinfo,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_getaddrinfo")
+    unsafe { crate::threading::threadpool::getaddrinfo(loop_, req, getaddrinfo_cb, node, service, hints) }
 }
 
 #[unsafe(no_mangle)]
@@ -756,7 +770,7 @@ pub unsafe extern "C" fn uv_getnameinfo(
     addr: *const abi::sockaddr,
     flags: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_getnameinfo")
+    unsafe { crate::threading::threadpool::getnameinfo(loop_, req, getnameinfo_cb, addr, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -776,7 +790,7 @@ pub unsafe extern "C" fn uv_guess_handle(file: abi::uv_file) -> abi::uv_handle_t
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_hrtime() -> u64 {
-    unsafe { stub::zeroed::<u64>("uv_hrtime") }
+    unsafe { crate::core::time::hrtime_export() }
 }
 
 #[unsafe(no_mangle)]
@@ -892,22 +906,26 @@ pub unsafe extern "C" fn uv_ip_name(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_key_create(key: *mut abi::uv_key_t) -> ::std::os::raw::c_int {
-    stub::status("uv_key_create")
+    unsafe { crate::threading::sync::key_create(key) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_key_delete(key: *mut abi::uv_key_t) {
-    stub::void("uv_key_delete");
+    unsafe {
+        crate::threading::sync::key_delete(key);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_key_get(key: *mut abi::uv_key_t) -> *mut ::std::os::raw::c_void {
-    unsafe { stub::zeroed::<*mut ::std::os::raw::c_void>("uv_key_get") }
+    unsafe { crate::threading::sync::key_get(key) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_key_set(key: *mut abi::uv_key_t, value: *mut ::std::os::raw::c_void) {
-    stub::void("uv_key_set");
+    unsafe {
+        crate::threading::sync::key_set(key, value);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -985,39 +1003,45 @@ pub unsafe extern "C" fn uv_metrics_info(
     loop_: *mut abi::uv_loop_t,
     metrics: *mut abi::uv_metrics_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_metrics_info")
+    unsafe { crate::core::metrics::metrics_info(loop_, metrics) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_mutex_destroy(handle: *mut abi::uv_mutex_t) {
-    stub::void("uv_mutex_destroy");
+    unsafe {
+        crate::threading::sync::mutex_destroy(handle);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_mutex_init(handle: *mut abi::uv_mutex_t) -> ::std::os::raw::c_int {
-    stub::status("uv_mutex_init")
+    unsafe { crate::threading::sync::mutex_init(handle) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_mutex_init_recursive(
     handle: *mut abi::uv_mutex_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_mutex_init_recursive")
+    unsafe { crate::threading::sync::mutex_init_recursive(handle) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_mutex_lock(handle: *mut abi::uv_mutex_t) {
-    stub::void("uv_mutex_lock");
+    unsafe {
+        crate::threading::sync::mutex_lock(handle);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_mutex_trylock(handle: *mut abi::uv_mutex_t) -> ::std::os::raw::c_int {
-    stub::status("uv_mutex_trylock")
+    unsafe { crate::threading::sync::mutex_trylock(handle) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_mutex_unlock(handle: *mut abi::uv_mutex_t) {
-    stub::void("uv_mutex_unlock");
+    unsafe {
+        crate::threading::sync::mutex_unlock(handle);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1025,7 +1049,9 @@ pub unsafe extern "C" fn uv_once(
     guard: *mut abi::uv_once_t,
     callback: ::std::option::Option<unsafe extern "C" fn()>,
 ) {
-    stub::void("uv_once");
+    unsafe {
+        crate::threading::sync::once(guard, callback);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1349,7 +1375,7 @@ pub unsafe extern "C" fn uv_queue_work(
     work_cb: abi::uv_work_cb,
     after_work_cb: abi::uv_after_work_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { core::request::queue_work(loop_, req, work_cb, after_work_cb) }
+    unsafe { crate::threading::threadpool::queue_work(loop_, req, work_cb, after_work_cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1361,7 +1387,7 @@ pub unsafe extern "C" fn uv_random(
     flags: ::std::os::raw::c_uint,
     cb: abi::uv_random_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_random")
+    unsafe { crate::threading::random::random(loop_, req, buf, buflen, flags, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1418,51 +1444,63 @@ pub unsafe extern "C" fn uv_run(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_destroy(rwlock: *mut abi::uv_rwlock_t) {
-    stub::void("uv_rwlock_destroy");
+    unsafe {
+        crate::threading::sync::rwlock_destroy(rwlock);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_init(rwlock: *mut abi::uv_rwlock_t) -> ::std::os::raw::c_int {
-    stub::status("uv_rwlock_init")
+    unsafe { crate::threading::sync::rwlock_init(rwlock) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_rdlock(rwlock: *mut abi::uv_rwlock_t) {
-    stub::void("uv_rwlock_rdlock");
+    unsafe {
+        crate::threading::sync::rwlock_rdlock(rwlock);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_rdunlock(rwlock: *mut abi::uv_rwlock_t) {
-    stub::void("uv_rwlock_rdunlock");
+    unsafe {
+        crate::threading::sync::rwlock_rdunlock(rwlock);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_tryrdlock(
     rwlock: *mut abi::uv_rwlock_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_rwlock_tryrdlock")
+    unsafe { crate::threading::sync::rwlock_tryrdlock(rwlock) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_trywrlock(
     rwlock: *mut abi::uv_rwlock_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_rwlock_trywrlock")
+    unsafe { crate::threading::sync::rwlock_trywrlock(rwlock) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_wrlock(rwlock: *mut abi::uv_rwlock_t) {
-    stub::void("uv_rwlock_wrlock");
+    unsafe {
+        crate::threading::sync::rwlock_wrlock(rwlock);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_rwlock_wrunlock(rwlock: *mut abi::uv_rwlock_t) {
-    stub::void("uv_rwlock_wrunlock");
+    unsafe {
+        crate::threading::sync::rwlock_wrunlock(rwlock);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_sem_destroy(sem: *mut abi::uv_sem_t) {
-    stub::void("uv_sem_destroy");
+    unsafe {
+        crate::threading::sync::sem_destroy(sem);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1470,22 +1508,26 @@ pub unsafe extern "C" fn uv_sem_init(
     sem: *mut abi::uv_sem_t,
     value: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_sem_init")
+    unsafe { crate::threading::sync::sem_init(sem, value) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_sem_post(sem: *mut abi::uv_sem_t) {
-    stub::void("uv_sem_post");
+    unsafe {
+        crate::threading::sync::sem_post(sem);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_sem_trywait(sem: *mut abi::uv_sem_t) -> ::std::os::raw::c_int {
-    stub::status("uv_sem_trywait")
+    unsafe { crate::threading::sync::sem_trywait(sem) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_sem_wait(sem: *mut abi::uv_sem_t) {
-    stub::void("uv_sem_wait");
+    unsafe {
+        crate::threading::sync::sem_wait(sem);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1545,7 +1587,9 @@ pub unsafe extern "C" fn uv_signal_stop(handle: *mut abi::uv_signal_t) -> ::std:
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_sleep(msec: ::std::os::raw::c_uint) {
-    stub::void("uv_sleep");
+    unsafe {
+        crate::core::time::sleep_export(msec);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1698,7 +1742,7 @@ pub unsafe extern "C" fn uv_thread_create(
     entry: abi::uv_thread_cb,
     arg: *mut ::std::os::raw::c_void,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_thread_create")
+    unsafe { crate::threading::thread::create(tid, entry, arg) }
 }
 
 #[unsafe(no_mangle)]
@@ -1708,7 +1752,7 @@ pub unsafe extern "C" fn uv_thread_create_ex(
     entry: abi::uv_thread_cb,
     arg: *mut ::std::os::raw::c_void,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_thread_create_ex")
+    unsafe { crate::threading::thread::create_ex(tid, params, entry, arg) }
 }
 
 #[unsafe(no_mangle)]
@@ -1717,7 +1761,7 @@ pub unsafe extern "C" fn uv_thread_getaffinity(
     cpumask: *mut ::std::os::raw::c_char,
     mask_size: usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_thread_getaffinity")
+    unsafe { crate::threading::thread::getaffinity(tid, cpumask, mask_size) }
 }
 
 #[unsafe(no_mangle)]
@@ -1725,17 +1769,17 @@ pub unsafe extern "C" fn uv_thread_getpriority(
     tid: abi::uv_thread_t,
     priority: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_thread_getpriority")
+    unsafe { crate::threading::thread::getpriority(tid, priority) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_thread_join(tid: *mut abi::uv_thread_t) -> ::std::os::raw::c_int {
-    stub::status("uv_thread_join")
+    unsafe { crate::threading::thread::join(tid) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_thread_self() -> abi::uv_thread_t {
-    unsafe { stub::zeroed::<abi::uv_thread_t>("uv_thread_self") }
+    unsafe { crate::threading::thread::self_thread() }
 }
 
 #[unsafe(no_mangle)]
@@ -1745,7 +1789,7 @@ pub unsafe extern "C" fn uv_thread_setaffinity(
     oldmask: *mut ::std::os::raw::c_char,
     mask_size: usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_thread_setaffinity")
+    unsafe { crate::threading::thread::setaffinity(tid, cpumask, oldmask, mask_size) }
 }
 
 #[unsafe(no_mangle)]
@@ -1753,7 +1797,7 @@ pub unsafe extern "C" fn uv_thread_setpriority(
     tid: abi::uv_thread_t,
     priority: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_thread_setpriority")
+    unsafe { crate::threading::thread::setpriority(tid, priority) }
 }
 
 #[unsafe(no_mangle)]

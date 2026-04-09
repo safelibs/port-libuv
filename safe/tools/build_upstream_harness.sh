@@ -39,6 +39,7 @@ mkdir -p "${generated_dir}"
 python3 - "${repo_root}" "${generated_dir}" <<'PY'
 import subprocess
 import sys
+import re
 from pathlib import Path
 
 repo_root = Path(sys.argv[1])
@@ -57,6 +58,43 @@ selected_tests = [
     "loop_stop",
     "run_once",
     "run_nowait",
+    "once",
+    "async",
+    "thread_create",
+    "thread_local_storage",
+    "thread_stack_size",
+    "thread_stack_size_explicit",
+    "threadpool_queue_work_simple",
+    "threadpool_queue_work_einval",
+    "threadpool_multiple_event_loops",
+    "random_async",
+    "random_sync",
+    "barrier_1",
+    "barrier_2",
+    "barrier_3",
+    "barrier_serial_thread",
+    "barrier_serial_thread_single",
+    "condvar_1",
+    "condvar_2",
+    "condvar_3",
+    "condvar_4",
+    "condvar_5",
+    "thread_mutex",
+    "thread_mutex_recursive",
+    "thread_rwlock",
+    "thread_rwlock_trylock",
+    "semaphore_1",
+    "semaphore_2",
+    "semaphore_3",
+    "metrics_idle_time",
+    "metrics_idle_time_thread",
+    "metrics_idle_time_zero",
+    "metrics_info_check",
+    "metrics_pool_events",
+    "threadpool_cancel_work",
+    "threadpool_cancel_random",
+    "threadpool_cancel_single",
+    "threadpool_cancel_when_busy",
 ]
 
 expected_delta = {
@@ -94,9 +132,9 @@ if set(review_bench) != set(old_bench):
 
 test_list_text = original_test_list.read_text()
 for name in selected_tests:
-    needle = f"TEST_DECLARE   ({name})"
-    if needle not in test_list_text:
-        raise SystemExit(f"missing {needle} in current test-list.h")
+    pattern = rf"TEST_DECLARE\s+\({re.escape(name)}\)"
+    if re.search(pattern, test_list_text) is None:
+        raise SystemExit(f"missing TEST_DECLARE(...{name}...) in current test-list.h")
 
 phase_test_list = "\n".join(
     [*(f"TEST_DECLARE({name})" for name in selected_tests),
