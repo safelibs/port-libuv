@@ -1,12 +1,17 @@
-This harness compiles a narrow upstream smoke slice against a staged Rust-built `libuv` without touching the upstream source tree.
+This harness compiles a focused upstream runner against a staged Rust-built `libuv` without modifying the upstream tree.
 
-Use it after:
+`safe/tools/build_upstream_harness.sh` is the entrypoint. It:
 
-```bash
-cargo build --manifest-path /home/yans/safelibs/port-libuv/safe/Cargo.toml --release
-/home/yans/safelibs/port-libuv/safe/tools/stage_install.sh /tmp/libuv-safe-stage
-cmake -S /home/yans/safelibs/port-libuv/safe/tests/harness -B /tmp/libuv-safe-harness -DSTAGE_PREFIX=/tmp/libuv-safe-stage
-cmake --build /tmp/libuv-safe-harness
-```
+- consumes the checked-in `original/build-checker*` inventories in place and verifies the expected `440/440/55` vs `435/435/55` delta
+- validates the selected phase tests against the current `original/test/test-list.h`
+- generates a reduced runner source list for the current core-loop phase
+- configures and builds this CMake harness against the staged library
 
-The harness intentionally links direct wrappers around upstream `original/test/test-getters-setters.c` and `original/test/benchmark-sizes.c`. That keeps the smoke target small while still compiling real upstream test sources against the staged headers and libraries.
+The CMake project builds:
+
+- `uv_safe_run_tests_shared`
+- `uv_safe_run_tests_static`
+- `uv_safe_benchmark_sizes_shared`
+- `uv_safe_benchmark_sizes_static`
+
+Use the scripts in `safe/tools/` instead of invoking this directory directly.

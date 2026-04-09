@@ -1,4 +1,4 @@
-use crate::{abi::linux_x86_64 as abi, version};
+use crate::{abi::linux_x86_64 as abi, core, version};
 use std::mem::size_of;
 use std::os::raw::{c_char, c_int, c_uint};
 
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn uv_handle_size(handle_type: abi::uv_handle_type) -> usi
         abi::uv_handle_type_UV_UDP => size_of::<abi::uv_udp_t>(),
         abi::uv_handle_type_UV_SIGNAL => size_of::<abi::uv_signal_t>(),
         abi::uv_handle_type_UV_FILE => size_of::<abi::uv_file>(),
-        _ => 0,
+        _ => usize::MAX,
     }
 }
 
@@ -74,7 +74,7 @@ pub unsafe extern "C" fn uv_req_size(req_type: abi::uv_req_type) -> usize {
         abi::uv_req_type_UV_GETADDRINFO => size_of::<abi::uv_getaddrinfo_t>(),
         abi::uv_req_type_UV_GETNAMEINFO => size_of::<abi::uv_getnameinfo_t>(),
         abi::uv_req_type_UV_RANDOM => size_of::<abi::uv_random_t>(),
-        _ => 0,
+        _ => usize::MAX,
     }
 }
 
@@ -164,43 +164,12 @@ pub unsafe extern "C" fn uv_req_get_type(req: *const abi::uv_req_t) -> abi::uv_r
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_handle_type_name(handle_type: abi::uv_handle_type) -> *const c_char {
-    match handle_type {
-        abi::uv_handle_type_UV_ASYNC => c_name(b"async\0"),
-        abi::uv_handle_type_UV_CHECK => c_name(b"check\0"),
-        abi::uv_handle_type_UV_FS_EVENT => c_name(b"fs_event\0"),
-        abi::uv_handle_type_UV_FS_POLL => c_name(b"fs_poll\0"),
-        abi::uv_handle_type_UV_HANDLE => c_name(b"handle\0"),
-        abi::uv_handle_type_UV_IDLE => c_name(b"idle\0"),
-        abi::uv_handle_type_UV_NAMED_PIPE => c_name(b"pipe\0"),
-        abi::uv_handle_type_UV_POLL => c_name(b"poll\0"),
-        abi::uv_handle_type_UV_PREPARE => c_name(b"prepare\0"),
-        abi::uv_handle_type_UV_PROCESS => c_name(b"process\0"),
-        abi::uv_handle_type_UV_STREAM => c_name(b"stream\0"),
-        abi::uv_handle_type_UV_TCP => c_name(b"tcp\0"),
-        abi::uv_handle_type_UV_TIMER => c_name(b"timer\0"),
-        abi::uv_handle_type_UV_TTY => c_name(b"tty\0"),
-        abi::uv_handle_type_UV_UDP => c_name(b"udp\0"),
-        abi::uv_handle_type_UV_SIGNAL => c_name(b"signal\0"),
-        abi::uv_handle_type_UV_FILE => c_name(b"file\0"),
-        _ => std::ptr::null(),
-    }
+    core::handle::handle_type_name_ptr(handle_type)
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_req_type_name(req_type: abi::uv_req_type) -> *const c_char {
-    match req_type {
-        abi::uv_req_type_UV_REQ => c_name(b"req\0"),
-        abi::uv_req_type_UV_CONNECT => c_name(b"connect\0"),
-        abi::uv_req_type_UV_WRITE => c_name(b"write\0"),
-        abi::uv_req_type_UV_SHUTDOWN => c_name(b"shutdown\0"),
-        abi::uv_req_type_UV_UDP_SEND => c_name(b"udp_send\0"),
-        abi::uv_req_type_UV_FS => c_name(b"fs\0"),
-        abi::uv_req_type_UV_WORK => c_name(b"work\0"),
-        abi::uv_req_type_UV_GETADDRINFO => c_name(b"getaddrinfo\0"),
-        abi::uv_req_type_UV_GETNAMEINFO => c_name(b"getnameinfo\0"),
-        abi::uv_req_type_UV_RANDOM => c_name(b"random\0"),
-        _ => std::ptr::null(),
-    }
+    core::request::req_type_name_ptr(req_type)
 }
 
 #[unsafe(no_mangle)]
@@ -246,10 +215,7 @@ pub unsafe extern "C" fn uv_timer_get_repeat(handle: *const abi::uv_timer_t) -> 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_timer_get_due_in(handle: *const abi::uv_timer_t) -> u64 {
-    if handle.is_null() {
-        return 0;
-    }
-    unsafe { (*handle).timeout }
+    unsafe { core::timer::timer_get_due_in(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -262,44 +228,32 @@ pub unsafe extern "C" fn uv_process_get_pid(handle: *const abi::uv_process_t) ->
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_alive(loop_: *const abi::uv_loop_t) -> c_int {
-    if loop_.is_null() {
-        return 0;
-    }
-    let loop_ref = unsafe { &*loop_ };
-    let active_reqs = unsafe { loop_ref.active_reqs.count };
-    ((loop_ref.active_handles != 0) || (active_reqs != 0) || !loop_ref.closing_handles.is_null())
-        as c_int
+    unsafe { core::loop_::loop_alive(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_now(loop_: *const abi::uv_loop_t) -> u64 {
-    if loop_.is_null() {
-        return 0;
-    }
-    unsafe { (*loop_).time }
+    unsafe { core::loop_::now(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_backend_fd(loop_: *const abi::uv_loop_t) -> c_int {
-    if loop_.is_null() {
-        return -1;
-    }
-    unsafe { (*loop_).backend_fd }
+    unsafe { core::loop_::backend_fd(loop_) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_backend_timeout(_loop_: *const abi::uv_loop_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_backend_timeout(loop_: *const abi::uv_loop_t) -> c_int {
+    unsafe { core::loop_::backend_timeout(loop_) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_is_active(_handle: *const abi::uv_handle_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_is_active(handle: *const abi::uv_handle_t) -> c_int {
+    unsafe { core::handle::is_active_int(handle) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_is_closing(_handle: *const abi::uv_handle_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_is_closing(handle: *const abi::uv_handle_t) -> c_int {
+    unsafe { core::handle::is_closing_int(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -313,8 +267,8 @@ pub unsafe extern "C" fn uv_is_writable(_handle: *const abi::uv_stream_t) -> c_i
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_has_ref(_handle: *const abi::uv_handle_t) -> c_int {
-    0
+pub unsafe extern "C" fn uv_has_ref(handle: *const abi::uv_handle_t) -> c_int {
+    unsafe { core::handle::has_ref_int(handle) }
 }
 
 #[unsafe(no_mangle)]

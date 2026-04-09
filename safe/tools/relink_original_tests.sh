@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 (--shared|--static) [--no-run] --build-dir <dir> --stage <prefix>" >&2
+  echo "usage: $0 (--shared|--static) [--no-run] [--run-smoke <test>] --build-dir <dir> --stage <prefix>" >&2
   exit 64
 }
 
@@ -10,6 +10,7 @@ mode=""
 build_dir=""
 stage_prefix=""
 no_run=0
+run_smoke=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -24,6 +25,11 @@ while [[ $# -gt 0 ]]; do
     --no-run)
       no_run=1
       shift
+      ;;
+    --run-smoke)
+      [[ $# -ge 2 ]] || usage
+      run_smoke="$2"
+      shift 2
       ;;
     --build-dir)
       [[ $# -ge 2 ]] || usage
@@ -43,7 +49,7 @@ done
 
 [[ -n "${mode}" && -n "${build_dir}" && -n "${stage_prefix}" ]] || usage
 
-python3 - "${mode}" "${build_dir}" "${stage_prefix}" "${no_run}" <<'PY'
+python3 - "${mode}" "${build_dir}" "${stage_prefix}" "${no_run}" "${run_smoke}" <<'PY'
 import pathlib
 import shlex
 import subprocess
@@ -53,6 +59,7 @@ mode = sys.argv[1]
 build_dir = pathlib.Path(sys.argv[2]).resolve()
 stage_prefix = pathlib.Path(sys.argv[3]).resolve()
 no_run = bool(int(sys.argv[4]))
+run_smoke = sys.argv[5]
 out_dir = build_dir / ".safe-relink" / mode
 out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +101,10 @@ for link_txt in targets:
     subprocess.check_call(command, cwd=build_dir)
 
     if not no_run:
-        probe = ["--list"]
+        if run_smoke and output_path.name.startswith("uv_run_tests"):
+            probe = [run_smoke]
+        else:
+            probe = ["--list"]
         subprocess.check_call([str(output_path), *probe], cwd=build_dir)
 
     print(output_path)

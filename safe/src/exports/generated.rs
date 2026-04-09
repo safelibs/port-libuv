@@ -1,4 +1,4 @@
-use crate::{abi::linux_x86_64 as abi, stub};
+use crate::{abi::linux_x86_64 as abi, core, stub};
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_accept(
@@ -86,7 +86,9 @@ pub unsafe extern "C" fn uv_clock_gettime(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_close(handle: *mut abi::uv_handle_t, close_cb: abi::uv_close_cb) {
-    stub::void("uv_close");
+    unsafe {
+        core::handle::close(handle, close_cb);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -141,7 +143,7 @@ pub unsafe extern "C" fn uv_cwd(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_default_loop() -> *mut abi::uv_loop_t {
-    unsafe { stub::zeroed::<*mut abi::uv_loop_t>("uv_default_loop") }
+    unsafe { core::default_loop::default_loop() }
 }
 
 #[unsafe(no_mangle)]
@@ -178,7 +180,7 @@ pub unsafe extern "C" fn uv_dlsym(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_err_name(err: ::std::os::raw::c_int) -> *const ::std::os::raw::c_char {
-    unsafe { stub::zeroed::<*const ::std::os::raw::c_char>("uv_err_name") }
+    unsafe { core::error::err_name(err) }
 }
 
 #[unsafe(no_mangle)]
@@ -187,7 +189,7 @@ pub unsafe extern "C" fn uv_err_name_r(
     buf: *mut ::std::os::raw::c_char,
     buflen: usize,
 ) -> *mut ::std::os::raw::c_char {
-    unsafe { stub::zeroed::<*mut ::std::os::raw::c_char>("uv_err_name_r") }
+    unsafe { core::error::err_name_r(err, buf, buflen) }
 }
 
 #[unsafe(no_mangle)]
@@ -782,7 +784,7 @@ pub unsafe extern "C" fn uv_idle_init(
     arg1: *mut abi::uv_loop_t,
     idle: *mut abi::uv_idle_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_idle_init")
+    unsafe { core::handle::idle_init(arg1, idle) }
 }
 
 #[unsafe(no_mangle)]
@@ -790,12 +792,12 @@ pub unsafe extern "C" fn uv_idle_start(
     idle: *mut abi::uv_idle_t,
     cb: abi::uv_idle_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_idle_start")
+    unsafe { core::handle::idle_start(idle, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_idle_stop(idle: *mut abi::uv_idle_t) -> ::std::os::raw::c_int {
-    stub::status("uv_idle_stop")
+    unsafe { core::handle::idle_stop(idle) }
 }
 
 #[unsafe(no_mangle)]
@@ -918,7 +920,9 @@ pub unsafe extern "C" fn uv_kill(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_library_shutdown() {
-    stub::void("uv_library_shutdown");
+    unsafe {
+        core::loop_::library_shutdown();
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -937,20 +941,23 @@ pub unsafe extern "C" fn uv_loadavg(avg: *mut f64) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_close(loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
-    stub::status("uv_loop_close")
+    unsafe { core::loop_::loop_close(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_configure(
     loop_: *mut abi::uv_loop_t,
     option: abi::uv_loop_option,
+    arg: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_loop_configure")
+    unsafe { core::loop_::loop_configure(loop_, option, arg) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_delete(arg1: *mut abi::uv_loop_t) {
-    stub::void("uv_loop_delete");
+    unsafe {
+        core::loop_::loop_delete(arg1);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -960,17 +967,17 @@ pub unsafe extern "C" fn uv_loop_fork(loop_: *mut abi::uv_loop_t) -> ::std::os::
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_init(loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
-    stub::status("uv_loop_init")
+    unsafe { core::loop_::loop_init(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_new() -> *mut abi::uv_loop_t {
-    unsafe { stub::zeroed::<*mut abi::uv_loop_t>("uv_loop_new") }
+    unsafe { core::loop_::loop_new() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_metrics_idle_time(loop_: *mut abi::uv_loop_t) -> u64 {
-    unsafe { stub::zeroed::<u64>("uv_metrics_idle_time") }
+    unsafe { core::loop_::metrics_idle_time(loop_) }
 }
 
 #[unsafe(no_mangle)]
@@ -1294,7 +1301,7 @@ pub unsafe extern "C" fn uv_prepare_init(
     arg1: *mut abi::uv_loop_t,
     prepare: *mut abi::uv_prepare_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_prepare_init")
+    unsafe { core::handle::prepare_init(arg1, prepare) }
 }
 
 #[unsafe(no_mangle)]
@@ -1302,12 +1309,12 @@ pub unsafe extern "C" fn uv_prepare_start(
     prepare: *mut abi::uv_prepare_t,
     cb: abi::uv_prepare_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_prepare_start")
+    unsafe { core::handle::prepare_start(prepare, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_prepare_stop(prepare: *mut abi::uv_prepare_t) -> ::std::os::raw::c_int {
-    stub::status("uv_prepare_stop")
+    unsafe { core::handle::prepare_stop(prepare) }
 }
 
 #[unsafe(no_mangle)]
@@ -1315,12 +1322,16 @@ pub unsafe extern "C" fn uv_print_active_handles(
     loop_: *mut abi::uv_loop_t,
     stream: *mut abi::FILE,
 ) {
-    stub::void("uv_print_active_handles");
+    unsafe {
+        core::handle::print_handles(loop_, true, stream);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_print_all_handles(loop_: *mut abi::uv_loop_t, stream: *mut abi::FILE) {
-    stub::void("uv_print_all_handles");
+    unsafe {
+        core::handle::print_handles(loop_, false, stream);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1338,7 +1349,7 @@ pub unsafe extern "C" fn uv_queue_work(
     work_cb: abi::uv_work_cb,
     after_work_cb: abi::uv_after_work_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_queue_work")
+    unsafe { core::request::queue_work(loop_, req, work_cb, after_work_cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -1377,7 +1388,9 @@ pub unsafe extern "C" fn uv_recv_buffer_size(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_ref(arg1: *mut abi::uv_handle_t) {
-    stub::void("uv_ref");
+    unsafe {
+        core::handle::handle_ref(arg1);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1387,7 +1400,7 @@ pub unsafe extern "C" fn uv_replace_allocator(
     calloc_func: abi::uv_calloc_func,
     free_func: abi::uv_free_func,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_replace_allocator")
+    core::allocator::replace_allocator(malloc_func, realloc_func, calloc_func, free_func)
 }
 
 #[unsafe(no_mangle)]
@@ -1400,7 +1413,7 @@ pub unsafe extern "C" fn uv_run(
     arg1: *mut abi::uv_loop_t,
     mode: abi::uv_run_mode,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_run")
+    unsafe { core::loop_::run(arg1, mode) }
 }
 
 #[unsafe(no_mangle)]
@@ -1557,7 +1570,9 @@ pub unsafe extern "C" fn uv_spawn(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_stop(arg1: *mut abi::uv_loop_t) {
-    stub::void("uv_stop");
+    unsafe {
+        core::loop_::stop(arg1);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1570,7 +1585,7 @@ pub unsafe extern "C" fn uv_stream_set_blocking(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_strerror(err: ::std::os::raw::c_int) -> *const ::std::os::raw::c_char {
-    unsafe { stub::zeroed::<*const ::std::os::raw::c_char>("uv_strerror") }
+    unsafe { core::error::strerror(err) }
 }
 
 #[unsafe(no_mangle)]
@@ -1579,7 +1594,7 @@ pub unsafe extern "C" fn uv_strerror_r(
     buf: *mut ::std::os::raw::c_char,
     buflen: usize,
 ) -> *mut ::std::os::raw::c_char {
-    unsafe { stub::zeroed::<*mut ::std::os::raw::c_char>("uv_strerror_r") }
+    unsafe { core::error::strerror_r(err, buf, buflen) }
 }
 
 #[unsafe(no_mangle)]
@@ -1743,7 +1758,7 @@ pub unsafe extern "C" fn uv_thread_setpriority(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_timer_again(handle: *mut abi::uv_timer_t) -> ::std::os::raw::c_int {
-    stub::status("uv_timer_again")
+    unsafe { core::timer::timer_again(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1751,7 +1766,7 @@ pub unsafe extern "C" fn uv_timer_init(
     arg1: *mut abi::uv_loop_t,
     handle: *mut abi::uv_timer_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_timer_init")
+    unsafe { core::timer::timer_init(arg1, handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1761,12 +1776,12 @@ pub unsafe extern "C" fn uv_timer_start(
     timeout: u64,
     repeat: u64,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_timer_start")
+    unsafe { core::timer::timer_start(handle, cb, timeout, repeat) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_timer_stop(handle: *mut abi::uv_timer_t) -> ::std::os::raw::c_int {
-    stub::status("uv_timer_stop")
+    unsafe { core::timer::timer_stop(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1998,12 +2013,16 @@ pub unsafe extern "C" fn uv_udp_try_send(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_unref(arg1: *mut abi::uv_handle_t) {
-    stub::void("uv_unref");
+    unsafe {
+        core::handle::handle_unref(arg1);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_update_time(arg1: *mut abi::uv_loop_t) {
-    stub::void("uv_update_time");
+    unsafe {
+        core::loop_::update_time(arg1);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -2017,7 +2036,9 @@ pub unsafe extern "C" fn uv_walk(
     walk_cb: abi::uv_walk_cb,
     arg: *mut ::std::os::raw::c_void,
 ) {
-    stub::void("uv_walk");
+    unsafe {
+        core::handle::walk(loop_, walk_cb, arg);
+    }
 }
 
 #[unsafe(no_mangle)]
