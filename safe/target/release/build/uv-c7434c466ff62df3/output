@@ -1,0 +1,9 @@
+cargo:rerun-if-changed=/home/yans/safelibs/port-libuv/original/build-checker/CMakeFiles/uv.dir/link.txt
+cargo:rerun-if-changed=/home/yans/safelibs/port-libuv/original/build-checker/CMakeFiles/uv_a.dir/link.txt
+cargo:rerun-if-changed=/home/yans/safelibs/port-libuv/safe/tools/abi-baseline.json
+cargo:rustc-link-lib=pthread
+cargo:rustc-link-lib=dl
+cargo:rustc-link-lib=rt
+cargo:rustc-env=LIBUV_STATIC_BASELINE_OBJECT_COUNT=35
+cargo:rustc-cdylib-link-arg=-Wl,-soname,libuv.so.1
+cargo:rustc-cdylib-link-arg=-Wl,--version-script=/home/yans/safelibs/port-libuv/safe/target/release/build/uv-c7434c466ff62df3/out/libuv.map

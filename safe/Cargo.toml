@@ -1,0 +1,17 @@
+[package]
+name = "uv"
+version = "1.48.0"
+edition = "2021"
+rust-version = "1.94"
+build = "build.rs"
+
+[lib]
+name = "uv"
+crate-type = ["cdylib", "staticlib"]
+
+[build-dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+panic = "abort"
