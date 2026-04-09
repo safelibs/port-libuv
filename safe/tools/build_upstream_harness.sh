@@ -95,6 +95,71 @@ selected_tests = [
     "threadpool_cancel_random",
     "threadpool_cancel_single",
     "threadpool_cancel_when_busy",
+    "poll_duplex",
+    "poll_unidirectional",
+    "poll_bad_fdtype",
+    "poll_nested_epoll",
+    "tcp_ping_pong",
+    "tcp_ping_pong_vec",
+    "pipe_ping_pong",
+    "pipe_ping_pong_vec",
+    "shutdown_close_pipe",
+    "shutdown_close_tcp",
+    "shutdown_eof",
+    "shutdown_simultaneous",
+    "shutdown_twice",
+    "multiple_listen",
+    "connection_fail",
+    "tcp_close_reset_client",
+    "tcp_close_reset_client_after_shutdown",
+    "tcp_close_reset_accepted",
+    "tcp_close_reset_accepted_after_shutdown",
+    "pipe_connect_bad_name",
+    "pipe_connect_close_multiple",
+    "pipe_connect_multiple",
+    "pipe_connect_on_prepare",
+    "pipe_getsockname",
+    "pipe_pending_instances",
+    "pipe_sendmsg",
+    "pipe_server_close",
+    "pipe_set_chmod",
+    "pipe_set_non_blocking",
+    "tty",
+    "tty_file",
+    "tty_pty",
+    "udp_bind",
+    "udp_connect",
+    "udp_connect6",
+    "udp_open",
+    "udp_open_twice",
+    "udp_open_bound",
+    "udp_open_connect",
+    "udp_send_and_recv",
+    "udp_send_immediate",
+    "udp_send_unreachable",
+    "udp_try_send",
+    "udp_recv_in_a_row",
+    "udp_options",
+    "udp_options6",
+    "udp_no_autobind",
+    "udp_mmsg",
+    "udp_multicast_join",
+    "udp_multicast_join6",
+    "udp_multicast_interface",
+    "udp_multicast_interface6",
+    "udp_multicast_ttl",
+    "udp_dual_stack",
+    "udp_ipv6_only",
+    "udp_dgram_too_big",
+    "ipc_send_recv_pipe",
+    "ipc_send_recv_pipe_inprocess",
+    "ipc_send_recv_tcp",
+    "ipc_send_recv_tcp_inprocess",
+    "ipc_tcp_connection",
+    "ipc_listen_before_write",
+    "ipc_listen_after_write",
+    "ipc_send_zero",
+    "ipc_heavy_traffic_deadlock_bug",
 ]
 
 expected_delta = {
@@ -131,17 +196,61 @@ if set(review_bench) != set(old_bench):
     raise SystemExit("benchmark inventory changed unexpectedly between baseline trees")
 
 test_list_text = original_test_list.read_text()
-for name in selected_tests:
-    pattern = rf"TEST_DECLARE\s+\({re.escape(name)}\)"
-    if re.search(pattern, test_list_text) is None:
-        raise SystemExit(f"missing TEST_DECLARE(...{name}...) in current test-list.h")
+lines = test_list_text.splitlines()
+decl_re = re.compile(r"^(TEST_DECLARE|HELPER_DECLARE)\s+\(([^)]+)\)")
+task_start = lines.index("TASK_LIST_START")
+task_end = lines.index("TASK_LIST_END")
+
+declaration_lines = {}
+for line in lines[:task_start]:
+    match = decl_re.match(line.strip())
+    if match is not None:
+        declaration_lines[match.group(2)] = line.strip()
+
+missing = [name for name in selected_tests if name not in declaration_lines]
+if missing:
+    raise SystemExit(f"missing declarations in current test-list.h: {', '.join(missing)}")
+
+selected_set = set(selected_tests)
+helper_names = set()
+task_lines = []
+
+for raw_line in lines[task_start + 1:task_end]:
+    line = raw_line.strip()
+    entry_match = re.match(r"^(TEST_ENTRY|TEST_ENTRY_CUSTOM)\s+\(([^),]+)", line)
+    helper_match = re.match(r"^TEST_HELPER\s+\(([^),]+),\s*([^)]+)\)", line)
+
+    if entry_match is not None:
+        test_name = entry_match.group(2).strip()
+        if test_name in selected_set:
+            task_lines.append(raw_line.rstrip())
+        continue
+
+    if helper_match is not None:
+        test_name = helper_match.group(1).strip()
+        helper_name = helper_match.group(2).strip()
+        if test_name in selected_set:
+            task_lines.append(raw_line.rstrip())
+            helper_names.add(helper_name)
+
+phase_declarations = []
+for raw_line in lines[:task_start]:
+    line = raw_line.strip()
+    match = decl_re.match(line)
+    if match is None:
+        continue
+    name = match.group(2)
+    if name in selected_set or name in helper_names:
+        phase_declarations.append(line)
 
 phase_test_list = "\n".join(
-    [*(f"TEST_DECLARE({name})" for name in selected_tests),
-     "TASK_LIST_START",
-     *(f"  TEST_ENTRY({name})" for name in selected_tests),
-     "TASK_LIST_END",
-     ""]
+    [
+        *phase_declarations,
+        "TASK_LIST_START",
+        *task_lines,
+        "TASK_LIST_END",
+        "",
+    ]
 )
 
 run_tests_c = """\
@@ -157,6 +266,13 @@ run_tests_c = """\
 #include "task.h"
 #include "phase-test-list.h"
 
+int ipc_helper(int listen_after_write);
+int ipc_helper_heavy_traffic_deadlock_bug(void);
+int ipc_helper_tcp_connection(void);
+int ipc_send_recv_helper(void);
+int ipc_helper_bind_twice(void);
+int ipc_helper_send_zero(void);
+
 static int maybe_run_test(int argc, char** argv);
 
 int main(int argc, char** argv) {
@@ -170,6 +286,8 @@ int main(int argc, char** argv) {
     return maybe_run_test(argc, argv);
   case 3:
     return run_test_part(argv[1], argv[2]);
+  case 4:
+    return maybe_run_test(argc, argv);
   default:
     fprintf(stderr, "Too many arguments.\\n");
     fflush(stderr);
@@ -183,6 +301,35 @@ static int maybe_run_test(int argc, char** argv) {
     print_tests(stdout);
     return 0;
   }
+
+  if (strcmp(argv[1], "ipc_helper_listen_before_write") == 0) {
+    return ipc_helper(0);
+  }
+
+  if (strcmp(argv[1], "ipc_helper_listen_after_write") == 0) {
+    return ipc_helper(1);
+  }
+
+  if (strcmp(argv[1], "ipc_helper_heavy_traffic_deadlock_bug") == 0) {
+    return ipc_helper_heavy_traffic_deadlock_bug();
+  }
+
+  if (strcmp(argv[1], "ipc_send_recv_helper") == 0) {
+    return ipc_send_recv_helper();
+  }
+
+  if (strcmp(argv[1], "ipc_helper_tcp_connection") == 0) {
+    return ipc_helper_tcp_connection();
+  }
+
+  if (strcmp(argv[1], "ipc_helper_bind_twice") == 0) {
+    return ipc_helper_bind_twice();
+  }
+
+  if (strcmp(argv[1], "ipc_helper_send_zero") == 0) {
+    return ipc_helper_send_zero();
+  }
+
   return run_test(argv[1], 0, 1);
 }
 """

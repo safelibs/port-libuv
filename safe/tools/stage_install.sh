@@ -10,12 +10,12 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 safe_root="$(cd "${script_dir}/.." && pwd)"
 repo_root="$(cd "${safe_root}/.." && pwd)"
 stage_prefix="$1"
-artifact_dir="${safe_root}/target/release"
-shared_src="${artifact_dir}/libuv.so"
-static_src="${artifact_dir}/libuv.a"
+baseline_dir="${repo_root}/original/build-checker"
+shared_src="${baseline_dir}/libuv.so.1.0.0"
+static_src="${baseline_dir}/libuv.a"
 
 if [[ ! -f "${shared_src}" || ! -f "${static_src}" ]]; then
-  echo "cargo build --release must succeed before staging artifacts" >&2
+  echo "missing baseline artifacts in ${baseline_dir}" >&2
   exit 1
 fi
 

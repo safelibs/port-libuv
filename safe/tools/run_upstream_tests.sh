@@ -55,5 +55,11 @@ fi
 
 IFS=',' read -r -a tests <<<"${tests_csv}"
 for test_name in "${tests[@]}"; do
+  set +e
   "${binary}" "${test_name}"
+  status=$?
+  set -e
+  if [[ "${status}" -ne 0 && "${status}" -ne 7 ]]; then
+    exit "${status}"
+  fi
 done
