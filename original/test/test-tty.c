@@ -435,6 +435,7 @@ TEST_IMPL(tty_pty) {
   struct winsize w;
   uv_loop_t loop;
   uv_tty_t master_tty, slave_tty;
+  uv_os_fd_t master_handle_fd, slave_handle_fd;
 
   ASSERT_OK(uv_loop_init(&loop));
 
@@ -448,13 +449,14 @@ TEST_IMPL(tty_pty) {
   ASSERT(uv_is_writable((uv_stream_t*) &slave_tty));
   ASSERT(uv_is_readable((uv_stream_t*) &master_tty));
   ASSERT(uv_is_writable((uv_stream_t*) &master_tty));
-  /* Check if the file descriptor was reopened. If it is,
-   * UV_HANDLE_BLOCKING_WRITES (value 0x100000) isn't set on flags.
+  ASSERT_OK(uv_fileno((const uv_handle_t*) &slave_tty, &slave_handle_fd));
+  ASSERT_OK(uv_fileno((const uv_handle_t*) &master_tty, &master_handle_fd));
+  /* Slave ptys are reopened so libuv can change their mode without mutating
+   * other processes that share the original descriptor.
    */
-  ASSERT_OK((slave_tty.flags & 0x100000));
-  /* The master_fd of a pty should never be reopened.
-   */
-  ASSERT(master_tty.flags & 0x100000);
+  ASSERT_NE(slave_fd, slave_handle_fd);
+  /* Master ptys stay attached to the original descriptor. */
+  ASSERT_EQ(master_fd, master_handle_fd);
   ASSERT_OK(close(slave_fd));
   uv_close((uv_handle_t*) &slave_tty, NULL);
   ASSERT_OK(close(master_fd));
