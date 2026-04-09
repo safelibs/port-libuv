@@ -1436,13 +1436,14 @@ TEST_IMPL(fs_fstat) {
   ASSERT_EQ(s->st_birthtim.tv_sec, t.st_birthtimespec.tv_sec);
   ASSERT_EQ(s->st_birthtim.tv_nsec, t.st_birthtimespec.tv_nsec);
 # elif defined(__linux__)
-  /* If statx() is supported, the birth time should be equal to the change time
-   * because we just created the file. On older kernels, it's set to zero.
+  /* If statx() is supported, the birth time should either be zero or no later
+   * than ctime for the file we just created. Some filesystems report a birth
+   * time that is slightly earlier than the subsequent fstat() ctime update.
    */
-  ASSERT(s->st_birthtim.tv_sec == 0 ||
-         s->st_birthtim.tv_sec == t.st_ctim.tv_sec);
-  ASSERT(s->st_birthtim.tv_nsec == 0 ||
-         s->st_birthtim.tv_nsec == t.st_ctim.tv_nsec);
+  ASSERT((s->st_birthtim.tv_sec == 0 && s->st_birthtim.tv_nsec == 0) ||
+         s->st_birthtim.tv_sec < t.st_ctim.tv_sec ||
+         (s->st_birthtim.tv_sec == t.st_ctim.tv_sec &&
+          s->st_birthtim.tv_nsec <= t.st_ctim.tv_nsec));
 # endif
 #endif
 
