@@ -214,6 +214,25 @@ unsafe fn open_parent_spawn_stream(
     rc
 }
 
+unsafe fn close_parent_spawn_stream(container: *mut abi::uv_stdio_container_t) {
+    if container.is_null() {
+        return;
+    }
+
+    if unsafe { ((*container).flags & abi::uv_stdio_flags_UV_CREATE_PIPE) == 0 } {
+        return;
+    }
+
+    let stream = unsafe { (*container).data.stream };
+    if stream.is_null() {
+        return;
+    }
+
+    unsafe {
+        crate::unix::stream::uv__stream_close(stream.cast());
+    }
+}
+
 unsafe fn dup_stdio_fds(stdio_count: usize, pipes: &mut [[c_int; 2]], error_fd: c_int) {
     for fd in 0..stdio_count {
         let use_fd = pipes[fd][1];
@@ -647,35 +666,37 @@ pub(crate) unsafe fn spawn(
     }
 
     let exec_error = unsafe { read_exec_error(error_pipe[0], pid) };
-    if exec_error != 0 {
-        unsafe { cleanup_spawn_pipes((*options).stdio, requested_stdio, &mut pipes) };
-        return exec_error;
-    }
 
-    unsafe {
-        (*handle).exit_cb = (*options).exit_cb;
-        (*handle).pid = pid;
-        queue::insert_tail(
-            std::ptr::addr_of_mut!((*loop_).process_handles),
-            std::ptr::addr_of_mut!((*handle).queue),
-        );
-        (*loop_).flags |= UV_LOOP_REAP_CHILDREN;
-        handle_start(handle.cast());
+    // Match upstream libuv: requested parent stdio is opened even when exec()
+    // fails, and a successfully exec'd child remains reaped by the loop if a
+    // later parent-side stdio open fails.
+    if exec_error == 0 {
+        unsafe {
+            (*handle).exit_cb = (*options).exit_cb;
+            (*handle).pid = pid;
+            queue::insert_tail(
+                std::ptr::addr_of_mut!((*loop_).process_handles),
+                std::ptr::addr_of_mut!((*handle).queue),
+            );
+            (*loop_).flags |= UV_LOOP_REAP_CHILDREN;
+            handle_start(handle.cast());
+        }
     }
 
     for (idx, pair) in pipes.iter_mut().enumerate().take(requested_stdio) {
         let rc = unsafe { open_parent_spawn_stream((*options).stdio.add(idx), pair) };
         if rc != 0 {
-            let _ = unsafe { libc::kill(pid, libc::SIGKILL) };
-            let mut status = 0;
-            let _ = unsafe { libc::waitpid(pid, &mut status, 0) };
-            unsafe { cleanup_spawn_pipes((*options).stdio, requested_stdio, &mut pipes) };
-            unsafe {
-                close(handle);
+            let mut open_idx = idx;
+            while open_idx > 0 {
+                open_idx -= 1;
+                unsafe {
+                    close_parent_spawn_stream((*options).stdio.add(open_idx));
+                }
             }
+            unsafe { cleanup_spawn_pipes((*options).stdio, requested_stdio, &mut pipes) };
             return rc;
         }
     }
 
-    0
+    exec_error
 }
