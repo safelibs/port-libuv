@@ -54,6 +54,7 @@ if [[ ! -x "${binary}" ]]; then
 fi
 
 IFS=',' read -r -a tests <<<"${tests_csv}"
+cd "${repo_root}/original"
 for test_name in "${tests[@]}"; do
   set +e
   "${binary}" "${test_name}"
