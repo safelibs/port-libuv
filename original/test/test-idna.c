@@ -24,9 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-# include <windows.h>
-#else
+#ifndef _WIN32
 # include <unistd.h>
 #endif
 
@@ -86,10 +84,11 @@ static void assert_idna_equivalent(const char* unicode, const char* ascii) {
   MAKE_VALGRIND_HAPPY(&loop);
 }
 
-#ifndef _WIN32
-static void resolve_ipv4(uv_loop_t* loop,
-                         const char* node,
-                         char ip[sizeof("255.255.255.255")]) {
+static void resolve_ipv4_with_canonname(uv_loop_t* loop,
+                                        const char* node,
+                                        char ip[sizeof("255.255.255.255")],
+                                        char* canonname,
+                                        size_t canonname_len) {
   uv_getaddrinfo_t req;
   struct addrinfo hints;
   struct addrinfo* res;
@@ -105,17 +104,22 @@ static void resolve_ipv4(uv_loop_t* loop,
   ASSERT_OK(uv_ip4_name((const struct sockaddr_in*) res->ai_addr,
                         ip,
                         sizeof("255.255.255.255")));
+  if (canonname != NULL) {
+    ASSERT_NOT_NULL(res->ai_canonname);
+    snprintf(canonname, canonname_len, "%s", res->ai_canonname);
+  }
   uv_freeaddrinfo(res);
 }
 
+#ifndef _WIN32
 static void assert_idna_alias_resolves(const char* unicode, const char* ascii) {
   uv_loop_t loop;
   char unicode_ip[sizeof("255.255.255.255")];
   char ascii_ip[sizeof("255.255.255.255")];
 
   ASSERT_OK(uv_loop_init(&loop));
-  resolve_ipv4(&loop, unicode, unicode_ip);
-  resolve_ipv4(&loop, ascii, ascii_ip);
+  resolve_ipv4_with_canonname(&loop, unicode, unicode_ip, NULL, 0);
+  resolve_ipv4_with_canonname(&loop, ascii, ascii_ip, NULL, 0);
   ASSERT_STR_EQ("127.0.0.1", unicode_ip);
   ASSERT_STR_EQ(unicode_ip, ascii_ip);
   MAKE_VALGRIND_HAPPY(&loop);
@@ -123,55 +127,50 @@ static void assert_idna_alias_resolves(const char* unicode, const char* ascii) {
 #endif  /* !_WIN32 */
 
 #ifdef _WIN32
-typedef int (WINAPI *uv_idn_to_ascii_func)(DWORD,
-                                           const WCHAR*,
-                                           int,
-                                           WCHAR*,
-                                           int);
-
-static void assert_windows_idna_toascii(const char* unicode,
-                                        const char* ascii) {
-  WCHAR unicode_wide[256];
-  WCHAR ascii_wide[256];
-  char ascii_utf8[256];
-  HMODULE normaliz;
-  uv_idn_to_ascii_func idn_to_ascii;
+static int can_resolve_localhost_alias(const char* node) {
+  uv_loop_t loop;
+  uv_getaddrinfo_t req;
+  struct addrinfo hints;
   int r;
 
-  normaliz = LoadLibraryA("normaliz.dll");
-  ASSERT_NOT_NULL(normaliz);
+  ASSERT_OK(uv_loop_init(&loop));
+  memset(&req, 0, sizeof(req));
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_flags = AI_CANONNAME;
 
-  idn_to_ascii =
-      (uv_idn_to_ascii_func) GetProcAddress(normaliz, "IdnToAscii");
-  ASSERT_NOT_NULL(idn_to_ascii);
+  r = uv_getaddrinfo(&loop, &req, NULL, node, NULL, &hints);
+  if (r == 0)
+    uv_freeaddrinfo(req.addrinfo);
 
-  r = MultiByteToWideChar(CP_UTF8,
-                          MB_ERR_INVALID_CHARS,
-                          unicode,
-                          -1,
-                          unicode_wide,
-                          ARRAY_SIZE(unicode_wide));
-  ASSERT_GT(r, 0);
+  MAKE_VALGRIND_HAPPY(&loop);
+  return r == 0;
+}
 
-  r = idn_to_ascii(0,
-                   unicode_wide,
-                   -1,
-                   ascii_wide,
-                   ARRAY_SIZE(ascii_wide));
-  ASSERT_GT(r, 0);
+static void assert_windows_idna_resolves(const char* unicode,
+                                         const char* ascii) {
+  uv_loop_t loop;
+  char unicode_ip[sizeof("255.255.255.255")];
+  char ascii_ip[sizeof("255.255.255.255")];
+  char unicode_canon[256];
+  char ascii_canon[256];
 
-  r = WideCharToMultiByte(CP_UTF8,
-                          0,
-                          ascii_wide,
-                          -1,
-                          ascii_utf8,
-                          sizeof(ascii_utf8),
-                          NULL,
-                          NULL);
-  ASSERT_GT(r, 0);
-  ASSERT_STR_EQ(ascii, ascii_utf8);
-
-  ASSERT(FreeLibrary(normaliz));
+  ASSERT_OK(uv_loop_init(&loop));
+  resolve_ipv4_with_canonname(&loop,
+                              unicode,
+                              unicode_ip,
+                              unicode_canon,
+                              sizeof(unicode_canon));
+  resolve_ipv4_with_canonname(&loop,
+                              ascii,
+                              ascii_ip,
+                              ascii_canon,
+                              sizeof(ascii_canon));
+  ASSERT_STR_EQ("127.0.0.1", unicode_ip);
+  ASSERT_STR_EQ(unicode_ip, ascii_ip);
+  ASSERT_STR_EQ(ascii, unicode_canon);
+  ASSERT_STR_EQ(ascii, ascii_canon);
+  MAKE_VALGRIND_HAPPY(&loop);
 }
 #endif  /* _WIN32 */
 
@@ -198,10 +197,17 @@ TEST_IMPL(utf8_decode1_overrun) {
 
 TEST_IMPL(idna_toascii) {
 #ifdef _WIN32
-  assert_windows_idna_toascii("mañana.invalid.", "xn--maana-pta.invalid.");
-  assert_windows_idna_toascii("mañana。invalid.", "xn--maana-pta.invalid.");
-  assert_windows_idna_toascii("bücher.invalid.", "xn--bcher-kva.invalid.");
-  assert_windows_idna_toascii("☃-⌘.invalid.", "xn----dqo34k.invalid.");
+  if (!can_resolve_localhost_alias("xn--maana-pta.localhost"))
+    RETURN_SKIP("System resolver does not resolve *.localhost names.");
+
+  assert_windows_idna_resolves("mañana.localhost",
+                               "xn--maana-pta.localhost");
+  assert_windows_idna_resolves("mañana。localhost",
+                               "xn--maana-pta.localhost");
+  assert_windows_idna_resolves("bücher.localhost",
+                               "xn--bcher-kva.localhost");
+  assert_windows_idna_resolves("☃-⌘.localhost",
+                               "xn----dqo34k.localhost");
 #else
   char alias_template[] = "/tmp/libuv-idna-XXXXXX";
   char* hostaliases;
