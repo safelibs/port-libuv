@@ -843,6 +843,9 @@ unsafe fn execute_fs(req: *mut abi::uv_fs_t) {
                 }
                 rc as isize
             } else {
+                unsafe {
+                    *(*req).path.cast_mut() = 0;
+                }
                 uv_err(last_errno()) as isize
             }
         }
