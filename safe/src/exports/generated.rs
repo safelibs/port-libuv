@@ -1,4 +1,4 @@
-use crate::{abi::linux_x86_64 as abi, core, stub, unix};
+use crate::{abi::linux_x86_64 as abi, core, unix};
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_accept(
@@ -773,7 +773,7 @@ pub unsafe extern "C" fn uv_getnameinfo(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_getrusage(rusage: *mut abi::uv_rusage_t) -> ::std::os::raw::c_int {
-    stub::status("uv_getrusage")
+    unsafe { unix::os::getrusage(rusage) }
 }
 
 #[unsafe(no_mangle)]
@@ -1419,7 +1419,7 @@ pub unsafe extern "C" fn uv_replace_allocator(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_resident_set_memory(rss: *mut usize) -> ::std::os::raw::c_int {
-    stub::status("uv_resident_set_memory")
+    unsafe { unix::os::resident_set_memory(rss) }
 }
 
 #[unsafe(no_mangle)]
@@ -2061,7 +2061,7 @@ pub unsafe extern "C" fn uv_update_time(arg1: *mut abi::uv_loop_t) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_uptime(uptime: *mut f64) -> ::std::os::raw::c_int {
-    stub::status("uv_uptime")
+    unsafe { unix::os::uptime(uptime) }
 }
 
 #[unsafe(no_mangle)]

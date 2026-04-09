@@ -67,6 +67,18 @@ pub(crate) unsafe fn gettimeofday(tv: *mut abi::uv_timeval64_t) -> c_int {
     unsafe { upstream_support::unix_core::uv_gettimeofday(tv.cast()) }
 }
 
+pub(crate) unsafe fn getrusage(rusage: *mut abi::uv_rusage_t) -> c_int {
+    unsafe { upstream_support::unix_core::uv_getrusage(rusage.cast()) }
+}
+
+pub(crate) unsafe fn resident_set_memory(rss: *mut usize) -> c_int {
+    unsafe { crate::unix::epoll::uv_resident_set_memory(rss.cast()) }
+}
+
+pub(crate) unsafe fn uptime(uptime: *mut f64) -> c_int {
+    unsafe { crate::unix::epoll::uv_uptime(uptime) }
+}
+
 pub(crate) unsafe fn get_osfhandle(fd: c_int) -> abi::uv_os_fd_t {
     unsafe { upstream_support::unix_core::uv_get_osfhandle(fd) as abi::uv_os_fd_t }
 }
