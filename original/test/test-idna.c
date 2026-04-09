@@ -52,6 +52,7 @@ static void assert_getaddrinfo_invalid(const char* node) {
   MAKE_VALGRIND_HAPPY(&loop);
 }
 
+#ifndef _WIN32
 static void assert_idna_equivalent(const char* unicode, const char* ascii) {
   uv_loop_t loop;
   struct addrinfo* unicode_res;
@@ -83,6 +84,7 @@ static void assert_idna_equivalent(const char* unicode, const char* ascii) {
   uv_freeaddrinfo(ascii_res);
   MAKE_VALGRIND_HAPPY(&loop);
 }
+#endif  /* !_WIN32 */
 
 static void resolve_ipv4_with_canonname(uv_loop_t* loop,
                                         const char* node,
@@ -96,6 +98,8 @@ static void resolve_ipv4_with_canonname(uv_loop_t* loop,
   memset(&req, 0, sizeof(req));
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
+  if (canonname != NULL)
+    hints.ai_flags = AI_CANONNAME;
 
   ASSERT_OK(uv_getaddrinfo(loop, &req, NULL, node, NULL, &hints));
   res = req.addrinfo;
