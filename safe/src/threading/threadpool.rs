@@ -104,7 +104,11 @@ unsafe fn set_req_state(req: *mut abi::uv_req_t, state: *mut TaskState) {
 
 #[inline]
 fn uv_err(errno: c_int) -> c_int {
-    if errno == 0 { 0 } else { -errno }
+    if errno == 0 {
+        0
+    } else {
+        -errno
+    }
 }
 
 #[inline]
@@ -415,7 +419,14 @@ pub(crate) unsafe fn queue_work(
         queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
     }
 
-    unsafe { submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::Cpu) }
+    unsafe {
+        submit(
+            loop_,
+            req.cast(),
+            std::ptr::addr_of_mut!((*req).work_req),
+            TaskClass::Cpu,
+        )
+    }
 }
 
 unsafe extern "C" fn work_cb_trampoline(work: *mut abi::uv__work) {
@@ -481,7 +492,11 @@ pub(crate) unsafe fn cancel(req: *mut abi::uv_req_t) -> c_int {
             }
         }
         TaskClass::SlowIo => {
-            if let Some(idx) = inner.slow_pending.iter().position(|task| *task == state_ptr) {
+            if let Some(idx) = inner
+                .slow_pending
+                .iter()
+                .position(|task| *task == state_ptr)
+            {
                 inner.slow_pending.remove(idx);
             }
         }
@@ -646,7 +661,14 @@ pub(crate) unsafe fn getaddrinfo(
         queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
     }
 
-    unsafe { submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::SlowIo) }
+    unsafe {
+        submit(
+            loop_,
+            req.cast(),
+            std::ptr::addr_of_mut!((*req).work_req),
+            TaskClass::SlowIo,
+        )
+    }
 }
 
 pub(crate) unsafe fn freeaddrinfo(ai: *mut abi::addrinfo) {
@@ -769,7 +791,14 @@ pub(crate) unsafe fn getnameinfo(
         (*req).work_req.done = Some(getnameinfo_done);
         queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
     }
-    unsafe { submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::SlowIo) }
+    unsafe {
+        submit(
+            loop_,
+            req.cast(),
+            std::ptr::addr_of_mut!((*req).work_req),
+            TaskClass::SlowIo,
+        )
+    }
 }
 
 unsafe fn fill_uv_stat(out: *mut abi::uv_stat_t, st: *const abi::stat) {
@@ -814,7 +843,12 @@ unsafe fn cleanup_fs_allocations(req: *mut abi::uv_fs_t) {
     }
 }
 
-unsafe fn fs_req_init(loop_: *mut abi::uv_loop_t, req: *mut abi::uv_fs_t, fs_type: abi::uv_fs_type, cb: abi::uv_fs_cb) {
+unsafe fn fs_req_init(
+    loop_: *mut abi::uv_loop_t,
+    req: *mut abi::uv_fs_t,
+    fs_type: abi::uv_fs_type,
+    cb: abi::uv_fs_cb,
+) {
     let data = unsafe { (*req).data };
     unsafe {
         std::ptr::write_bytes(req, 0, 1);
@@ -838,7 +872,12 @@ unsafe fn clone_path_slot(req: *mut abi::uv_fs_t, path: *const c_char, slot: usi
     abi::uv_errno_t_UV_ENOMEM
 }
 
-unsafe fn copy_bufs(req: *mut abi::uv_fs_t, bufs: *const abi::uv_buf_t, nbufs: c_int, stable: bool) -> c_int {
+unsafe fn copy_bufs(
+    req: *mut abi::uv_fs_t,
+    bufs: *const abi::uv_buf_t,
+    nbufs: c_int,
+    stable: bool,
+) -> c_int {
     if nbufs <= 0 || bufs.is_null() {
         return abi::uv_errno_t_UV_EINVAL;
     }
@@ -883,6 +922,31 @@ unsafe extern "C" fn fs_work(work: *mut abi::uv__work) {
     };
 
     match unsafe { (*req).fs_type } {
+        abi::uv_fs_type_UV_FS_READ => {
+            let bufs = unsafe { (*req).bufs.cast::<libc::iovec>() };
+            let nbufs = unsafe { (*req).nbufs as c_int };
+            let off = unsafe { (*req).off as i64 };
+            let rc = if off < 0 {
+                if nbufs == 1 {
+                    let buf = unsafe { *(*req).bufs };
+                    unsafe { libc::read((*req).file, buf.base.cast(), buf.len) }
+                } else {
+                    unsafe { libc::readv((*req).file, bufs, nbufs) }
+                }
+            } else if nbufs == 1 {
+                let buf = unsafe { *(*req).bufs };
+                unsafe { libc::pread((*req).file, buf.base.cast(), buf.len, off as libc::off_t) }
+            } else {
+                unsafe { libc::preadv((*req).file, bufs, nbufs, off as libc::off_t) }
+            };
+            unsafe {
+                (*req).result = if rc >= 0 {
+                    rc as isize
+                } else {
+                    uv_err(last_errno()) as isize
+                };
+            }
+        }
         abi::uv_fs_type_UV_FS_OPEN => {
             let rc = unsafe { libc::open((*req).path, (*req).flags, (*req).mode as libc::mode_t) };
             unsafe {
@@ -1025,7 +1089,12 @@ pub(crate) unsafe fn fs_open(
             (*req).work_req.work = Some(fs_work);
             (*req).work_req.done = Some(fs_done);
             queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
-            submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::SlowIo)
+            submit(
+                loop_,
+                req.cast(),
+                std::ptr::addr_of_mut!((*req).work_req),
+                TaskClass::SlowIo,
+            )
         }
     }
 }
@@ -1054,7 +1123,54 @@ pub(crate) unsafe fn fs_close(
             (*req).work_req.work = Some(fs_work);
             (*req).work_req.done = Some(fs_done);
             queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
-            submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::SlowIo)
+            submit(
+                loop_,
+                req.cast(),
+                std::ptr::addr_of_mut!((*req).work_req),
+                TaskClass::SlowIo,
+            )
+        }
+    }
+}
+
+pub(crate) unsafe fn fs_read(
+    loop_: *mut abi::uv_loop_t,
+    req: *mut abi::uv_fs_t,
+    file: abi::uv_file,
+    bufs: *const abi::uv_buf_t,
+    nbufs: c_int,
+    offset: i64,
+    cb: abi::uv_fs_cb,
+) -> c_int {
+    if req.is_null() {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+    unsafe {
+        fs_req_init(loop_, req, abi::uv_fs_type_UV_FS_READ, cb);
+        (*req).file = file;
+        (*req).off = offset as abi::off_t;
+    }
+    let rc = unsafe { copy_bufs(req, bufs, nbufs, cb.is_some()) };
+    if rc != 0 {
+        return rc;
+    }
+
+    if cb.is_none() {
+        unsafe {
+            fs_work(std::ptr::addr_of_mut!((*req).work_req));
+            (*req).result as c_int
+        }
+    } else {
+        unsafe {
+            (*req).work_req.work = Some(fs_work);
+            (*req).work_req.done = Some(fs_done);
+            queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
+            submit(
+                loop_,
+                req.cast(),
+                std::ptr::addr_of_mut!((*req).work_req),
+                TaskClass::SlowIo,
+            )
         }
     }
 }
@@ -1091,7 +1207,12 @@ pub(crate) unsafe fn fs_write(
             (*req).work_req.work = Some(fs_work);
             (*req).work_req.done = Some(fs_done);
             queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
-            submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::SlowIo)
+            submit(
+                loop_,
+                req.cast(),
+                std::ptr::addr_of_mut!((*req).work_req),
+                TaskClass::SlowIo,
+            )
         }
     }
 }
@@ -1124,7 +1245,12 @@ pub(crate) unsafe fn fs_stat(
             (*req).work_req.work = Some(fs_work);
             (*req).work_req.done = Some(fs_done);
             queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
-            submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::SlowIo)
+            submit(
+                loop_,
+                req.cast(),
+                std::ptr::addr_of_mut!((*req).work_req),
+                TaskClass::SlowIo,
+            )
         }
     }
 }
@@ -1157,7 +1283,12 @@ pub(crate) unsafe fn fs_unlink(
             (*req).work_req.work = Some(fs_work);
             (*req).work_req.done = Some(fs_done);
             queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
-            submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::SlowIo)
+            submit(
+                loop_,
+                req.cast(),
+                std::ptr::addr_of_mut!((*req).work_req),
+                TaskClass::SlowIo,
+            )
         }
     }
 }

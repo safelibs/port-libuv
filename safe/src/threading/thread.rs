@@ -17,7 +17,11 @@ struct ThreadStart {
 
 #[inline]
 fn uv_err(err: c_int) -> c_int {
-    if err == 0 { 0 } else { -err }
+    if err == 0 {
+        0
+    } else {
+        -err
+    }
 }
 
 #[inline]
@@ -230,7 +234,9 @@ pub(crate) unsafe fn setaffinity(
         }
     }
 
-    let mut set = CpuSet { bits: [0; CPU_SET_WORDS] };
+    let mut set = CpuSet {
+        bits: [0; CPU_SET_WORDS],
+    };
     cpu_zero(&mut set);
     for i in 0..cpumasksize as usize {
         if unsafe { *cpumask.add(i) } != 0 {
@@ -255,7 +261,9 @@ pub(crate) unsafe fn getaffinity(
         return abi::uv_errno_t_UV_EINVAL;
     }
 
-    let mut set = CpuSet { bits: [0; CPU_SET_WORDS] };
+    let mut set = CpuSet {
+        bits: [0; CPU_SET_WORDS],
+    };
     cpu_zero(&mut set);
     let err = unsafe { pthread_getaffinity_np(*tid, std::mem::size_of::<CpuSet>(), &mut set) };
     if err != 0 {
@@ -292,7 +300,8 @@ pub(crate) unsafe fn getpriority(tid: abi::uv_thread_t, priority: *mut c_int) ->
         return uv_err(err);
     }
 
-    if policy == libc::SCHED_OTHER && unsafe { libc::pthread_equal(tid, libc::pthread_self()) } != 0 {
+    if policy == libc::SCHED_OTHER && unsafe { libc::pthread_equal(tid, libc::pthread_self()) } != 0
+    {
         unsafe {
             *libc::__errno_location() = 0;
         }
@@ -336,7 +345,8 @@ pub(crate) unsafe fn setpriority(tid: abi::uv_thread_t, priority: c_int) -> c_in
         return uv_err(err);
     }
 
-    if policy == libc::SCHED_OTHER && unsafe { libc::pthread_equal(tid, libc::pthread_self()) } != 0 {
+    if policy == libc::SCHED_OTHER && unsafe { libc::pthread_equal(tid, libc::pthread_self()) } != 0
+    {
         return unsafe { set_nice_for_calling_thread(priority) };
     }
 
@@ -368,7 +378,9 @@ pub(crate) unsafe fn setpriority(tid: abi::uv_thread_t, priority: c_int) -> c_in
 }
 
 pub(crate) fn available_parallelism() -> libc::c_uint {
-    let mut set = CpuSet { bits: [0; CPU_SET_WORDS] };
+    let mut set = CpuSet {
+        bits: [0; CPU_SET_WORDS],
+    };
     cpu_zero(&mut set);
 
     let mut rc = if unsafe { sched_getaffinity(0, std::mem::size_of::<CpuSet>(), &mut set) } == 0 {

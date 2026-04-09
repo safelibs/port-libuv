@@ -154,7 +154,11 @@ pub(crate) unsafe fn init_internal(loop_: *mut abi::uv_loop_t) -> c_int {
     0
 }
 
-pub(crate) unsafe fn init(loop_: *mut abi::uv_loop_t, handle_ptr: *mut abi::uv_async_t, cb: abi::uv_async_cb) -> c_int {
+pub(crate) unsafe fn init(
+    loop_: *mut abi::uv_loop_t,
+    handle_ptr: *mut abi::uv_async_t,
+    cb: abi::uv_async_cb,
+) -> c_int {
     if loop_.is_null() || handle_ptr.is_null() {
         return abi::uv_errno_t_UV_EINVAL;
     }

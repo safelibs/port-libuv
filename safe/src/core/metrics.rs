@@ -90,7 +90,10 @@ pub(crate) unsafe fn record_event(loop_: *mut abi::uv_loop_t, count: u64) {
     }
 }
 
-pub(crate) unsafe fn metrics_info(loop_: *mut abi::uv_loop_t, out: *mut abi::uv_metrics_t) -> c_int {
+pub(crate) unsafe fn metrics_info(
+    loop_: *mut abi::uv_loop_t,
+    out: *mut abi::uv_metrics_t,
+) -> c_int {
     if loop_.is_null() || out.is_null() {
         return abi::uv_errno_t_UV_EINVAL;
     }

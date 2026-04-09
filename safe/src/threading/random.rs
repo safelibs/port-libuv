@@ -30,11 +30,20 @@ fn last_errno() -> c_int {
 
 #[inline]
 fn uv_err(errno: c_int) -> c_int {
-    if errno == 0 { 0 } else { -errno }
+    if errno == 0 {
+        0
+    } else {
+        -errno
+    }
 }
 
 fn random_readpath(path: &[u8], buf: *mut c_void, buflen: usize) -> c_int {
-    let fd = unsafe { libc::open(path.as_ptr().cast::<c_char>(), libc::O_RDONLY | libc::O_CLOEXEC) };
+    let fd = unsafe {
+        libc::open(
+            path.as_ptr().cast::<c_char>(),
+            libc::O_RDONLY | libc::O_CLOEXEC,
+        )
+    };
     if fd < 0 {
         return uv_err(last_errno());
     }
@@ -261,5 +270,12 @@ pub(crate) unsafe fn random(
         queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
     }
 
-    unsafe { threadpool::submit(loop_, req.cast(), std::ptr::addr_of_mut!((*req).work_req), TaskClass::Cpu) }
+    unsafe {
+        threadpool::submit(
+            loop_,
+            req.cast(),
+            std::ptr::addr_of_mut!((*req).work_req),
+            TaskClass::Cpu,
+        )
+    }
 }

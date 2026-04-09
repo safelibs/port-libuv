@@ -215,7 +215,7 @@ pub unsafe extern "C" fn uv_timer_get_repeat(handle: *const abi::uv_timer_t) -> 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_timer_get_due_in(handle: *const abi::uv_timer_t) -> u64 {
-    unsafe { core::timer::timer_get_due_in(handle) }
+    unsafe { unix::epoll::timer_get_due_in(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -228,12 +228,12 @@ pub unsafe extern "C" fn uv_process_get_pid(handle: *const abi::uv_process_t) ->
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loop_alive(loop_: *const abi::uv_loop_t) -> c_int {
-    unsafe { core::loop_::loop_alive(loop_) }
+    unsafe { unix::epoll::loop_alive(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_now(loop_: *const abi::uv_loop_t) -> u64 {
-    unsafe { core::loop_::now(loop_) }
+    unsafe { unix::epoll::now(loop_) }
 }
 
 #[unsafe(no_mangle)]
@@ -268,7 +268,7 @@ pub unsafe extern "C" fn uv_is_writable(handle: *const abi::uv_stream_t) -> c_in
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_has_ref(handle: *const abi::uv_handle_t) -> c_int {
-    unsafe { core::handle::has_ref_int(handle) }
+    unsafe { unix::epoll::has_ref(handle) }
 }
 
 #[unsafe(no_mangle)]

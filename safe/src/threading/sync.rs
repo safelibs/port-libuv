@@ -4,7 +4,11 @@ use libc::{self, c_int, c_uint};
 
 #[inline]
 fn uv_err(err: c_int) -> c_int {
-    if err == 0 { 0 } else { -err }
+    if err == 0 {
+        0
+    } else {
+        -err
+    }
 }
 
 #[cold]

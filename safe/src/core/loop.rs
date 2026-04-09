@@ -1,7 +1,7 @@
 use crate::abi::linux_x86_64 as abi;
 use crate::core::{
-    allocator, default_loop, handle, loop_state, metrics, queue, request, time, timer,
-    LoopState, UV_LOOP_BLOCK_SIGPROF, UV_LOOP_REAP_CHILDREN,
+    allocator, default_loop, handle, loop_state, metrics, queue, request, time, timer, LoopState,
+    UV_LOOP_BLOCK_SIGPROF, UV_LOOP_REAP_CHILDREN,
 };
 use crate::threading::sync;
 use crate::unix_async;
@@ -354,8 +354,7 @@ pub(crate) unsafe fn run(loop_: *mut abi::uv_loop_t, mode: abi::uv_run_mode) -> 
         unsafe { update_time(loop_) };
     }
 
-    if mode == abi::uv_run_mode_UV_RUN_DEFAULT && alive != 0 && unsafe { (*loop_).stop_flag } == 0
-    {
+    if mode == abi::uv_run_mode_UV_RUN_DEFAULT && alive != 0 && unsafe { (*loop_).stop_flag } == 0 {
         unsafe {
             update_time(loop_);
             timer::run_timers(loop_);

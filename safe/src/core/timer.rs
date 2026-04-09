@@ -30,7 +30,10 @@ unsafe fn heap_sift_up(inner: &mut LoopStateInner, mut index: usize) {
     while index > 0 {
         let parent = (index - 1) / 2;
         let should_swap = unsafe {
-            timer_less_than(&*inner.timer_heap.add(index), &*inner.timer_heap.add(parent))
+            timer_less_than(
+                &*inner.timer_heap.add(index),
+                &*inner.timer_heap.add(parent),
+            )
         };
         if !should_swap {
             break;
@@ -189,7 +192,10 @@ unsafe fn heap_min(loop_: *mut abi::uv_loop_t) -> Option<TimerHeapEntry> {
     }
 }
 
-pub(crate) unsafe fn timer_init(loop_: *mut abi::uv_loop_t, handle_ptr: *mut abi::uv_timer_t) -> c_int {
+pub(crate) unsafe fn timer_init(
+    loop_: *mut abi::uv_loop_t,
+    handle_ptr: *mut abi::uv_timer_t,
+) -> c_int {
     let rc = unsafe {
         handle::handle_init(
             loop_,

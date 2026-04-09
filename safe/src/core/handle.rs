@@ -48,8 +48,7 @@ pub(crate) unsafe fn is_active(handle: *const abi::uv_handle_t) -> bool {
 
 #[inline]
 pub(crate) unsafe fn is_closing(handle: *const abi::uv_handle_t) -> bool {
-    !handle.is_null()
-        && unsafe { ((*handle).flags & (UV_HANDLE_CLOSING | UV_HANDLE_CLOSED)) != 0 }
+    !handle.is_null() && unsafe { ((*handle).flags & (UV_HANDLE_CLOSING | UV_HANDLE_CLOSED)) != 0 }
 }
 
 #[inline]

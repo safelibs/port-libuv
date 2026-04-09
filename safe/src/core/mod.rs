@@ -32,6 +32,7 @@ pub(crate) enum HandleKind {
     Prepare = 2,
     Idle = 3,
     Async = 4,
+    Process = 5,
 }
 
 #[repr(u8)]

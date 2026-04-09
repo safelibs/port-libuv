@@ -17,4 +17,5 @@ pub mod threading;
 pub mod unix;
 #[path = "unix/async.rs"]
 pub(crate) mod unix_async;
+mod upstream_support;
 pub mod version;
