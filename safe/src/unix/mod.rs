@@ -1,6 +1,12 @@
 pub(crate) mod epoll;
 pub(crate) mod fd;
+pub(crate) mod fs;
+pub(crate) mod fs_event;
+pub(crate) mod fs_poll;
 pub(crate) mod fork;
+pub(crate) mod getaddrinfo;
+pub(crate) mod getnameinfo;
+pub(crate) mod os;
 pub(crate) mod process;
 pub(crate) mod process_title;
 pub(crate) mod signal;

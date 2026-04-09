@@ -132,10 +132,7 @@ pub unsafe extern "C" fn uv__process_title_cleanup() {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv__fs_poll_close(handle: *mut abi::uv_fs_poll_t) {
-    unsafe {
-        handle::handle_stop(handle.cast());
-        crate::upstream_support::unix_core::uv__make_close_pending(handle.cast());
-    }
+    unsafe { crate::unix::fs_poll::close(handle) }
 }
 
 #[unsafe(no_mangle)]

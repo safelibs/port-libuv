@@ -324,7 +324,7 @@ pub unsafe extern "C" fn uv_fs_get_system_error(req: *const abi::uv_fs_t) -> c_i
     if result >= 0 {
         0
     } else {
-        result as c_int
+        -(result as c_int)
     }
 }
 

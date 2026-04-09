@@ -54,7 +54,7 @@ pub unsafe extern "C" fn uv_cancel(req: *mut abi::uv_req_t) -> ::std::os::raw::c
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_chdir(dir: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int {
-    stub::status("uv_chdir")
+    unsafe { unix::os::chdir(dir) }
 }
 
 #[unsafe(no_mangle)]
@@ -138,7 +138,7 @@ pub unsafe extern "C" fn uv_cpu_info(
     cpu_infos: *mut *mut abi::uv_cpu_info_t,
     count: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_cpu_info")
+    unsafe { unix::os::cpu_info(cpu_infos, count) }
 }
 
 #[unsafe(no_mangle)]
@@ -146,7 +146,7 @@ pub unsafe extern "C" fn uv_cwd(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_cwd")
+    unsafe { unix::os::cwd(buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn uv_exepath(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    unsafe { unix::fd::exepath(buffer, size) }
+    unsafe { unix::os::exepath(buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -221,7 +221,7 @@ pub unsafe extern "C" fn uv_free_cpu_info(
     cpu_infos: *mut abi::uv_cpu_info_t,
     count: ::std::os::raw::c_int,
 ) {
-    stub::void("uv_free_cpu_info");
+    unsafe { unix::os::free_cpu_info(cpu_infos, count) }
 }
 
 #[unsafe(no_mangle)]
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn uv_fs_access(
     mode: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_access")
+    unsafe { unix::fs::access(loop_, req, path, mode, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -258,7 +258,7 @@ pub unsafe extern "C" fn uv_fs_chmod(
     mode: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_chmod")
+    unsafe { unix::fs::chmod(loop_, req, path, mode, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -270,7 +270,7 @@ pub unsafe extern "C" fn uv_fs_chown(
     gid: abi::uv_gid_t,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_chown")
+    unsafe { unix::fs::chown(loop_, req, path, uid, gid, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -280,7 +280,7 @@ pub unsafe extern "C" fn uv_fs_close(
     file: abi::uv_file,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::threading::threadpool::fs_close(loop_, req, file, cb) }
+    unsafe { unix::fs::close(loop_, req, file, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -290,7 +290,7 @@ pub unsafe extern "C" fn uv_fs_closedir(
     dir: *mut abi::uv_dir_t,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_closedir")
+    unsafe { unix::fs::closedir(loop_, req, dir, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -302,7 +302,7 @@ pub unsafe extern "C" fn uv_fs_copyfile(
     flags: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_copyfile")
+    unsafe { unix::fs::copyfile(loop_, req, path, new_path, flags, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -311,7 +311,7 @@ pub unsafe extern "C" fn uv_fs_event_getpath(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_event_getpath")
+    unsafe { unix::fs_event::getpath(handle, buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -319,7 +319,7 @@ pub unsafe extern "C" fn uv_fs_event_init(
     loop_: *mut abi::uv_loop_t,
     handle: *mut abi::uv_fs_event_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_event_init")
+    unsafe { unix::fs_event::init(loop_, handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -329,14 +329,14 @@ pub unsafe extern "C" fn uv_fs_event_start(
     path: *const ::std::os::raw::c_char,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_event_start")
+    unsafe { unix::fs_event::start(handle, cb, path, flags) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_fs_event_stop(
     handle: *mut abi::uv_fs_event_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_event_stop")
+    unsafe { unix::fs_event::stop(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -347,7 +347,7 @@ pub unsafe extern "C" fn uv_fs_fchmod(
     mode: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_fchmod")
+    unsafe { unix::fs::fchmod(loop_, req, file, mode, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -359,7 +359,7 @@ pub unsafe extern "C" fn uv_fs_fchown(
     gid: abi::uv_gid_t,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_fchown")
+    unsafe { unix::fs::fchown(loop_, req, file, uid, gid, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -369,7 +369,7 @@ pub unsafe extern "C" fn uv_fs_fdatasync(
     file: abi::uv_file,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_fdatasync")
+    unsafe { unix::fs::fdatasync(loop_, req, file, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -379,7 +379,7 @@ pub unsafe extern "C" fn uv_fs_fstat(
     file: abi::uv_file,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_fstat")
+    unsafe { unix::fs::fstat(loop_, req, file, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -389,7 +389,7 @@ pub unsafe extern "C" fn uv_fs_fsync(
     file: abi::uv_file,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_fsync")
+    unsafe { unix::fs::fsync(loop_, req, file, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -400,7 +400,7 @@ pub unsafe extern "C" fn uv_fs_ftruncate(
     offset: i64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_ftruncate")
+    unsafe { unix::fs::ftruncate(loop_, req, file, offset, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -412,7 +412,7 @@ pub unsafe extern "C" fn uv_fs_futime(
     mtime: f64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_futime")
+    unsafe { unix::fs::futime(loop_, req, file, atime, mtime, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -424,7 +424,7 @@ pub unsafe extern "C" fn uv_fs_lchown(
     gid: abi::uv_gid_t,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_lchown")
+    unsafe { unix::fs::lchown(loop_, req, path, uid, gid, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -435,7 +435,7 @@ pub unsafe extern "C" fn uv_fs_link(
     new_path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_link")
+    unsafe { unix::fs::link(loop_, req, path, new_path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -445,7 +445,7 @@ pub unsafe extern "C" fn uv_fs_lstat(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_lstat")
+    unsafe { unix::fs::lstat(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -457,7 +457,7 @@ pub unsafe extern "C" fn uv_fs_lutime(
     mtime: f64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_lutime")
+    unsafe { unix::fs::lutime(loop_, req, path, atime, mtime, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -468,7 +468,7 @@ pub unsafe extern "C" fn uv_fs_mkdir(
     mode: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_mkdir")
+    unsafe { unix::fs::mkdir(loop_, req, path, mode, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -478,7 +478,7 @@ pub unsafe extern "C" fn uv_fs_mkdtemp(
     tpl: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_mkdtemp")
+    unsafe { unix::fs::mkdtemp(loop_, req, tpl, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -488,7 +488,7 @@ pub unsafe extern "C" fn uv_fs_mkstemp(
     tpl: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_mkstemp")
+    unsafe { unix::fs::mkstemp(loop_, req, tpl, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn uv_fs_open(
     mode: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::threading::threadpool::fs_open(loop_, req, path, flags, mode, cb) }
+    unsafe { unix::fs::open(loop_, req, path, flags, mode, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -510,7 +510,7 @@ pub unsafe extern "C" fn uv_fs_opendir(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_opendir")
+    unsafe { unix::fs::opendir(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -519,7 +519,7 @@ pub unsafe extern "C" fn uv_fs_poll_getpath(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_poll_getpath")
+    unsafe { unix::fs_poll::getpath(handle, buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -527,7 +527,7 @@ pub unsafe extern "C" fn uv_fs_poll_init(
     loop_: *mut abi::uv_loop_t,
     handle: *mut abi::uv_fs_poll_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_poll_init")
+    unsafe { unix::fs_poll::init(loop_, handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -537,12 +537,12 @@ pub unsafe extern "C" fn uv_fs_poll_start(
     path: *const ::std::os::raw::c_char,
     interval: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_poll_start")
+    unsafe { unix::fs_poll::start(handle, poll_cb, path, interval) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_fs_poll_stop(handle: *mut abi::uv_fs_poll_t) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_poll_stop")
+    unsafe { unix::fs_poll::stop(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -555,7 +555,7 @@ pub unsafe extern "C" fn uv_fs_read(
     offset: i64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { unix::fd::fs_read(loop_, req, file, bufs, nbufs, offset, cb) }
+    unsafe { unix::fs::read(loop_, req, file, bufs, nbufs, offset, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -565,7 +565,7 @@ pub unsafe extern "C" fn uv_fs_readdir(
     dir: *mut abi::uv_dir_t,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_readdir")
+    unsafe { unix::fs::readdir(loop_, req, dir, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -575,7 +575,7 @@ pub unsafe extern "C" fn uv_fs_readlink(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_readlink")
+    unsafe { unix::fs::readlink(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -585,7 +585,7 @@ pub unsafe extern "C" fn uv_fs_realpath(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_realpath")
+    unsafe { unix::fs::realpath(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -596,12 +596,12 @@ pub unsafe extern "C" fn uv_fs_rename(
     new_path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_rename")
+    unsafe { unix::fs::rename(loop_, req, path, new_path, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_fs_req_cleanup(req: *mut abi::uv_fs_t) {
-    unsafe { unix::fd::fs_req_cleanup(req) }
+    unsafe { unix::fs::req_cleanup(req) }
 }
 
 #[unsafe(no_mangle)]
@@ -611,7 +611,7 @@ pub unsafe extern "C" fn uv_fs_rmdir(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_rmdir")
+    unsafe { unix::fs::rmdir(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -622,7 +622,7 @@ pub unsafe extern "C" fn uv_fs_scandir(
     flags: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_scandir")
+    unsafe { unix::fs::scandir(loop_, req, path, flags, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -630,7 +630,7 @@ pub unsafe extern "C" fn uv_fs_scandir_next(
     req: *mut abi::uv_fs_t,
     ent: *mut abi::uv_dirent_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_scandir_next")
+    unsafe { unix::fs::scandir_next(req, ent) }
 }
 
 #[unsafe(no_mangle)]
@@ -643,7 +643,7 @@ pub unsafe extern "C" fn uv_fs_sendfile(
     length: usize,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_sendfile")
+    unsafe { unix::fs::sendfile(loop_, req, out_fd, in_fd, in_offset, length, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -653,7 +653,7 @@ pub unsafe extern "C" fn uv_fs_stat(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::threading::threadpool::fs_stat(loop_, req, path, cb) }
+    unsafe { unix::fs::stat(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -663,7 +663,7 @@ pub unsafe extern "C" fn uv_fs_statfs(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_statfs")
+    unsafe { unix::fs::statfs(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -675,7 +675,7 @@ pub unsafe extern "C" fn uv_fs_symlink(
     flags: ::std::os::raw::c_int,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_symlink")
+    unsafe { unix::fs::symlink(loop_, req, path, new_path, flags, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -685,7 +685,7 @@ pub unsafe extern "C" fn uv_fs_unlink(
     path: *const ::std::os::raw::c_char,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { unix::fd::fs_unlink(loop_, req, path, cb) }
+    unsafe { unix::fs::unlink(loop_, req, path, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -697,7 +697,7 @@ pub unsafe extern "C" fn uv_fs_utime(
     mtime: f64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_fs_utime")
+    unsafe { unix::fs::utime(loop_, req, path, atime, mtime, cb) }
 }
 
 #[unsafe(no_mangle)]
@@ -710,29 +710,27 @@ pub unsafe extern "C" fn uv_fs_write(
     offset: i64,
     cb: abi::uv_fs_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe {
-        crate::threading::threadpool::fs_write(loop_, req, file, bufs, nbufs as _, offset, cb)
-    }
+    unsafe { unix::fs::write(loop_, req, file, bufs, nbufs, offset, cb) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_get_available_memory() -> u64 {
-    unsafe { stub::zeroed::<u64>("uv_get_available_memory") }
+    unsafe { unix::os::get_available_memory() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_get_constrained_memory() -> u64 {
-    unsafe { stub::zeroed::<u64>("uv_get_constrained_memory") }
+    unsafe { unix::os::get_constrained_memory() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_get_free_memory() -> u64 {
-    unsafe { stub::zeroed::<u64>("uv_get_free_memory") }
+    unsafe { unix::os::get_free_memory() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_get_osfhandle(fd: ::std::os::raw::c_int) -> abi::uv_os_fd_t {
-    unsafe { stub::zeroed::<abi::uv_os_fd_t>("uv_get_osfhandle") }
+    unsafe { unix::os::get_osfhandle(fd) }
 }
 
 #[unsafe(no_mangle)]
@@ -745,7 +743,7 @@ pub unsafe extern "C" fn uv_get_process_title(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_get_total_memory() -> u64 {
-    unsafe { stub::zeroed::<u64>("uv_get_total_memory") }
+    unsafe { unix::os::get_total_memory() }
 }
 
 #[unsafe(no_mangle)]
@@ -770,7 +768,7 @@ pub unsafe extern "C" fn uv_getnameinfo(
     addr: *const abi::sockaddr,
     flags: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::threading::threadpool::getnameinfo(loop_, req, getnameinfo_cb, addr, flags) }
+    unsafe { unix::getnameinfo::start(loop_, req, getnameinfo_cb, addr, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -780,7 +778,7 @@ pub unsafe extern "C" fn uv_getrusage(rusage: *mut abi::uv_rusage_t) -> ::std::o
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_gettimeofday(tv: *mut abi::uv_timeval64_t) -> ::std::os::raw::c_int {
-    stub::status("uv_gettimeofday")
+    unsafe { unix::os::gettimeofday(tv) }
 }
 
 #[unsafe(no_mangle)]
@@ -820,7 +818,7 @@ pub unsafe extern "C" fn uv_if_indextoiid(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_if_indextoiid")
+    unsafe { unix::getaddrinfo::if_indextoiid(ifindex, buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -829,7 +827,7 @@ pub unsafe extern "C" fn uv_if_indextoname(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_if_indextoname")
+    unsafe { unix::getaddrinfo::if_indextoname(ifindex, buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -952,7 +950,7 @@ pub unsafe extern "C" fn uv_listen(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_loadavg(avg: *mut f64) {
-    stub::void("uv_loadavg");
+    unsafe { unix::os::loadavg(avg) }
 }
 
 #[unsafe(no_mangle)]
@@ -1052,7 +1050,7 @@ pub unsafe extern "C" fn uv_once(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_open_osfhandle(os_fd: abi::uv_os_fd_t) -> ::std::os::raw::c_int {
-    stub::status("uv_open_osfhandle")
+    unsafe { unix::os::open_osfhandle(os_fd) }
 }
 
 #[unsafe(no_mangle)]
@@ -1060,7 +1058,7 @@ pub unsafe extern "C" fn uv_os_environ(
     envitems: *mut *mut abi::uv_env_item_t,
     count: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_environ")
+    unsafe { unix::os::os_environ(envitems, count) }
 }
 
 #[unsafe(no_mangle)]
@@ -1068,17 +1066,17 @@ pub unsafe extern "C" fn uv_os_free_environ(
     envitems: *mut abi::uv_env_item_t,
     count: ::std::os::raw::c_int,
 ) {
-    stub::void("uv_os_free_environ");
+    unsafe { unix::os::os_free_environ(envitems, count) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_free_group(grp: *mut abi::uv_group_t) {
-    stub::void("uv_os_free_group");
+    unsafe { unix::os::os_free_group(grp) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_free_passwd(pwd: *mut abi::uv_passwd_t) {
-    stub::void("uv_os_free_passwd");
+    unsafe { unix::os::os_free_passwd(pwd) }
 }
 
 #[unsafe(no_mangle)]
@@ -1086,12 +1084,12 @@ pub unsafe extern "C" fn uv_os_get_group(
     grp: *mut abi::uv_group_t,
     gid: abi::uv_uid_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_get_group")
+    unsafe { unix::os::os_get_group(grp, gid) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_get_passwd(pwd: *mut abi::uv_passwd_t) -> ::std::os::raw::c_int {
-    stub::status("uv_os_get_passwd")
+    unsafe { unix::os::os_get_passwd(pwd) }
 }
 
 #[unsafe(no_mangle)]
@@ -1099,7 +1097,7 @@ pub unsafe extern "C" fn uv_os_get_passwd2(
     pwd: *mut abi::uv_passwd_t,
     uid: abi::uv_uid_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_get_passwd2")
+    unsafe { unix::os::os_get_passwd2(pwd, uid) }
 }
 
 #[unsafe(no_mangle)]
@@ -1108,7 +1106,7 @@ pub unsafe extern "C" fn uv_os_getenv(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_getenv")
+    unsafe { unix::os::os_getenv(name, buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -1116,17 +1114,17 @@ pub unsafe extern "C" fn uv_os_gethostname(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_gethostname")
+    unsafe { unix::os::os_gethostname(buffer, size) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_getpid() -> abi::uv_pid_t {
-    unsafe { unix::fd::os_getpid() }
+    unsafe { unix::os::os_getpid() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_getppid() -> abi::uv_pid_t {
-    unsafe { stub::zeroed::<abi::uv_pid_t>("uv_os_getppid") }
+    unsafe { unix::os::os_getppid() }
 }
 
 #[unsafe(no_mangle)]
@@ -1134,7 +1132,7 @@ pub unsafe extern "C" fn uv_os_getpriority(
     pid: abi::uv_pid_t,
     priority: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_getpriority")
+    unsafe { unix::os::os_getpriority(pid, priority) }
 }
 
 #[unsafe(no_mangle)]
@@ -1142,7 +1140,7 @@ pub unsafe extern "C" fn uv_os_homedir(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_homedir")
+    unsafe { unix::os::os_homedir(buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -1150,7 +1148,7 @@ pub unsafe extern "C" fn uv_os_setenv(
     name: *const ::std::os::raw::c_char,
     value: *const ::std::os::raw::c_char,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_setenv")
+    unsafe { unix::os::os_setenv(name, value) }
 }
 
 #[unsafe(no_mangle)]
@@ -1158,7 +1156,7 @@ pub unsafe extern "C" fn uv_os_setpriority(
     pid: abi::uv_pid_t,
     priority: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_setpriority")
+    unsafe { unix::os::os_setpriority(pid, priority) }
 }
 
 #[unsafe(no_mangle)]
@@ -1166,19 +1164,19 @@ pub unsafe extern "C" fn uv_os_tmpdir(
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_tmpdir")
+    unsafe { unix::os::os_tmpdir(buffer, size) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_uname(buffer: *mut abi::uv_utsname_t) -> ::std::os::raw::c_int {
-    stub::status("uv_os_uname")
+    unsafe { unix::os::os_uname(buffer) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_os_unsetenv(
     name: *const ::std::os::raw::c_char,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_os_unsetenv")
+    unsafe { unix::os::os_unsetenv(name) }
 }
 
 #[unsafe(no_mangle)]

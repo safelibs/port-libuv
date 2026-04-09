@@ -14,6 +14,10 @@ pub mod core;
 mod exports;
 pub mod stub;
 pub mod threading;
+mod util {
+    pub(crate) mod idna;
+    pub(crate) mod inet;
+}
 pub mod unix;
 #[path = "unix/async.rs"]
 pub(crate) mod unix_async;

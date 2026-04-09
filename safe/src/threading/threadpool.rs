@@ -637,13 +637,20 @@ fn clone_c_string(value: *const c_char) -> *mut c_char {
 }
 
 fn translate_eai_error(err: c_int) -> c_int {
+    const EAI_ADDRFAMILY_GNU: c_int = -9;
+    const EAI_CANCELED_GNU: c_int = -101;
+
     match err {
         0 => 0,
+        x if x == EAI_ADDRFAMILY_GNU => abi::uv_errno_t_UV_EAI_ADDRFAMILY,
         x if x == libc::EAI_AGAIN => abi::uv_errno_t_UV_EAI_AGAIN,
         x if x == libc::EAI_BADFLAGS => abi::uv_errno_t_UV_EAI_BADFLAGS,
+        x if x == EAI_CANCELED_GNU => abi::uv_errno_t_UV_EAI_CANCELED,
         x if x == libc::EAI_FAIL => abi::uv_errno_t_UV_EAI_FAIL,
         x if x == libc::EAI_FAMILY => abi::uv_errno_t_UV_EAI_FAMILY,
         x if x == libc::EAI_MEMORY => abi::uv_errno_t_UV_EAI_MEMORY,
+        #[allow(unreachable_patterns)]
+        x if x == libc::EAI_NODATA => abi::uv_errno_t_UV_EAI_NODATA,
         x if x == libc::EAI_NONAME => abi::uv_errno_t_UV_EAI_NONAME,
         x if x == libc::EAI_OVERFLOW => abi::uv_errno_t_UV_EAI_OVERFLOW,
         x if x == libc::EAI_SERVICE => abi::uv_errno_t_UV_EAI_SERVICE,
@@ -711,8 +718,15 @@ pub(crate) unsafe fn getaddrinfo(
     }
 
     if cb.is_none() {
+        let prepared_node = match unsafe { crate::unix::getaddrinfo::prepare_hostname(node) } {
+            Ok(node) => node,
+            Err(err) => return err,
+        };
         let mut result: *mut abi::addrinfo = null_mut();
-        let rc = unsafe { c_getaddrinfo(node, service, hints, &mut result) };
+        let rc = unsafe { c_getaddrinfo(prepared_node, service, hints, &mut result) };
+        unsafe {
+            allocator::free_bytes(prepared_node.cast());
+        }
         unsafe {
             (*req).type_ = abi::uv_req_type_UV_GETADDRINFO;
             (*req).loop_ = loop_;
@@ -742,7 +756,16 @@ pub(crate) unsafe fn getaddrinfo(
         }
         return abi::uv_errno_t_UV_ENOMEM;
     }
-    let cloned_node = clone_c_string(node);
+    let cloned_node = match unsafe { crate::unix::getaddrinfo::prepare_hostname(node) } {
+        Ok(node) => node,
+        Err(err) => {
+            unsafe {
+                allocator::free_bytes(cloned_hints.cast());
+                allocator::free_bytes(cloned_service.cast());
+            }
+            return err;
+        }
+    };
     if !node.is_null() && cloned_node.is_null() {
         unsafe {
             allocator::free_bytes(cloned_hints.cast());
