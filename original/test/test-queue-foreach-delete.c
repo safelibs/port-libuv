@@ -24,12 +24,6 @@
 
 #include <string.h>
 
-#define RETURN_SKIP_IF_INOTIFY_ENOSPC(r)                                      \
-  do {                                                                        \
-    if ((r) == UV_EMFILE || (r) == UV_ENOSPC)                                 \
-      RETURN_SKIP("inotify resource limit reached in test environment");      \
-  } while (0)
-
 
 /*
  * The idea behind the test is as follows.
@@ -141,7 +135,7 @@ static uv_timer_t timer;
 static unsigned helper_timer_cb_calls;
 
 
-static int init_and_start_fs_events(uv_loop_t* loop) {
+static void init_and_start_fs_events(uv_loop_t* loop) {
   size_t i;
   for (i = 0; i < ARRAY_SIZE(fs_event); i++) {
     int r;
@@ -152,11 +146,8 @@ static int init_and_start_fs_events(uv_loop_t* loop) {
                           (uv_fs_event_cb)fs_event_cbs[i],
                           watched_dir,
                           0);
-    if (r != 0)
-      return r;
+    ASSERT_OK(r);
   }
-
-  return 0;
 }
 
 static void helper_timer_cb(uv_timer_t* thandle) {
@@ -187,9 +178,7 @@ TEST_IMPL(queue_foreach_delete) {
   INIT_AND_START(check,   loop);
 
 #ifdef __linux__
-  r = init_and_start_fs_events(loop);
-  RETURN_SKIP_IF_INOTIFY_ENOSPC(r);
-  ASSERT_OK(r);
+  init_and_start_fs_events(loop);
 
   /* helper timer to trigger async and fs_event callbacks */
   r = uv_timer_init(loop, &timer);
