@@ -724,6 +724,7 @@ if(LIBUV_BUILD_TESTS)
   add_test(NAME uv_test_a
            COMMAND uv_run_tests_a
            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  set_tests_properties(uv_test uv_test_a PROPERTIES RUN_SERIAL TRUE)
   if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
     set_target_properties(uv_run_benchmarks_a PROPERTIES LINKER_LANGUAGE CXX)
     set_target_properties(uv_run_tests PROPERTIES LINKER_LANGUAGE CXX)

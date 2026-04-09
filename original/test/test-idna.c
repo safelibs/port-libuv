@@ -24,7 +24,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef _WIN32
+#ifdef _WIN32
+# include <windows.h>
+#else
 # include <unistd.h>
 #endif
 
@@ -120,6 +122,59 @@ static void assert_idna_alias_resolves(const char* unicode, const char* ascii) {
 }
 #endif  /* !_WIN32 */
 
+#ifdef _WIN32
+typedef int (WINAPI *uv_idn_to_ascii_func)(DWORD,
+                                           const WCHAR*,
+                                           int,
+                                           WCHAR*,
+                                           int);
+
+static void assert_windows_idna_toascii(const char* unicode,
+                                        const char* ascii) {
+  WCHAR unicode_wide[256];
+  WCHAR ascii_wide[256];
+  char ascii_utf8[256];
+  HMODULE normaliz;
+  uv_idn_to_ascii_func idn_to_ascii;
+  int r;
+
+  normaliz = LoadLibraryA("normaliz.dll");
+  ASSERT_NOT_NULL(normaliz);
+
+  idn_to_ascii =
+      (uv_idn_to_ascii_func) GetProcAddress(normaliz, "IdnToAscii");
+  ASSERT_NOT_NULL(idn_to_ascii);
+
+  r = MultiByteToWideChar(CP_UTF8,
+                          MB_ERR_INVALID_CHARS,
+                          unicode,
+                          -1,
+                          unicode_wide,
+                          ARRAY_SIZE(unicode_wide));
+  ASSERT_GT(r, 0);
+
+  r = idn_to_ascii(0,
+                   unicode_wide,
+                   -1,
+                   ascii_wide,
+                   ARRAY_SIZE(ascii_wide));
+  ASSERT_GT(r, 0);
+
+  r = WideCharToMultiByte(CP_UTF8,
+                          0,
+                          ascii_wide,
+                          -1,
+                          ascii_utf8,
+                          sizeof(ascii_utf8),
+                          NULL,
+                          NULL);
+  ASSERT_GT(r, 0);
+  ASSERT_STR_EQ(ascii, ascii_utf8);
+
+  ASSERT(FreeLibrary(normaliz));
+}
+#endif  /* _WIN32 */
+
 TEST_IMPL(utf8_decode1) {
   assert_getaddrinfo_invalid("\xC0\x80\xC1\x80.invalid.");
   assert_getaddrinfo_invalid("\xED\xA0\x80\xED\xA3\xBF.invalid.");
@@ -143,9 +198,10 @@ TEST_IMPL(utf8_decode1_overrun) {
 
 TEST_IMPL(idna_toascii) {
 #ifdef _WIN32
-  assert_idna_equivalent("mañana.invalid.", "xn--maana-pta.invalid.");
-  assert_idna_equivalent("bücher.invalid.", "xn--bcher-kva.invalid.");
-  assert_idna_equivalent("☃-⌘.invalid.", "xn----dqo34k.invalid.");
+  assert_windows_idna_toascii("mañana.invalid.", "xn--maana-pta.invalid.");
+  assert_windows_idna_toascii("mañana。invalid.", "xn--maana-pta.invalid.");
+  assert_windows_idna_toascii("bücher.invalid.", "xn--bcher-kva.invalid.");
+  assert_windows_idna_toascii("☃-⌘.invalid.", "xn----dqo34k.invalid.");
 #else
   char alias_template[] = "/tmp/libuv-idna-XXXXXX";
   char* hostaliases;
