@@ -161,12 +161,12 @@ pub unsafe extern "C" fn uv_disable_stdio_inheritance() {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_dlclose(lib: *mut abi::uv_lib_t) {
-    stub::void("uv_dlclose");
+    unsafe { unix::dl::dlclose(lib) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_dlerror(lib: *const abi::uv_lib_t) -> *const ::std::os::raw::c_char {
-    unsafe { stub::zeroed::<*const ::std::os::raw::c_char>("uv_dlerror") }
+    unsafe { unix::dl::dlerror(lib) }
 }
 
 #[unsafe(no_mangle)]
@@ -174,7 +174,7 @@ pub unsafe extern "C" fn uv_dlopen(
     filename: *const ::std::os::raw::c_char,
     lib: *mut abi::uv_lib_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_dlopen")
+    unsafe { unix::dl::dlopen(filename, lib) }
 }
 
 #[unsafe(no_mangle)]
@@ -183,7 +183,7 @@ pub unsafe extern "C" fn uv_dlsym(
     name: *const ::std::os::raw::c_char,
     ptr: *mut *mut ::std::os::raw::c_void,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_dlsym")
+    unsafe { unix::dl::dlsym(lib, name, ptr) }
 }
 
 #[unsafe(no_mangle)]
@@ -740,7 +740,7 @@ pub unsafe extern "C" fn uv_get_process_title(
     buffer: *mut ::std::os::raw::c_char,
     size: usize,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_get_process_title")
+    unsafe { unix::process_title::get_process_title(buffer, size) }
 }
 
 #[unsafe(no_mangle)]
@@ -933,7 +933,7 @@ pub unsafe extern "C" fn uv_kill(
     pid: ::std::os::raw::c_int,
     signum: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_kill")
+    unsafe { unix::process::kill(pid, signum) }
 }
 
 #[unsafe(no_mangle)]
@@ -1357,7 +1357,7 @@ pub unsafe extern "C" fn uv_process_kill(
     arg1: *mut abi::uv_process_t,
     signum: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { unix::fd::process_kill(arg1, signum) }
+    unsafe { unix::process::process_kill(arg1, signum) }
 }
 
 #[unsafe(no_mangle)]
@@ -1532,7 +1532,7 @@ pub unsafe extern "C" fn uv_send_buffer_size(
 pub unsafe extern "C" fn uv_set_process_title(
     title: *const ::std::os::raw::c_char,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_set_process_title")
+    unsafe { unix::process_title::set_process_title(title) }
 }
 
 #[unsafe(no_mangle)]
@@ -1549,7 +1549,7 @@ pub unsafe extern "C" fn uv_signal_init(
     loop_: *mut abi::uv_loop_t,
     handle: *mut abi::uv_signal_t,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_signal_init")
+    unsafe { unix::signal::init(loop_, handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1558,7 +1558,7 @@ pub unsafe extern "C" fn uv_signal_start(
     signal_cb: abi::uv_signal_cb,
     signum: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_signal_start")
+    unsafe { unix::signal::start_regular(handle, signal_cb, signum) }
 }
 
 #[unsafe(no_mangle)]
@@ -1567,12 +1567,12 @@ pub unsafe extern "C" fn uv_signal_start_oneshot(
     signal_cb: abi::uv_signal_cb,
     signum: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    stub::status("uv_signal_start_oneshot")
+    unsafe { unix::signal::start_oneshot(handle, signal_cb, signum) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv_signal_stop(handle: *mut abi::uv_signal_t) -> ::std::os::raw::c_int {
-    stub::status("uv_signal_stop")
+    unsafe { unix::signal::stop(handle) }
 }
 
 #[unsafe(no_mangle)]
@@ -1599,7 +1599,7 @@ pub unsafe extern "C" fn uv_spawn(
     handle: *mut abi::uv_process_t,
     options: *const abi::uv_process_options_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { unix::fd::spawn(loop_, handle, options) }
+    unsafe { unix::process::spawn(loop_, handle, options) }
 }
 
 #[unsafe(no_mangle)]

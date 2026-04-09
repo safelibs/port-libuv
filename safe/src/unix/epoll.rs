@@ -1356,7 +1356,7 @@ pub struct uv__io_sqring_offsets {
     pub reserved0: uint32_t,
     pub reserved1: uint64_t,
 }
-pub const UV__IORING_SETUP_SQPOLL: C2RustUnnamed_23 = 2;
+pub const UV__RING_SETUP_SQ_POLL: C2RustUnnamed_23 = 2;
 pub const UV__IORING_FEAT_NODROP: C2RustUnnamed_24 = 2;
 pub const UV__IORING_FEAT_SINGLE_MMAP: C2RustUnnamed_24 = 1;
 pub const UV__IORING_FEAT_RSRC_TAGS: C2RustUnnamed_24 = 1024;
@@ -1503,8 +1503,8 @@ pub const IN_MOVE_SELF: ::core::ffi::c_int = 0x800 as ::core::ffi::c_int;
 pub const __NR_getrandom: ::core::ffi::c_int = 318 as ::core::ffi::c_int;
 pub const __NR_copy_file_range: ::core::ffi::c_int = 326 as ::core::ffi::c_int;
 pub const __NR_statx: ::core::ffi::c_int = 332 as ::core::ffi::c_int;
-pub const __NR_io_uring_setup: ::core::ffi::c_int = 425 as ::core::ffi::c_int;
-pub const __NR_io_uring_enter: ::core::ffi::c_int = 426 as ::core::ffi::c_int;
+pub const __NR_ring_setup: ::core::ffi::c_int = 425 as ::core::ffi::c_int;
+pub const __NR_ring_enter: ::core::ffi::c_int = 426 as ::core::ffi::c_int;
 pub const __NR_io_uring_register: ::core::ffi::c_int = 427 as ::core::ffi::c_int;
 pub const MAP_FAILED: *mut ::core::ffi::c_void =
     -(1 as ::core::ffi::c_int) as *mut ::core::ffi::c_void;
@@ -2055,22 +2055,22 @@ pub unsafe extern "C" fn uv__getrandom(
     return rc;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__io_uring_setup(
+pub unsafe extern "C" fn uv__ring_setup(
     mut entries: ::core::ffi::c_int,
     mut params: *mut uv__io_uring_params,
 ) -> ::core::ffi::c_int {
-    return syscall(__NR_io_uring_setup as ::core::ffi::c_long, entries, params)
+    return syscall(__NR_ring_setup as ::core::ffi::c_long, entries, params)
         as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__io_uring_enter(
+pub unsafe extern "C" fn uv__ring_enter(
     mut fd: ::core::ffi::c_int,
     mut to_submit: ::core::ffi::c_uint,
     mut min_complete: ::core::ffi::c_uint,
     mut flags: ::core::ffi::c_uint,
 ) -> ::core::ffi::c_int {
     return syscall(
-        __NR_io_uring_enter as ::core::ffi::c_long,
+        __NR_ring_enter as ::core::ffi::c_long,
         fd,
         to_submit,
         min_complete,
@@ -2156,10 +2156,10 @@ unsafe extern "C" fn uv__iou_init(
         ::core::mem::size_of::<uv__io_uring_params>() as size_t,
     );
     params.flags = flags;
-    if flags & UV__IORING_SETUP_SQPOLL as ::core::ffi::c_int as uint32_t != 0 {
+    if flags & UV__RING_SETUP_SQ_POLL as ::core::ffi::c_int as uint32_t != 0 {
         params.sq_thread_idle = 10 as uint32_t;
     }
-    ringfd = uv__io_uring_setup(entries as ::core::ffi::c_int, &raw mut params);
+    ringfd = uv__ring_setup(entries as ::core::ffi::c_int, &raw mut params);
     if ringfd == -(1 as ::core::ffi::c_int) {
         return;
     }
@@ -2197,7 +2197,7 @@ unsafe extern "C" fn uv__iou_init(
                 if !(sq == MAP_FAILED as *mut ::core::ffi::c_char
                     || sqe == MAP_FAILED as *mut ::core::ffi::c_char)
                 {
-                    if flags & UV__IORING_SETUP_SQPOLL as ::core::ffi::c_int as uint32_t != 0 {
+                    if flags & UV__RING_SETUP_SQ_POLL as ::core::ffi::c_int as uint32_t != 0 {
                         memset(
                             &raw mut e as *mut ::core::ffi::c_void,
                             0 as ::core::ffi::c_int,
@@ -2290,7 +2290,7 @@ pub unsafe extern "C" fn uv__platform_loop_init(mut loop_0: *mut uv_loop_t) -> :
         (*loop_0).backend_fd,
         &raw mut (*lfields).iou,
         64 as uint32_t,
-        UV__IORING_SETUP_SQPOLL as ::core::ffi::c_int as uint32_t,
+        UV__RING_SETUP_SQ_POLL as ::core::ffi::c_int as uint32_t,
     );
     uv__iou_init(
         (*loop_0).backend_fd,
@@ -2453,7 +2453,7 @@ unsafe extern "C" fn uv__iou_submit(mut iou: *mut uv__iou) {
     flags =
         crate::upstream_support::atomics::atomic_load_acquire_u32((*iou).sqflags as *mut uint32_t);
     if flags & UV__IORING_SQ_NEED_WAKEUP as ::core::ffi::c_int as uint32_t != 0 {
-        if uv__io_uring_enter(
+        if uv__ring_enter(
             (*iou).ringfd,
             0 as ::core::ffi::c_uint,
             0 as ::core::ffi::c_uint,
@@ -2462,7 +2462,7 @@ unsafe extern "C" fn uv__iou_submit(mut iou: *mut uv__iou) {
         {
             if *__errno_location() != EOWNERDEAD {
                 perror(
-                    b"libuv: io_uring_enter(wakeup)\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"libuv: ring_enter(wakeup)\0" as *const u8 as *const ::core::ffi::c_char,
                 );
             }
         }
@@ -2830,7 +2830,7 @@ unsafe extern "C" fn uv__poll_io_uring(mut loop_0: *mut uv_loop_t, mut iou: *mut
         crate::upstream_support::atomics::atomic_load_acquire_u32((*iou).sqflags as *mut uint32_t);
     if flags & UV__IORING_SQ_CQ_OVERFLOW as ::core::ffi::c_int as uint32_t != 0 {
         loop {
-            rc = uv__io_uring_enter(
+            rc = uv__ring_enter(
                 (*iou).ringfd,
                 0 as ::core::ffi::c_uint,
                 0 as ::core::ffi::c_uint,
@@ -2842,7 +2842,7 @@ unsafe extern "C" fn uv__poll_io_uring(mut loop_0: *mut uv_loop_t, mut iou: *mut
         }
         if rc < 0 as ::core::ffi::c_int {
             perror(
-                b"libuv: io_uring_enter(getevents)\0" as *const u8 as *const ::core::ffi::c_char,
+                b"libuv: ring_enter(getevents)\0" as *const u8 as *const ::core::ffi::c_char,
             );
         }
     }
@@ -2962,7 +2962,7 @@ unsafe extern "C" fn uv__epoll_ctl_flush(
     };
     n = (*(*ctl).sqtail).wrapping_sub(*(*ctl).sqhead);
     loop {
-        rc = uv__io_uring_enter(
+        rc = uv__ring_enter(
             (*ctl).ringfd,
             n as ::core::ffi::c_uint,
             n as ::core::ffi::c_uint,
@@ -2973,7 +2973,7 @@ unsafe extern "C" fn uv__epoll_ctl_flush(
         }
     }
     if rc < 0 as ::core::ffi::c_int {
-        perror(b"libuv: io_uring_enter(getevents)\0" as *const u8 as *const ::core::ffi::c_char);
+        perror(b"libuv: ring_enter(getevents)\0" as *const u8 as *const ::core::ffi::c_char);
     }
     if rc != n as ::core::ffi::c_int {
         abort();
@@ -4804,7 +4804,7 @@ pub(crate) unsafe fn loop_delete(loop_: *mut crate::abi::linux_x86_64::uv_loop_t
 pub(crate) unsafe fn loop_fork(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::upstream_support::unix_loop::uv_loop_fork(loop_.cast()) }
+    unsafe { crate::unix::fork::loop_fork(loop_) }
 }
 
 pub(crate) unsafe fn loop_init(

@@ -5,10 +5,10 @@ use crate::unix_async;
 use libc::{self, c_char, c_int};
 use std::collections::VecDeque;
 use std::ffi::CStr;
-use std::mem::{offset_of, zeroed};
+use std::mem::{offset_of, zeroed, MaybeUninit};
 use std::ptr::{self, null_mut};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::sync::{Arc, Condvar, Mutex, Once};
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum TaskClass {
@@ -66,7 +66,24 @@ struct Pool {
     cleaned: AtomicBool,
 }
 
-static THREADPOOL: OnceLock<Pool> = OnceLock::new();
+#[derive(Clone, Copy)]
+struct PoolControl {
+    pid: libc::pid_t,
+    pool: *mut Pool,
+}
+
+struct PoolControlCell(std::cell::UnsafeCell<PoolControl>);
+
+unsafe impl Sync for PoolControlCell {}
+
+static THREADPOOL_CONTROL: PoolControlCell = PoolControlCell(std::cell::UnsafeCell::new(
+    PoolControl {
+        pid: 0,
+        pool: null_mut(),
+    },
+));
+static INIT_LOCK_ONCE: Once = Once::new();
+static mut INIT_LOCK: MaybeUninit<abi::uv_mutex_t> = MaybeUninit::uninit();
 
 unsafe extern "C" {
     #[link_name = "getaddrinfo"]
@@ -130,38 +147,103 @@ fn configured_thread_count() -> usize {
     nthreads.clamp(1, 1024)
 }
 
-fn pool() -> &'static Pool {
-    THREADPOOL.get_or_init(|| {
-        let nthreads = configured_thread_count();
-        let shared = Arc::new(Shared {
-            inner: Mutex::new(Inner {
-                queue: VecDeque::new(),
-                slow_pending: VecDeque::new(),
-                run_slow_enqueued: false,
-                idle_threads: 0,
-                slow_running: 0,
-                shutdown: false,
-            }),
-            cond: Condvar::new(),
-            nthreads,
-        });
+fn current_pid() -> libc::pid_t {
+    unsafe { libc::getpid() }
+}
 
-        let mut workers = Vec::with_capacity(nthreads);
-        for _ in 0..nthreads {
-            let worker_shared = Arc::clone(&shared);
-            let handle = std::thread::Builder::new()
-                .stack_size(8 << 20)
-                .spawn(move || worker_main(worker_shared))
-                .unwrap_or_else(|_| panic!("failed to create threadpool worker"));
-            workers.push(handle);
+unsafe fn init_lock() -> *mut abi::uv_mutex_t {
+    INIT_LOCK_ONCE.call_once(|| unsafe {
+        let lock = INIT_LOCK.as_mut_ptr();
+        std::ptr::write_bytes(lock, 0, 1);
+        let rc = sync::mutex_init_raw(lock, false);
+        if rc != 0 {
+            panic!("failed to initialize threadpool lock: {rc}");
         }
+    });
 
-        Pool {
-            shared,
-            workers: Mutex::new(workers),
-            cleaned: AtomicBool::new(false),
+    unsafe { INIT_LOCK.as_mut_ptr() }
+}
+
+unsafe fn reset_init_lock_after_fork() {
+    unsafe {
+        let lock = INIT_LOCK.as_mut_ptr();
+        std::ptr::write_bytes(lock, 0, 1);
+        let rc = sync::mutex_init_raw(lock, false);
+        if rc != 0 {
+            panic!("failed to reset threadpool lock after fork: {rc}");
         }
+    }
+}
+
+fn build_pool() -> Box<Pool> {
+    let nthreads = configured_thread_count();
+    let shared = Arc::new(Shared {
+        inner: Mutex::new(Inner {
+            queue: VecDeque::new(),
+            slow_pending: VecDeque::new(),
+            run_slow_enqueued: false,
+            idle_threads: 0,
+            slow_running: 0,
+            shutdown: false,
+        }),
+        cond: Condvar::new(),
+        nthreads,
+    });
+
+    let mut workers = Vec::with_capacity(nthreads);
+    for _ in 0..nthreads {
+        let worker_shared = Arc::clone(&shared);
+        let handle = std::thread::Builder::new()
+            .stack_size(8 << 20)
+            .spawn(move || worker_main(worker_shared))
+            .unwrap_or_else(|_| panic!("failed to create threadpool worker"));
+        workers.push(handle);
+    }
+
+    Box::new(Pool {
+        shared,
+        workers: Mutex::new(workers),
+        cleaned: AtomicBool::new(false),
     })
+}
+
+fn pool() -> &'static Pool {
+    let pid = current_pid();
+
+    unsafe {
+        let control = &mut *THREADPOOL_CONTROL.0.get();
+        if control.pid == pid
+            && !control.pool.is_null()
+            && !(*control.pool).cleaned.load(Ordering::Acquire)
+        {
+            return &*control.pool;
+        }
+
+        if control.pid != 0 && control.pid != pid {
+            reset_init_lock_after_fork();
+            let pool = Box::into_raw(build_pool());
+            control.pid = pid;
+            control.pool = pool;
+            return &*pool;
+        }
+
+        let lock = init_lock();
+        sync::mutex_lock_raw(lock);
+
+        let control = &mut *THREADPOOL_CONTROL.0.get();
+        if control.pid != pid
+            || control.pool.is_null()
+            || (*control.pool).cleaned.load(Ordering::Acquire)
+        {
+            let pool = Box::into_raw(build_pool());
+            control.pid = pid;
+            control.pool = pool;
+        }
+
+        let pool = &*control.pool;
+        sync::mutex_unlock_raw(lock);
+        pool
+    }
 }
 
 fn worker_main(shared: Arc<Shared>) {
@@ -377,22 +459,47 @@ pub(crate) unsafe extern "C" fn loop_wq_async_cb(handle: *mut abi::uv_async_t) {
 }
 
 pub(crate) fn cleanup() {
-    let Some(pool) = THREADPOOL.get() else {
-        return;
-    };
-    if pool.cleaned.swap(true, Ordering::AcqRel) {
-        return;
-    }
+    let pid = current_pid();
 
-    {
-        let mut inner = pool.shared.inner.lock().unwrap();
-        inner.shutdown = true;
-    }
-    pool.shared.cond.notify_all();
+    unsafe {
+        let control = &mut *THREADPOOL_CONTROL.0.get();
+        if control.pid != pid || control.pool.is_null() {
+            return;
+        }
 
-    let mut workers = pool.workers.lock().unwrap();
-    for handle in workers.drain(..) {
-        let _ = handle.join();
+        let lock = init_lock();
+        sync::mutex_lock_raw(lock);
+
+        let control = &mut *THREADPOOL_CONTROL.0.get();
+        if control.pid != pid || control.pool.is_null() {
+            sync::mutex_unlock_raw(lock);
+            return;
+        }
+
+        let pool_ptr = control.pool;
+        if (*pool_ptr).cleaned.swap(true, Ordering::AcqRel) {
+            sync::mutex_unlock_raw(lock);
+            return;
+        }
+
+        control.pool = null_mut();
+        sync::mutex_unlock_raw(lock);
+
+        {
+            let mut inner = (&(*pool_ptr).shared).inner.lock().unwrap();
+            inner.shutdown = true;
+        }
+        (&(*pool_ptr).shared).cond.notify_all();
+
+        let mut workers = (*pool_ptr).workers.lock().unwrap();
+        let handles: Vec<_> = workers.drain(..).collect();
+        drop(workers);
+
+        for handle in handles {
+            let _ = handle.join();
+        }
+
+        drop(Box::from_raw(pool_ptr));
     }
 }
 

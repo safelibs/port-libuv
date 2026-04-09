@@ -33,9 +33,11 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 safe_root="$(cd "${script_dir}/.." && pwd)"
 repo_root="$(cd "${safe_root}/.." && pwd)"
 generated_dir="${build_dir}/generated"
+template_dir="${safe_root}/tests/harness"
 
 mkdir -p "${generated_dir}"
 
+if [[ -z "${LIBUV_SAFE_NO_PYTHON:-}" ]] && command -v python3 >/dev/null 2>&1; then
 python3 - "${repo_root}" "${generated_dir}" <<'PY'
 import subprocess
 import sys
@@ -95,10 +97,19 @@ selected_tests = [
     "threadpool_cancel_random",
     "threadpool_cancel_single",
     "threadpool_cancel_when_busy",
+    "fork_timer",
+    "fork_socketpair",
+    "fork_socketpair_started",
+    "fork_signal_to_child",
+    "fork_signal_to_child_closed",
+    "fork_close_signal_in_child",
+    "fork_threadpool_queue_work_simple",
     "poll_duplex",
     "poll_unidirectional",
     "poll_bad_fdtype",
     "poll_nested_epoll",
+    "signal_multiple_loops",
+    "signal_pending_on_close",
     "tcp_ping_pong",
     "tcp_ping_pong_vec",
     "pipe_ping_pong",
@@ -160,6 +171,24 @@ selected_tests = [
     "ipc_listen_after_write",
     "ipc_send_zero",
     "ipc_heavy_traffic_deadlock_bug",
+    "dlerror",
+    "kill",
+    "kill_invalid_signum",
+    "process_title",
+    "process_title_threadsafe",
+    "spawn_stdout",
+    "spawn_stdin",
+    "spawn_exit_code",
+    "spawn_and_kill",
+    "spawn_and_kill_with_std",
+    "spawn_and_ping",
+    "spawn_detached",
+    "spawn_auto_unref",
+    "spawn_empty_env",
+    "spawn_preserve_env",
+    "spawn_setuid_setgid",
+    "spawn_setuid_fails",
+    "spawn_setgid_fails",
 ]
 
 expected_delta = {
@@ -254,10 +283,15 @@ phase_test_list = "\n".join(
 )
 
 run_tests_c = """\
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+# include <io.h>
+# define read _read
+#else
 # include <unistd.h>
 #endif
 
@@ -272,10 +306,20 @@ int ipc_helper_tcp_connection(void);
 int ipc_send_recv_helper(void);
 int ipc_helper_bind_twice(void);
 int ipc_helper_send_zero(void);
+void spawn_stdin_stdout(void);
+void process_title_big_argv(void);
+int spawn_tcp_server_helper(void);
 
 static int maybe_run_test(int argc, char** argv);
 
 int main(int argc, char** argv) {
+#ifndef _WIN32
+  if (0 == geteuid() && NULL == getenv("UV_RUN_AS_ROOT")) {
+    fprintf(stderr, "The libuv test suite cannot be run as root.\\n");
+    return EXIT_FAILURE;
+  }
+#endif
+
   platform_init(argc, argv);
   argv = uv_setup_args(argc, argv);
 
@@ -291,12 +335,13 @@ int main(int argc, char** argv) {
   default:
     fprintf(stderr, "Too many arguments.\\n");
     fflush(stderr);
-    return 1;
+    return EXIT_FAILURE;
   }
 }
 
 static int maybe_run_test(int argc, char** argv) {
   (void) argc;
+
   if (strcmp(argv[1], "--list") == 0) {
     print_tests(stdout);
     return 0;
@@ -330,6 +375,118 @@ static int maybe_run_test(int argc, char** argv) {
     return ipc_helper_send_zero();
   }
 
+  if (strcmp(argv[1], "spawn_helper1") == 0) {
+    notify_parent_process();
+    return 1;
+  }
+
+  if (strcmp(argv[1], "spawn_helper2") == 0) {
+    notify_parent_process();
+    printf("hello world\\n");
+    return 1;
+  }
+
+  if (strcmp(argv[1], "spawn_tcp_server_helper") == 0) {
+    notify_parent_process();
+    return spawn_tcp_server_helper();
+  }
+
+  if (strcmp(argv[1], "spawn_helper3") == 0) {
+    char buffer[256];
+    notify_parent_process();
+    ASSERT_PTR_EQ(buffer, fgets(buffer, sizeof(buffer) - 1, stdin));
+    buffer[sizeof(buffer) - 1] = '\\0';
+    fputs(buffer, stdout);
+    return 1;
+  }
+
+  if (strcmp(argv[1], "spawn_helper4") == 0) {
+    notify_parent_process();
+    for (;;)
+      uv_sleep(10000);
+  }
+
+  if (strcmp(argv[1], "spawn_helper5") == 0) {
+    const char out[] = "fourth stdio!\\n";
+    notify_parent_process();
+    {
+      ssize_t r;
+      do
+        r = write(3, out, sizeof(out) - 1);
+      while (r == -1 && errno == EINTR);
+
+      fsync(3);
+    }
+    return 1;
+  }
+
+  if (strcmp(argv[1], "spawn_helper6") == 0) {
+    int r;
+
+    notify_parent_process();
+
+    r = fprintf(stdout, "hello world\\n");
+    ASSERT_GT(r, 0);
+
+    r = fprintf(stderr, "hello errworld\\n");
+    ASSERT_GT(r, 0);
+
+    return 1;
+  }
+
+  if (strcmp(argv[1], "spawn_helper7") == 0) {
+    int r;
+    char* test;
+
+    notify_parent_process();
+
+    test = getenv("ENV_TEST");
+    ASSERT_NOT_NULL(test);
+
+    r = fprintf(stdout, "%s", test);
+    ASSERT_GT(r, 0);
+
+    return 1;
+  }
+
+  if (strcmp(argv[1], "spawn_helper8") == 0) {
+    uv_os_fd_t closed_fd;
+    uv_os_fd_t open_fd;
+
+    notify_parent_process();
+    ASSERT_EQ(sizeof(closed_fd), read(0, &closed_fd, sizeof(closed_fd)));
+    ASSERT_EQ(sizeof(open_fd), read(0, &open_fd, sizeof(open_fd)));
+    ASSERT_GT(open_fd, 2);
+    ASSERT_GT(closed_fd, 2);
+    ASSERT_EQ(-1, write(closed_fd, "x", 1));
+    return 1;
+  }
+
+  if (strcmp(argv[1], "spawn_helper9") == 0) {
+    notify_parent_process();
+    spawn_stdin_stdout();
+    return 1;
+  }
+
+#ifndef _WIN32
+  if (strcmp(argv[1], "spawn_helper_setuid_setgid") == 0) {
+    uv_uid_t uid = atoi(argv[2]);
+    uv_gid_t gid = atoi(argv[3]);
+
+    ASSERT_EQ(uid, getuid());
+    ASSERT_EQ(gid, getgid());
+    notify_parent_process();
+
+    return 1;
+  }
+#endif
+
+  if (strcmp(argv[1], "process_title_big_argv_helper") == 0) {
+    notify_parent_process();
+    process_title_big_argv();
+    return 0;
+  }
+
   return run_test(argv[1], 0, 1);
 }
 """
@@ -346,6 +503,16 @@ generated_dir.mkdir(parents=True, exist_ok=True)
 (generated_dir / "uv-safe-run-tests.c").write_text(run_tests_c)
 (generated_dir / "benchmark-sizes-main.c").write_text(benchmark_main_c)
 PY
+else
+  cp "${template_dir}/phase-test-list.h" "${generated_dir}/phase-test-list.h"
+  cp "${template_dir}/uv-safe-run-tests.c" "${generated_dir}/uv-safe-run-tests.c"
+  cat > "${generated_dir}/benchmark-sizes-main.c" <<'EOF'
+int run_benchmark_sizes(void);
+int main(void) {
+  return run_benchmark_sizes();
+}
+EOF
+fi
 
 cmake -S "${safe_root}/tests/harness" \
   -B "${build_dir}" \

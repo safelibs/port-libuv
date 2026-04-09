@@ -1,6 +1,7 @@
 use crate::abi::linux_x86_64 as abi;
-use crate::core::{handle, loop_state, metrics, queue, HandleKind, UV_HANDLE_INTERNAL};
-use libc::{self, c_int};
+use crate::core::{handle, queue, UV_HANDLE_INTERNAL, UV_HANDLE_REF};
+use crate::upstream_support::unix_core;
+use libc::{self, c_int, c_uint};
 use std::mem::offset_of;
 use std::sync::atomic::{AtomicI32, Ordering};
 
@@ -78,6 +79,16 @@ unsafe fn drain_wakeup_fd(loop_: *mut abi::uv_loop_t) {
     }
 }
 
+unsafe extern "C" fn async_io(
+    loop_: *mut abi::uv_loop_t,
+    _watcher: *mut abi::uv__io_t,
+    _events: c_uint,
+) {
+    unsafe {
+        run(loop_);
+    }
+}
+
 fn set_nonblocking_cloexec(fd: c_int) -> bool {
     unsafe {
         if libc::fcntl(fd, libc::F_SETFL, libc::O_NONBLOCK) != 0 {
@@ -90,26 +101,61 @@ fn set_nonblocking_cloexec(fd: c_int) -> bool {
     true
 }
 
-unsafe fn open_pipe_fallback(loop_: *mut abi::uv_loop_t) -> c_int {
-    let mut fds = [0; 2];
-    let rc = unsafe { libc::pipe(fds.as_mut_ptr()) };
-    if rc != 0 {
-        return -unsafe { *libc::__errno_location() };
-    }
+unsafe fn start_backend(loop_: *mut abi::uv_loop_t) -> c_int {
+    let mut read_fd = unsafe { libc::eventfd(0, libc::EFD_CLOEXEC | libc::EFD_NONBLOCK) };
+    let mut write_fd = -1;
 
-    if !set_nonblocking_cloexec(fds[0]) || !set_nonblocking_cloexec(fds[1]) {
-        unsafe {
-            libc::close(fds[0]);
-            libc::close(fds[1]);
+    if read_fd < 0 {
+        let mut fds = [0; 2];
+        if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+            return -unsafe { *libc::__errno_location() };
         }
-        return -unsafe { *libc::__errno_location() };
+
+        if !set_nonblocking_cloexec(fds[0]) || !set_nonblocking_cloexec(fds[1]) {
+            unsafe {
+                libc::close(fds[0]);
+                libc::close(fds[1]);
+            }
+            return -unsafe { *libc::__errno_location() };
+        }
+
+        read_fd = fds[0];
+        write_fd = fds[1];
     }
 
     unsafe {
-        (*loop_).async_io_watcher.fd = fds[0];
-        (*loop_).async_wfd = fds[1];
+        unix_core::uv__io_init(
+            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+            std::mem::transmute::<abi::uv__io_cb, crate::upstream_support::unix_core::uv__io_cb>(
+                Some(async_io),
+            ),
+            read_fd,
+        );
+        unix_core::uv__io_start(
+            loop_.cast(),
+            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+            libc::POLLIN as c_uint,
+        );
+        (*loop_).async_wfd = write_fd;
     }
+
     0
+}
+
+fn init_handle(loop_: *mut abi::uv_loop_t, handle_ptr: *mut abi::uv_async_t) {
+    unsafe {
+        std::ptr::write_bytes(handle_ptr, 0, 1);
+        (*handle_ptr).loop_ = loop_;
+        (*handle_ptr).type_ = abi::uv_handle_type_UV_ASYNC;
+        (*handle_ptr).close_cb = None;
+        (*handle_ptr).flags = UV_HANDLE_REF;
+        (*handle_ptr).next_closing = std::ptr::null_mut();
+        queue::init(std::ptr::addr_of_mut!((*handle_ptr).handle_queue));
+        queue::insert_tail(
+            std::ptr::addr_of_mut!((*loop_).handle_queue),
+            std::ptr::addr_of_mut!((*handle_ptr).handle_queue),
+        );
+    }
 }
 
 pub(crate) unsafe fn ensure_backend(loop_: *mut abi::uv_loop_t) -> c_int {
@@ -119,17 +165,7 @@ pub(crate) unsafe fn ensure_backend(loop_: *mut abi::uv_loop_t) -> c_int {
     if unsafe { (*loop_).async_io_watcher.fd } != -1 {
         return 0;
     }
-
-    let eventfd = unsafe { libc::eventfd(0, libc::EFD_CLOEXEC | libc::EFD_NONBLOCK) };
-    if eventfd >= 0 {
-        unsafe {
-            (*loop_).async_io_watcher.fd = eventfd;
-            (*loop_).async_wfd = -1;
-        }
-        return 0;
-    }
-
-    unsafe { open_pipe_fallback(loop_) }
+    unsafe { start_backend(loop_) }
 }
 
 pub(crate) unsafe fn init_internal(loop_: *mut abi::uv_loop_t) -> c_int {
@@ -144,7 +180,12 @@ pub(crate) unsafe fn init_internal(loop_: *mut abi::uv_loop_t) -> c_int {
         (*loop_).wq_async.type_ = abi::uv_handle_type_UV_ASYNC;
         (*loop_).wq_async.flags = UV_HANDLE_INTERNAL;
         (*loop_).wq_async.async_cb = Some(crate::threading::threadpool::loop_wq_async_cb);
+        queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.handle_queue));
         queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.queue));
+        queue::insert_tail(
+            std::ptr::addr_of_mut!((*loop_).handle_queue),
+            std::ptr::addr_of_mut!((*loop_).wq_async.handle_queue),
+        );
         queue::insert_tail(
             std::ptr::addr_of_mut!((*loop_).async_handles),
             std::ptr::addr_of_mut!((*loop_).wq_async.queue),
@@ -168,17 +209,7 @@ pub(crate) unsafe fn init(
         return rc;
     }
 
-    let rc = unsafe {
-        handle::handle_init(
-            loop_,
-            handle_ptr.cast(),
-            abi::uv_handle_type_UV_ASYNC,
-            HandleKind::Async,
-        )
-    };
-    if rc != 0 {
-        return rc;
-    }
+    init_handle(loop_, handle_ptr);
 
     unsafe {
         (*handle_ptr).async_cb = cb;
@@ -210,7 +241,7 @@ fn send_wakeup(loop_: *mut abi::uv_loop_t) {
     loop {
         let rc = unsafe { libc::write(fd, buf_ptr, len) };
         if rc == len as isize {
-            break;
+            return;
         }
         if rc == -1 {
             let err = unsafe { *libc::__errno_location() };
@@ -218,18 +249,11 @@ fn send_wakeup(loop_: *mut abi::uv_loop_t) {
                 continue;
             }
             if err == libc::EAGAIN || err == libc::EWOULDBLOCK {
-                break;
+                return;
             }
         }
         unsafe {
             libc::abort();
-        }
-    }
-
-    let state_ptr = unsafe { loop_state(loop_) };
-    if !state_ptr.is_null() {
-        unsafe {
-            (*state_ptr).wake.notify_one();
         }
     }
 }
@@ -328,10 +352,6 @@ pub(crate) unsafe fn run(loop_: *mut abi::uv_loop_t) {
             continue;
         }
 
-        unsafe {
-            metrics::record_event(loop_, 1);
-        }
-
         if let Some(cb) = unsafe { (*handle_ptr).async_cb } {
             unsafe {
                 cb(handle_ptr);
@@ -341,28 +361,86 @@ pub(crate) unsafe fn run(loop_: *mut abi::uv_loop_t) {
 }
 
 pub(crate) unsafe fn shutdown(loop_: *mut abi::uv_loop_t) {
-    if loop_.is_null() {
+    if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
         return;
     }
 
-    let fd = unsafe { (*loop_).async_io_watcher.fd };
-    if fd != -1 {
-        unsafe {
-            libc::close(fd);
-            (*loop_).async_io_watcher.fd = -1;
-        }
+    let mut local = abi::uv__queue::default();
+    unsafe {
+        queue::move_queue(
+            std::ptr::addr_of_mut!((*loop_).async_handles),
+            std::ptr::addr_of_mut!(local),
+        );
     }
 
-    let wfd = unsafe { (*loop_).async_wfd };
-    if wfd != -1 {
+    while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
+        let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
+        let handle_ptr = unsafe { async_handle_from_queue(node) };
         unsafe {
-            libc::close(wfd);
-            (*loop_).async_wfd = -1;
+            queue::remove(node);
+            queue::insert_tail(
+                std::ptr::addr_of_mut!((*loop_).async_handles),
+                std::ptr::addr_of_mut!((*handle_ptr).queue),
+            );
+        }
+        spin_until_idle(handle_ptr);
+    }
+
+    unsafe {
+        if (*loop_).async_wfd != -1 && (*loop_).async_wfd != (*loop_).async_io_watcher.fd {
+            libc::close((*loop_).async_wfd);
+        }
+        (*loop_).async_wfd = -1;
+        unix_core::uv__io_stop(
+            loop_.cast(),
+            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+            libc::POLLIN as c_uint,
+        );
+        libc::close((*loop_).async_io_watcher.fd);
+        (*loop_).async_io_watcher.fd = -1;
+    }
+}
+
+pub(crate) unsafe fn fork(loop_: *mut abi::uv_loop_t) -> c_int {
+    if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
+        return 0;
+    }
+
+    let mut local = abi::uv__queue::default();
+    unsafe {
+        queue::move_queue(
+            std::ptr::addr_of_mut!((*loop_).async_handles),
+            std::ptr::addr_of_mut!(local),
+        );
+    }
+
+    while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
+        let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
+        let handle_ptr = unsafe { async_handle_from_queue(node) };
+        unsafe {
+            queue::remove(node);
+            queue::insert_tail(
+                std::ptr::addr_of_mut!((*loop_).async_handles),
+                std::ptr::addr_of_mut!((*handle_ptr).queue),
+            );
+            (*handle_ptr).pending = 0;
+            (*handle_ptr).u.fd = 0;
         }
     }
 
     unsafe {
-        queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.queue));
-        queue::init(std::ptr::addr_of_mut!((*loop_).async_handles));
+        if (*loop_).async_wfd != -1 && (*loop_).async_wfd != (*loop_).async_io_watcher.fd {
+            libc::close((*loop_).async_wfd);
+        }
+        (*loop_).async_wfd = -1;
+        unix_core::uv__io_stop(
+            loop_.cast(),
+            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+            libc::POLLIN as c_uint,
+        );
+        libc::close((*loop_).async_io_watcher.fd);
+        (*loop_).async_io_watcher.fd = -1;
     }
+
+    unsafe { ensure_backend(loop_) }
 }

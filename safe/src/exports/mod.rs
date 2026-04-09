@@ -28,8 +28,8 @@ pub unsafe extern "C" fn uv_buf_init(base: *mut c_char, len: c_uint) -> abi::uv_
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv_setup_args(_argc: c_int, argv: *mut *mut c_char) -> *mut *mut c_char {
-    argv
+pub unsafe extern "C" fn uv_setup_args(argc: c_int, argv: *mut *mut c_char) -> *mut *mut c_char {
+    unsafe { unix::process_title::setup_args(argc, argv) }
 }
 
 #[unsafe(no_mangle)]

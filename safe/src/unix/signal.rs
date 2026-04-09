@@ -1,0 +1,631 @@
+use crate::abi::linux_x86_64 as abi;
+use crate::core::queue;
+use crate::upstream_support::unix_core;
+use std::cell::UnsafeCell;
+use std::cmp::Ordering;
+use std::mem::offset_of;
+use std::os::raw::{c_int, c_uint, c_void};
+use std::ptr;
+use std::sync::Once;
+
+const UV_HANDLE_CLOSING: u32 = crate::core::UV_HANDLE_CLOSING;
+const UV_HANDLE_ACTIVE: u32 = crate::core::UV_HANDLE_ACTIVE;
+const UV_HANDLE_REF: u32 = crate::core::UV_HANDLE_REF;
+const UV_SIGNAL_ONE_SHOT: u32 = crate::upstream_support::unix_core::UV_SIGNAL_ONE_SHOT as u32;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct SignalMsg {
+    handle: *mut abi::uv_signal_t,
+    signum: c_int,
+}
+
+struct SignalRegistry {
+    watchers: UnsafeCell<Vec<*mut abi::uv_signal_t>>,
+}
+
+unsafe impl Sync for SignalRegistry {}
+
+static REGISTRY: SignalRegistry = SignalRegistry {
+    watchers: UnsafeCell::new(Vec::new()),
+};
+static GLOBAL_INIT: Once = Once::new();
+static mut SIGNAL_LOCK_PIPEFD: [c_int; 2] = [-1, -1];
+
+#[inline]
+fn last_errno() -> c_int {
+    unsafe { *libc::__errno_location() }
+}
+
+#[inline]
+fn watchers_mut() -> &'static mut Vec<*mut abi::uv_signal_t> {
+    unsafe { &mut *REGISTRY.watchers.get() }
+}
+
+#[inline]
+fn watchers() -> &'static [*mut abi::uv_signal_t] {
+    unsafe { &*REGISTRY.watchers.get() }
+}
+
+fn handle_start(handle: *mut abi::uv_handle_t) {
+    unsafe {
+        if (*handle).flags & UV_HANDLE_ACTIVE != 0 {
+            return;
+        }
+
+        (*handle).flags |= UV_HANDLE_ACTIVE;
+        if (*handle).flags & UV_HANDLE_REF != 0 {
+            (*(*handle).loop_).active_handles += 1;
+        }
+    }
+}
+
+fn handle_stop(handle: *mut abi::uv_handle_t) {
+    unsafe {
+        if (*handle).flags & UV_HANDLE_ACTIVE == 0 {
+            return;
+        }
+
+        (*handle).flags &= !UV_HANDLE_ACTIVE;
+        if (*handle).flags & UV_HANDLE_REF != 0 {
+            (*(*handle).loop_).active_handles -= 1;
+        }
+    }
+}
+
+unsafe fn close_fd(fd: c_int) {
+    if fd >= 0 {
+        let _ = unsafe { libc::close(fd) };
+    }
+}
+
+unsafe fn signal_unlock() -> bool {
+    let data = 42u8;
+    loop {
+        let rc = unsafe {
+            libc::write(
+                SIGNAL_LOCK_PIPEFD[1],
+                std::ptr::addr_of!(data).cast::<c_void>(),
+                1,
+            )
+        };
+        if rc >= 0 {
+            return true;
+        }
+        if last_errno() != libc::EINTR {
+            return false;
+        }
+    }
+}
+
+unsafe fn signal_lock() -> bool {
+    let mut data = 0u8;
+    loop {
+        let rc = unsafe {
+            libc::read(
+                SIGNAL_LOCK_PIPEFD[0],
+                std::ptr::addr_of_mut!(data).cast::<c_void>(),
+                1,
+            )
+        };
+        if rc >= 0 {
+            return true;
+        }
+        if last_errno() != libc::EINTR {
+            return false;
+        }
+    }
+}
+
+unsafe fn global_reinit() {
+    unsafe { cleanup_global() };
+
+    if unsafe { libc::pipe2(SIGNAL_LOCK_PIPEFD.as_mut_ptr(), libc::O_CLOEXEC) } != 0 {
+        unsafe { libc::abort() };
+    }
+
+    if !unsafe { signal_unlock() } {
+        unsafe { libc::abort() };
+    }
+}
+
+unsafe extern "C" fn after_fork_child() {
+    unsafe { global_reinit() };
+}
+
+fn ensure_global_init() {
+    GLOBAL_INIT.call_once(|| {
+        if unsafe { libc::pthread_atfork(None, None, Some(after_fork_child)) } != 0 {
+            unsafe { libc::abort() };
+        }
+    });
+
+    if unsafe { SIGNAL_LOCK_PIPEFD[0] } == -1 {
+        unsafe { global_reinit() };
+    }
+}
+
+unsafe fn block_and_lock(saved_sigmask: *mut libc::sigset_t) {
+    let mut mask = std::mem::MaybeUninit::<libc::sigset_t>::uninit();
+    if unsafe { libc::sigfillset(mask.as_mut_ptr()) } != 0 {
+        unsafe { libc::abort() };
+    }
+    if unsafe { libc::sigemptyset(saved_sigmask) } != 0 {
+        unsafe { libc::abort() };
+    }
+    if unsafe { libc::pthread_sigmask(libc::SIG_SETMASK, mask.as_ptr(), saved_sigmask) } != 0 {
+        unsafe { libc::abort() };
+    }
+    if !unsafe { signal_lock() } {
+        unsafe { libc::abort() };
+    }
+}
+
+unsafe fn unlock_and_unblock(saved_sigmask: *const libc::sigset_t) {
+    if !unsafe { signal_unlock() } {
+        unsafe { libc::abort() };
+    }
+    if unsafe { libc::pthread_sigmask(libc::SIG_SETMASK, saved_sigmask, ptr::null_mut()) } != 0 {
+        unsafe { libc::abort() };
+    }
+}
+
+fn compare_handles(a: *mut abi::uv_signal_t, b: *mut abi::uv_signal_t) -> Ordering {
+    unsafe {
+        (*a)
+            .signum
+            .cmp(&(*b).signum)
+            .then_with(|| ((*a).flags & UV_SIGNAL_ONE_SHOT).cmp(&((*b).flags & UV_SIGNAL_ONE_SHOT)))
+            .then_with(|| ((*a).loop_ as usize).cmp(&((*b).loop_ as usize)))
+            .then_with(|| (a as usize).cmp(&(b as usize)))
+    }
+}
+
+unsafe fn sort_watchers() {
+    watchers_mut().sort_by(|a, b| compare_handles(*a, *b));
+}
+
+unsafe fn first_handle(signum: c_int) -> *mut abi::uv_signal_t {
+    for &handle in watchers() {
+        if unsafe { (*handle).signum == signum } {
+            return handle;
+        }
+    }
+    ptr::null_mut()
+}
+
+unsafe fn register_handler(signum: c_int, oneshot: bool) -> c_int {
+    let mut action = std::mem::MaybeUninit::<libc::sigaction>::zeroed();
+    let action_ptr = action.as_mut_ptr();
+
+    if unsafe { libc::sigfillset(std::ptr::addr_of_mut!((*action_ptr).sa_mask)) } != 0 {
+        unsafe { libc::abort() };
+    }
+
+    unsafe {
+        (*action_ptr).sa_sigaction = signal_handler as usize;
+        (*action_ptr).sa_flags = libc::SA_RESTART | if oneshot { libc::SA_RESETHAND } else { 0 };
+    }
+
+    if unsafe { libc::sigaction(signum, action_ptr, ptr::null_mut()) } != 0 {
+        -last_errno()
+    } else {
+        0
+    }
+}
+
+unsafe fn unregister_handler(signum: c_int) {
+    let mut action = std::mem::MaybeUninit::<libc::sigaction>::zeroed();
+    let action_ptr = action.as_mut_ptr();
+
+    unsafe {
+        (*action_ptr).sa_sigaction = libc::SIG_DFL;
+    }
+
+    if unsafe { libc::sigaction(signum, action_ptr, ptr::null_mut()) } != 0 {
+        unsafe { libc::abort() };
+    }
+}
+
+unsafe extern "C" fn signal_handler(signum: c_int) {
+    let saved_errno = last_errno();
+    let mut message = SignalMsg {
+        handle: ptr::null_mut(),
+        signum,
+    };
+
+    if !unsafe { signal_lock() } {
+        unsafe {
+            *libc::__errno_location() = saved_errno;
+        }
+        return;
+    }
+
+    for &handle in watchers() {
+        if unsafe { (*handle).signum } != signum {
+            continue;
+        }
+
+        message.handle = handle;
+        let rc = loop {
+            let rc = unsafe {
+                libc::write(
+                    (*(*handle).loop_).signal_pipefd[1],
+                    std::ptr::addr_of!(message).cast::<c_void>(),
+                    std::mem::size_of::<SignalMsg>(),
+                )
+            };
+            if rc == -1 && last_errno() == libc::EINTR {
+                continue;
+            }
+            break rc;
+        };
+
+        if rc == std::mem::size_of::<SignalMsg>() as isize {
+            unsafe {
+                (*handle).caught_signals = (*handle).caught_signals.wrapping_add(1);
+            }
+        }
+    }
+
+    let _ = unsafe { signal_unlock() };
+    unsafe {
+        *libc::__errno_location() = saved_errno;
+    }
+}
+
+unsafe fn signal_loop_once_init(loop_: *mut abi::uv_loop_t) -> c_int {
+    if unsafe { (*loop_).signal_pipefd[0] } != -1 {
+        return 0;
+    }
+
+    let mut pipefd = [-1; 2];
+    if unsafe { libc::pipe2(pipefd.as_mut_ptr(), libc::O_NONBLOCK | libc::O_CLOEXEC) } != 0 {
+        return -last_errno();
+    }
+
+    unsafe {
+        (*loop_).signal_pipefd = pipefd;
+        unix_core::uv__io_init(
+            std::ptr::addr_of_mut!((*loop_).signal_io_watcher).cast(),
+            std::mem::transmute::<
+                abi::uv__io_cb,
+                crate::upstream_support::unix_core::uv__io_cb,
+            >(Some(signal_event)),
+            pipefd[0],
+        );
+        unix_core::uv__io_start(
+            loop_.cast(),
+            std::ptr::addr_of_mut!((*loop_).signal_io_watcher).cast(),
+            libc::POLLIN as c_uint,
+        );
+    }
+
+    0
+}
+
+unsafe extern "C" fn signal_event(
+    loop_: *mut abi::uv_loop_t,
+    watcher: *mut abi::uv__io_t,
+    _events: c_uint,
+) {
+    let _ = loop_;
+    let _ = watcher;
+
+    const MSGS_PER_READ: usize = 32;
+    const MSG_SIZE: usize = std::mem::size_of::<SignalMsg>();
+
+    let mut buffer = [0u8; MSGS_PER_READ * MSG_SIZE];
+    let mut bytes = 0usize;
+
+    loop {
+        let rc = unsafe {
+            libc::read(
+                (*loop_).signal_pipefd[0],
+                buffer[bytes..].as_mut_ptr().cast::<c_void>(),
+                buffer.len() - bytes,
+            )
+        };
+
+        if rc == -1 && last_errno() == libc::EINTR {
+            continue;
+        }
+
+        if rc == -1 && (last_errno() == libc::EAGAIN || last_errno() == libc::EWOULDBLOCK) {
+            if bytes == 0 {
+                return;
+            }
+            continue;
+        }
+
+        if rc == -1 {
+            unsafe { libc::abort() };
+        }
+
+        bytes += rc as usize;
+        let end = (bytes / MSG_SIZE) * MSG_SIZE;
+        let mut offset = 0usize;
+
+        while offset < end {
+            let message = unsafe {
+                std::ptr::read_unaligned(buffer.as_ptr().add(offset).cast::<SignalMsg>())
+            };
+            let handle = message.handle;
+
+            if !handle.is_null() {
+                let should_dispatch = unsafe {
+                    message.signum == (*handle).signum && ((*handle).flags & UV_HANDLE_CLOSING) == 0
+                };
+
+                if should_dispatch {
+                    if let Some(cb) = unsafe { (*handle).signal_cb } {
+                        unsafe {
+                            cb(handle, (*handle).signum);
+                        }
+                    }
+                }
+
+                unsafe {
+                    (*handle).dispatched_signals = (*handle).dispatched_signals.wrapping_add(1);
+                }
+
+                if should_dispatch && unsafe { (*handle).flags & UV_SIGNAL_ONE_SHOT } != 0 {
+                    let _ = unsafe { stop(handle) };
+                }
+            }
+
+            offset += MSG_SIZE;
+        }
+
+        bytes -= end;
+        if bytes != 0 {
+            buffer.copy_within(end..end + bytes, 0);
+            continue;
+        }
+
+        if end < buffer.len() {
+            return;
+        }
+    }
+}
+
+unsafe fn init_handle(loop_: *mut abi::uv_loop_t, handle: *mut abi::uv_signal_t) {
+    unsafe {
+        std::ptr::write_bytes(handle, 0, 1);
+        (*handle).loop_ = loop_;
+        (*handle).type_ = abi::uv_handle_type_UV_SIGNAL;
+        (*handle).flags = UV_HANDLE_REF;
+        queue::init(std::ptr::addr_of_mut!((*handle).handle_queue));
+        queue::insert_tail(
+            std::ptr::addr_of_mut!((*loop_).handle_queue),
+            std::ptr::addr_of_mut!((*handle).handle_queue),
+        );
+        (*handle).next_closing = ptr::null_mut();
+        (*handle).close_cb = None;
+    }
+}
+
+unsafe fn start(handle: *mut abi::uv_signal_t, signal_cb: abi::uv_signal_cb, signum: c_int, oneshot: bool) -> c_int {
+    if handle.is_null() || signal_cb.is_none() || signum == 0 {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+
+    if unsafe { (*handle).flags & UV_HANDLE_CLOSING } != 0 {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+
+    if signum == unsafe { (*handle).signum } {
+        unsafe {
+            (*handle).signal_cb = signal_cb;
+            if oneshot {
+                (*handle).flags |= UV_SIGNAL_ONE_SHOT;
+            } else {
+                (*handle).flags &= !UV_SIGNAL_ONE_SHOT;
+            }
+        }
+        return 0;
+    }
+
+    if unsafe { (*handle).signum } != 0 {
+        let rc = unsafe { stop(handle) };
+        if rc != 0 {
+            return rc;
+        }
+    }
+
+    let mut saved = std::mem::MaybeUninit::<libc::sigset_t>::uninit();
+    unsafe { block_and_lock(saved.as_mut_ptr()) };
+
+    let first = unsafe { first_handle(signum) };
+    if first.is_null() || (!oneshot && unsafe { (*first).flags & UV_SIGNAL_ONE_SHOT } != 0) {
+        let rc = unsafe { register_handler(signum, oneshot) };
+        if rc != 0 {
+            unsafe { unlock_and_unblock(saved.as_ptr()) };
+            return rc;
+        }
+    }
+
+    unsafe {
+        (*handle).signal_cb = signal_cb;
+        (*handle).signum = signum;
+        (*handle).caught_signals = 0;
+        (*handle).dispatched_signals = 0;
+        if oneshot {
+            (*handle).flags |= UV_SIGNAL_ONE_SHOT;
+        } else {
+            (*handle).flags &= !UV_SIGNAL_ONE_SHOT;
+        }
+        watchers_mut().push(handle);
+        sort_watchers();
+    }
+
+    unsafe { unlock_and_unblock(saved.as_ptr()) };
+    handle_start(handle.cast());
+    0
+}
+
+pub(crate) unsafe fn stop(handle: *mut abi::uv_signal_t) -> c_int {
+    if handle.is_null() {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+
+    let signum = unsafe { (*handle).signum };
+    if signum == 0 {
+        return 0;
+    }
+
+    let mut saved = std::mem::MaybeUninit::<libc::sigset_t>::uninit();
+    unsafe { block_and_lock(saved.as_mut_ptr()) };
+
+    let removed_regular = unsafe { (*handle).flags & UV_SIGNAL_ONE_SHOT } == 0;
+    if let Some(index) = watchers_mut().iter().position(|candidate| *candidate == handle) {
+        watchers_mut().remove(index);
+    }
+
+    let first = unsafe { first_handle(signum) };
+    if first.is_null() {
+        unsafe { unregister_handler(signum) };
+    } else if removed_regular && unsafe { (*first).flags & UV_SIGNAL_ONE_SHOT } != 0 {
+        let rc = unsafe { register_handler(signum, true) };
+        if rc != 0 {
+            unsafe { libc::abort() };
+        }
+    }
+
+    unsafe { unlock_and_unblock(saved.as_ptr()) };
+
+    unsafe {
+        (*handle).signum = 0;
+        (*handle).flags &= !UV_SIGNAL_ONE_SHOT;
+    }
+    handle_stop(handle.cast());
+    0
+}
+
+pub(crate) unsafe fn init(loop_: *mut abi::uv_loop_t, handle: *mut abi::uv_signal_t) -> c_int {
+    if loop_.is_null() || handle.is_null() {
+        return abi::uv_errno_t_UV_EINVAL;
+    }
+
+    ensure_global_init();
+
+    let rc = unsafe { signal_loop_once_init(loop_) };
+    if rc != 0 {
+        return rc;
+    }
+
+    unsafe { init_handle(loop_, handle) };
+    0
+}
+
+pub(crate) unsafe fn start_regular(
+    handle: *mut abi::uv_signal_t,
+    signal_cb: abi::uv_signal_cb,
+    signum: c_int,
+) -> c_int {
+    unsafe { start(handle, signal_cb, signum, false) }
+}
+
+pub(crate) unsafe fn start_oneshot(
+    handle: *mut abi::uv_signal_t,
+    signal_cb: abi::uv_signal_cb,
+    signum: c_int,
+) -> c_int {
+    unsafe { start(handle, signal_cb, signum, true) }
+}
+
+pub(crate) unsafe fn close(handle: *mut abi::uv_signal_t) {
+    let _ = unsafe { stop(handle) };
+}
+
+pub(crate) unsafe fn loop_fork(loop_: *mut abi::uv_loop_t) -> c_int {
+    if loop_.is_null() || unsafe { (*loop_).signal_pipefd[0] } == -1 {
+        return 0;
+    }
+
+    unsafe {
+        unix_core::uv__io_stop(
+            loop_.cast(),
+            std::ptr::addr_of_mut!((*loop_).signal_io_watcher).cast(),
+            libc::POLLIN as c_uint,
+        );
+        close_fd((*loop_).signal_pipefd[0]);
+        close_fd((*loop_).signal_pipefd[1]);
+        (*loop_).signal_pipefd = [-1, -1];
+    }
+
+    let head = unsafe { std::ptr::addr_of_mut!((*loop_).handle_queue) };
+    let mut node = unsafe { (*head).next };
+    while !std::ptr::eq(node, head) {
+        let handle = unsafe {
+            node.cast::<u8>()
+                .sub(offset_of!(abi::uv_handle_t, handle_queue))
+                .cast::<abi::uv_handle_t>()
+        };
+        node = unsafe { (*node).next };
+
+        if unsafe { (*handle).type_ } != abi::uv_handle_type_UV_SIGNAL {
+            continue;
+        }
+
+        let signal = handle.cast::<abi::uv_signal_t>();
+        unsafe {
+            (*signal).caught_signals = 0;
+            (*signal).dispatched_signals = 0;
+        }
+    }
+
+    unsafe { signal_loop_once_init(loop_) }
+}
+
+pub(crate) unsafe fn loop_cleanup(loop_: *mut abi::uv_loop_t) {
+    if loop_.is_null() {
+        return;
+    }
+
+    let head = unsafe { std::ptr::addr_of_mut!((*loop_).handle_queue) };
+    let mut node = unsafe { (*head).next };
+    while !std::ptr::eq(node, head) {
+        let handle = unsafe {
+            node.cast::<u8>()
+                .sub(offset_of!(abi::uv_handle_t, handle_queue))
+                .cast::<abi::uv_handle_t>()
+        };
+        node = unsafe { (*node).next };
+
+        if unsafe { (*handle).type_ } == abi::uv_handle_type_UV_SIGNAL {
+            let _ = unsafe { stop(handle.cast()) };
+        }
+    }
+
+    if unsafe { (*loop_).signal_pipefd[0] } != -1 {
+        unsafe {
+            unix_core::uv__io_stop(
+                loop_.cast(),
+                std::ptr::addr_of_mut!((*loop_).signal_io_watcher).cast(),
+                libc::POLLIN as c_uint,
+            );
+            close_fd((*loop_).signal_pipefd[0]);
+            close_fd((*loop_).signal_pipefd[1]);
+            (*loop_).signal_pipefd = [-1, -1];
+            (*loop_).signal_io_watcher.fd = -1;
+        }
+    }
+}
+
+pub(crate) unsafe fn global_once_init() {
+    ensure_global_init();
+}
+
+pub(crate) unsafe fn cleanup_global() {
+    unsafe {
+        if SIGNAL_LOCK_PIPEFD[0] != -1 {
+            close_fd(SIGNAL_LOCK_PIPEFD[0]);
+            SIGNAL_LOCK_PIPEFD[0] = -1;
+        }
+        if SIGNAL_LOCK_PIPEFD[1] != -1 {
+            close_fd(SIGNAL_LOCK_PIPEFD[1]);
+            SIGNAL_LOCK_PIPEFD[1] = -1;
+        }
+    }
+}

@@ -1,5 +1,5 @@
 use crate::abi::linux_x86_64 as abi;
-use crate::core::{handle, queue};
+use crate::core::handle;
 use libc::{c_char, ssize_t};
 
 #[unsafe(no_mangle)]
@@ -79,8 +79,8 @@ pub unsafe extern "C" fn uv__async_stop(loop_: *mut abi::uv_loop_t) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv__async_fork(_loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
-    0
+pub unsafe extern "C" fn uv__async_fork(loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
+    unsafe { crate::unix_async::fork(loop_) }
 }
 
 #[unsafe(no_mangle)]
@@ -89,46 +89,46 @@ pub unsafe extern "C" fn uv__async_close(handle: *mut abi::uv_async_t) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv__signal_global_once_init() {}
+pub unsafe extern "C" fn uv__signal_global_once_init() {
+    unsafe { crate::unix::signal::global_once_init() }
+}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv__signal_loop_cleanup(_loop_: *mut abi::uv_loop_t) {}
+pub unsafe extern "C" fn uv__signal_loop_cleanup(loop_: *mut abi::uv_loop_t) {
+    unsafe { crate::unix::signal::loop_cleanup(loop_) }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv__signal_loop_fork(
-    _loop_: *mut abi::uv_loop_t,
+    loop_: *mut abi::uv_loop_t,
 ) -> ::std::os::raw::c_int {
-    0
+    unsafe { crate::unix::signal::loop_fork(loop_) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv__signal_cleanup() {}
+pub unsafe extern "C" fn uv__signal_cleanup() {
+    unsafe { crate::unix::signal::cleanup_global() }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv__signal_close(handle: *mut abi::uv_signal_t) {
-    unsafe { handle::handle_stop(handle.cast()) }
+    unsafe { crate::unix::signal::close(handle) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv__process_init(_loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
-    0
+pub unsafe extern "C" fn uv__process_init(loop_: *mut abi::uv_loop_t) -> ::std::os::raw::c_int {
+    unsafe { crate::unix::process::loop_init(loop_) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv__process_close(handle: *mut abi::uv_process_t) {
-    unsafe {
-        queue::remove(std::ptr::addr_of_mut!((*handle).queue));
-        queue::init(std::ptr::addr_of_mut!((*handle).queue));
-        handle::handle_stop(handle.cast());
-        if queue::is_empty(std::ptr::addr_of!((*(*handle).loop_).process_handles)) {
-            (*(*handle).loop_).flags &=
-                !(crate::upstream_support::unix_core::UV_LOOP_REAP_CHILDREN as u64);
-        }
-    }
+    unsafe { crate::unix::process::close(handle) }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn uv__process_title_cleanup() {}
+pub unsafe extern "C" fn uv__process_title_cleanup() {
+    unsafe { crate::unix::process_title::cleanup() }
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn uv__fs_poll_close(handle: *mut abi::uv_fs_poll_t) {
