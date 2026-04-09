@@ -8,14 +8,13 @@ fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 safe_root="$(cd "${script_dir}/.." && pwd)"
-repo_root="$(cd "${safe_root}/.." && pwd)"
 stage_prefix="$1"
-baseline_dir="${repo_root}/original/build-checker"
-shared_src="${baseline_dir}/libuv.so.1.0.0"
-static_src="${baseline_dir}/libuv.a"
+artifact_dir="${safe_root}/target/release"
+shared_src="${artifact_dir}/libuv.so"
+static_src="${artifact_dir}/libuv.a"
 
 if [[ ! -f "${shared_src}" || ! -f "${static_src}" ]]; then
-  echo "missing baseline artifacts in ${baseline_dir}" >&2
+  echo "cargo build --release must succeed before staging artifacts" >&2
   exit 1
 fi
 
@@ -25,6 +24,8 @@ install -m 0644 "${static_src}" "${stage_prefix}/lib/libuv.a"
 install -m 0755 "${shared_src}" "${stage_prefix}/lib/libuv.so.1.0.0"
 ln -sfn "libuv.so.1.0.0" "${stage_prefix}/lib/libuv.so.1"
 ln -sfn "libuv.so.1" "${stage_prefix}/lib/libuv.so"
+
+repo_root="$(cd "${safe_root}/.." && pwd)"
 
 python3 - "${repo_root}" "${safe_root}" "${stage_prefix}" <<'PY'
 import json
