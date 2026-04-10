@@ -1254,13 +1254,13 @@ pub union epoll_data {
 
 #[inline]
 // SAFETY(syscall_ffi): accesses packed epoll_event fd payloads through raw pointers.
-unsafe fn epoll_event_get_fd(event: *const epoll_event) -> ::core::ffi::c_int {
+fn epoll_event_get_fd(event: *const epoll_event) -> ::core::ffi::c_int {
     unsafe { ::core::ptr::addr_of!((*event).data.fd).read_unaligned() }
 }
 
 #[inline]
 // SAFETY(syscall_ffi): accesses packed epoll_event fd payloads through raw pointers.
-unsafe fn epoll_event_set_fd(event: *mut epoll_event, fd: ::core::ffi::c_int) {
+fn epoll_event_set_fd(event: *mut epoll_event, fd: ::core::ffi::c_int) {
     unsafe { ::core::ptr::addr_of_mut!((*event).data.fd).write_unaligned(fd) };
 }
 #[derive(Copy, Clone)]

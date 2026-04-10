@@ -139,7 +139,7 @@
     {
       "id": "gevent",
       "software_name": "gevent",
-      "coverage": ["source-build"],
+      "coverage": ["source-build", "runtime"],
       "probe_path": "probes/gevent.sh",
       "expected_link_targets": [
         {"kind": "probe-glob", "locator": "src/gevent/libuv/_corecffi*.so"}
