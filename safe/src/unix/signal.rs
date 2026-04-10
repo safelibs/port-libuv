@@ -20,7 +20,7 @@ struct SignalMsg {
 }
 
 struct SignalRegistry {
-    watchers: UnsafeCell<[WatcherKey; MAX_SIGNAL_WATCHERS]>,
+    watchers: UnsafeCell<Vec<WatcherKey>>,
 }
 
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
@@ -31,22 +31,11 @@ struct WatcherKey {
     handle_ptr: usize,
 }
 
-impl WatcherKey {
-    const EMPTY: Self = Self {
-        signum: 0,
-        oneshot: false,
-        loop_ptr: 0,
-        handle_ptr: 0,
-    };
-}
-
-const MAX_SIGNAL_WATCHERS: usize = 1024;
-
 // SAFETY(syscall_ffi): the registry stores stable libuv handle pointers and mutates only under the signal lock.
 unsafe impl Sync for SignalRegistry {}
 
 static REGISTRY: SignalRegistry = SignalRegistry {
-    watchers: UnsafeCell::new([WatcherKey::EMPTY; MAX_SIGNAL_WATCHERS]),
+    watchers: UnsafeCell::new(Vec::new()),
 };
 static GLOBAL_INIT: Once = Once::new();
 static mut SIGNAL_LOCK_PIPEFD: [c_int; 2] = [-1, -1];
@@ -219,55 +208,50 @@ fn unlock_and_unblock(saved_sigmask: *const libc::sigset_t) {
 }
 
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
-fn insert_watcher(handle: *mut abi::uv_signal_t) {
-    let key = watcher_key(handle);
-    let watchers = unsafe { &mut *REGISTRY.watchers.get() };
-    let mut len = watcher_count(watchers);
-
-    if let Some(index) = watchers[..len]
-        .iter()
-        .position(|candidate| candidate.handle_ptr == handle as usize)
-    {
-        if index + 1 < len {
-            watchers.copy_within(index + 1..len, index);
-        }
-        len -= 1;
-        watchers[len] = WatcherKey::EMPTY;
-    }
-
-    if len == MAX_SIGNAL_WATCHERS {
-        unsafe { libc::abort() };
-    }
-
-    let insert_at = watchers[..len]
-        .binary_search(&key)
-        .unwrap_or_else(|index| index);
-    if insert_at < len {
-        watchers.copy_within(insert_at..len, insert_at + 1);
-    }
-    watchers[insert_at] = key;
+fn signal_lower_bound(watchers: &[WatcherKey], signum: c_int) -> usize {
+    watchers.partition_point(|candidate| candidate.signum < signum)
 }
 
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
-fn first_watcher(signum: c_int) -> Option<WatcherKey> {
-    let watchers = unsafe { &*REGISTRY.watchers.get() };
-    let len = watcher_count(watchers);
-    let active = &watchers[..len];
-    let first = active.partition_point(|candidate| candidate.signum < signum);
-    if first < active.len() && active[first].signum == signum {
-        Some(active[first])
+fn first_watcher_in(watchers: &[WatcherKey], signum: c_int) -> Option<WatcherKey> {
+    let first = signal_lower_bound(watchers, signum);
+    if first < watchers.len() && watchers[first].signum == signum {
+        Some(watchers[first])
     } else {
         None
     }
 }
 
-// SAFETY(syscall_ffi): the registry is always compacted, so the first empty slot marks the active span.
-fn watcher_count(watchers: &[WatcherKey; MAX_SIGNAL_WATCHERS]) -> usize {
-    let mut len = 0;
-    while len < MAX_SIGNAL_WATCHERS && watchers[len].handle_ptr != 0 {
-        len += 1;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+fn insert_watcher(handle: *mut abi::uv_signal_t) {
+    let key = watcher_key(handle);
+    let watchers = unsafe { &mut *REGISTRY.watchers.get() };
+
+    if let Some(index) = watchers
+        .iter()
+        .position(|candidate| candidate.handle_ptr == handle as usize)
+    {
+        watchers.remove(index);
     }
-    len
+
+    let insert_at = watchers.binary_search(&key).unwrap_or_else(|index| index);
+    watchers.insert(insert_at, key);
+}
+
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+fn first_watcher(signum: c_int) -> Option<WatcherKey> {
+    let watchers = unsafe { &*REGISTRY.watchers.get() };
+    first_watcher_in(watchers, signum)
+}
+
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+fn reserve_watcher_slot() -> c_int {
+    let watchers = unsafe { &mut *REGISTRY.watchers.get() };
+    if watchers.try_reserve(1).is_err() {
+        abi::uv_errno_t_UV_ENOMEM
+    } else {
+        0
+    }
 }
 
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
@@ -327,8 +311,11 @@ extern "C" fn signal_handler(signum: c_int) {
         }
 
         let watchers = unsafe { &*REGISTRY.watchers.get() };
-        let len = watcher_count(watchers);
-        for &watcher in &watchers[..len] {
+        let first = signal_lower_bound(watchers, signum);
+        for &watcher in watchers[first..]
+            .iter()
+            .take_while(|watcher| watcher.signum == signum)
+        {
             if watcher.signum != signum {
                 continue;
             }
@@ -538,6 +525,12 @@ fn start(
         let mut saved = std::mem::MaybeUninit::<libc::sigset_t>::uninit();
         unsafe { block_and_lock(saved.as_mut_ptr()) };
 
+        let rc = reserve_watcher_slot();
+        if rc != 0 {
+            unsafe { unlock_and_unblock(saved.as_ptr()) };
+            return rc;
+        }
+
         let first = unsafe { first_watcher(signum) };
         if first.is_none() || (!oneshot && first.unwrap().oneshot) {
             let rc = unsafe { register_handler(signum, oneshot) };
@@ -582,30 +575,26 @@ pub(crate) fn stop(handle: *mut abi::uv_signal_t) -> c_int {
         unsafe { block_and_lock(saved.as_mut_ptr()) };
 
         let removed_regular = unsafe { (*handle).flags & UV_SIGNAL_ONE_SHOT } == 0;
-        let watchers = unsafe { &mut *REGISTRY.watchers.get() };
-        let mut len = watcher_count(watchers);
-        let remove_at = watchers[..len]
-            .iter()
-            .position(|candidate| candidate.handle_ptr == handle as usize);
-        let remove_at = match remove_at {
-            Some(index) => index,
-            None => {
-                unsafe { unlock_and_unblock(saved.as_ptr()) };
-                unsafe {
-                    (*handle).signum = 0;
-                    (*handle).flags &= !UV_SIGNAL_ONE_SHOT;
+        let first = {
+            let watchers = unsafe { &mut *REGISTRY.watchers.get() };
+            let remove_at = watchers
+                .iter()
+                .position(|candidate| candidate.handle_ptr == handle as usize);
+            let remove_at = match remove_at {
+                Some(index) => index,
+                None => {
+                    unsafe { unlock_and_unblock(saved.as_ptr()) };
+                    unsafe {
+                        (*handle).signum = 0;
+                        (*handle).flags &= !UV_SIGNAL_ONE_SHOT;
+                    }
+                    handle_stop(handle.cast());
+                    return 0;
                 }
-                handle_stop(handle.cast());
-                return 0;
-            }
+            };
+            watchers.remove(remove_at);
+            first_watcher_in(watchers, signum)
         };
-        if remove_at + 1 < len {
-            watchers.copy_within(remove_at + 1..len, remove_at);
-        }
-        len -= 1;
-        watchers[len] = WatcherKey::EMPTY;
-
-        let first = unsafe { first_watcher(signum) };
         if first.is_none() {
             unsafe { unregister_handler(signum) };
         } else if removed_regular && first.unwrap().oneshot {
