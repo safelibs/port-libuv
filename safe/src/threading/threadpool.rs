@@ -401,7 +401,15 @@ pub(crate) fn submit(
         }
 
         let mut inner = pool.shared.inner.lock().unwrap();
-        match class {
+        let queue_class = if matches!(class, TaskClass::SlowIo) && pool.shared.nthreads == 1 {
+            // A single-worker pool cannot make progress benefit from the SlowIo
+            // limiter and the special RunSlow path can starve chained fs work.
+            TaskClass::Cpu
+        } else {
+            class
+        };
+
+        match queue_class {
             TaskClass::Cpu => inner.queue.push_back(QueueItem::Task(raw)),
             TaskClass::SlowIo => {
                 inner.slow_pending.push_back(raw);
