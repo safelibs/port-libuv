@@ -52,10 +52,35 @@ runtime_deb="$(realpath "${dist_dir}/$(basename "${runtime_src}")")"
 dev_deb="$(realpath "${dist_dir}/$(basename "${dev_src}")")"
 runtime_repo_rel="${runtime_deb#${repo_root}/}"
 dev_repo_rel="${dev_deb#${repo_root}/}"
+runtime_package="$(dpkg-deb -f "${runtime_deb}" Package)"
+runtime_version="$(dpkg-deb -f "${runtime_deb}" Version)"
+runtime_arch="$(dpkg-deb -f "${runtime_deb}" Architecture)"
+dev_package="$(dpkg-deb -f "${dev_deb}" Package)"
+dev_version="$(dpkg-deb -f "${dev_deb}" Version)"
+dev_arch="$(dpkg-deb -f "${dev_deb}" Architecture)"
 
-cat >"${dist_dir}/artifacts.env" <<EOF
+[[ "${runtime_package}" = "${runtime_pkg}" ]] || {
+  echo "unexpected runtime package name: ${runtime_package}" >&2
+  exit 1
+}
+[[ "${dev_package}" = "${dev_pkg}" ]] || {
+  echo "unexpected development package name: ${dev_package}" >&2
+  exit 1
+}
+
+artifacts_tmp="$(mktemp "${dist_dir}/artifacts.env.XXXXXX")"
+
+cat >"${artifacts_tmp}" <<EOF
 LIBUV_SAFE_RUNTIME_DEB=${runtime_deb}
 LIBUV_SAFE_DEV_DEB=${dev_deb}
 LIBUV_SAFE_RUNTIME_DEB_REPO_REL=${runtime_repo_rel}
 LIBUV_SAFE_DEV_DEB_REPO_REL=${dev_repo_rel}
+LIBUV_SAFE_RUNTIME_PACKAGE=${runtime_package}
+LIBUV_SAFE_RUNTIME_VERSION=${runtime_version}
+LIBUV_SAFE_RUNTIME_ARCH=${runtime_arch}
+LIBUV_SAFE_DEV_PACKAGE=${dev_package}
+LIBUV_SAFE_DEV_VERSION=${dev_version}
+LIBUV_SAFE_DEV_ARCH=${dev_arch}
 EOF
+
+mv "${artifacts_tmp}" "${dist_dir}/artifacts.env"
