@@ -4992,15 +4992,11 @@ pub const __LONG_MAX__: ::core::ffi::c_long = 9223372036854775807 as ::core::ffi
 
 #[no_mangle]
 // SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
-pub extern "C" fn uv__kernel_version() -> ::core::ffi::c_uint {
-    unsafe { 0 }
-}
+pub extern "C" fn uv__kernel_version() -> ::core::ffi::c_uint {unsafe{0}}
 
 #[no_mangle]
 // SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
-pub extern "C" fn uv__use_io_uring() -> ::core::ffi::c_int {
-    unsafe { 0 }
-}
+pub extern "C" fn uv__use_io_uring() -> ::core::ffi::c_int {unsafe{0}}
 
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 pub(crate) fn backend_fd(
