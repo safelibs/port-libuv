@@ -168,11 +168,8 @@ fn ensure_global_init() {
         if unsafe { libc::pthread_atfork(None, None, Some(after_fork_child)) } != 0 {
             unsafe { libc::abort() };
         }
-    });
-
-    if unsafe { SIGNAL_LOCK_PIPEFD[0] } == -1 {
         unsafe { global_reinit() };
-    }
+    });
 }
 
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
