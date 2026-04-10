@@ -12,7 +12,6 @@ compile_error!("safe/libuv currently targets linux/x86_64 only");
 pub mod abi;
 pub mod core;
 mod exports;
-pub mod stub;
 pub mod threading;
 mod util {
     pub(crate) mod idna;

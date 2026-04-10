@@ -1694,50 +1694,67 @@ pub const CLOCK_MONOTONIC: ::core::ffi::c_int = 1 as ::core::ffi::c_int;
 pub const UV_PRIORITY_LOW: ::core::ffi::c_int = 19 as ::core::ffi::c_int;
 pub const UV_PRIORITY_HIGHEST: ::core::ffi::c_int = -(20 as ::core::ffi::c_int);
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
-    return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
+    unsafe {
+        return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
-    return (*q).next;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
+    unsafe {
+        return (*q).next;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_split(
-    mut h: *mut uv__queue,
-    mut q: *mut uv__queue,
-    mut n: *mut uv__queue,
-) {
-    (*n).prev = (*h).prev;
-    (*(*n).prev).next = n;
-    (*n).next = q;
-    (*h).prev = (*q).prev;
-    (*(*h).prev).next = h;
-    (*q).prev = n;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_split(mut h: *mut uv__queue, mut q: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        (*n).prev = (*h).prev;
+        (*(*n).prev).next = n;
+        (*n).next = q;
+        (*h).prev = (*q).prev;
+        (*(*h).prev).next = h;
+        (*q).prev = n;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
-    if uv__queue_empty(h) != 0 {
-        uv__queue_init(n);
-    } else {
-        uv__queue_split(h, (*h).next, n);
-    };
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        if uv__queue_empty(h) != 0 {
+            uv__queue_init(n);
+        } else {
+            uv__queue_split(h, (*h).next, n);
+        };
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
-    (*(*q).prev).next = (*q).next;
-    (*(*q).next).prev = (*q).prev;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
+    unsafe {
+        (*(*q).prev).next = (*q).next;
+        (*(*q).next).prev = (*q).prev;
+    }
 }
 pub const POLLIN: ::core::ffi::c_int = 0x1 as ::core::ffi::c_int;
 pub const POLLPRI: ::core::ffi::c_int = 0x2 as ::core::ffi::c_int;
@@ -1746,1668 +1763,1825 @@ pub const POLLRDHUP: ::core::ffi::c_int = 0x2000 as ::core::ffi::c_int;
 pub const FIONBIO: ::core::ffi::c_int = 0x5421 as ::core::ffi::c_int;
 pub const UV__POLLRDHUP: ::core::ffi::c_int = POLLRDHUP;
 pub const UV__POLLPRI: ::core::ffi::c_int = POLLPRI;
-unsafe extern "C" fn uv__update_time(mut loop_0: *mut uv_loop_t) {
-    (*loop_0).time = uv__hrtime(UV_CLOCK_FAST).wrapping_div(1000000 as uint64_t);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__update_time(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        (*loop_0).time = uv__hrtime(UV_CLOCK_FAST).wrapping_div(1000000 as uint64_t);
+    }
 }
 pub const __NR_close: ::core::ffi::c_int = 3 as ::core::ffi::c_int;
 pub const __NR_gettid: ::core::ffi::c_int = 186 as ::core::ffi::c_int;
 pub const SYS_close: ::core::ffi::c_int = __NR_close;
 pub const SYS_gettid: ::core::ffi::c_int = __NR_gettid;
-pub(crate) unsafe fn uv_clock_gettime(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_clock_gettime(
     mut clock_id: uv_clock_id,
     mut ts: *mut uv_timespec64_t,
 ) -> ::core::ffi::c_int {
-    let mut t: timespec = timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    let mut r: ::core::ffi::c_int = 0;
-    if ts.is_null() {
-        return UV_EFAULT as ::core::ffi::c_int;
-    }
-    match clock_id as ::core::ffi::c_uint {
-        0 => {
-            r = clock_gettime(CLOCK_MONOTONIC, &raw mut t);
+    unsafe {
+        let mut t: timespec = timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        let mut r: ::core::ffi::c_int = 0;
+        if ts.is_null() {
+            return UV_EFAULT as ::core::ffi::c_int;
         }
-        1 => {
-            r = clock_gettime(CLOCK_REALTIME, &raw mut t);
+        match clock_id as ::core::ffi::c_uint {
+            0 => {
+                r = clock_gettime(CLOCK_MONOTONIC, &raw mut t);
+            }
+            1 => {
+                r = clock_gettime(CLOCK_REALTIME, &raw mut t);
+            }
+            _ => return UV_EINVAL as ::core::ffi::c_int,
         }
-        _ => return UV_EINVAL as ::core::ffi::c_int,
+        if r != 0 {
+            return -*__errno_location();
+        }
+        (*ts).tv_sec = t.tv_sec as int64_t;
+        (*ts).tv_nsec = t.tv_nsec as int32_t;
+        return 0 as ::core::ffi::c_int;
     }
-    if r != 0 {
-        return -*__errno_location();
-    }
-    (*ts).tv_sec = t.tv_sec as int64_t;
-    (*ts).tv_nsec = t.tv_nsec as int32_t;
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_hrtime() -> uint64_t {
-    return uv__hrtime(UV_CLOCK_PRECISE);
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_hrtime() -> uint64_t {
+    unsafe {
+        return uv__hrtime(UV_CLOCK_PRECISE);
+    }
 }
-pub(crate) unsafe fn uv_close(mut handle: *mut uv_handle_t, mut close_cb: uv_close_cb) {
-    '_c2rust_label: {
-        if !((*handle).flags
-            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-                as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint)
-        {
-        } else {
-            __assert_fail(
-                b"!uv__is_closing(handle)\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                148 as ::core::ffi::c_uint,
-                b"void uv_close(uv_handle_t *, uv_close_cb)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*handle).flags |= UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint;
-    (*handle).close_cb = close_cb;
-    match (*handle).type_0 as ::core::ffi::c_uint {
-        7 => {
-            uv__pipe_close(handle as *mut uv_pipe_t);
-        }
-        14 => {
-            uv__stream_close(handle as *mut uv_stream_t);
-        }
-        12 => {
-            uv__tcp_close(handle as *mut uv_tcp_t);
-        }
-        15 => {
-            uv__udp_close(handle as *mut uv_udp_t);
-        }
-        9 => {
-            uv__prepare_close(handle as *mut uv_prepare_t);
-        }
-        2 => {
-            uv__check_close(handle as *mut uv_check_t);
-        }
-        6 => {
-            uv__idle_close(handle as *mut uv_idle_t);
-        }
-        1 => {
-            uv__async_close(handle as *mut uv_async_t);
-        }
-        13 => {
-            uv__timer_close(handle as *mut uv_timer_t);
-        }
-        10 => {
-            uv__process_close(handle as *mut uv_process_t);
-        }
-        3 => {
-            uv__fs_event_close(handle as *mut uv_fs_event_t);
-        }
-        8 => {
-            uv__poll_close(handle as *mut uv_poll_t);
-        }
-        4 => {
-            uv__fs_poll_close(handle as *mut uv_fs_poll_t);
-            return;
-        }
-        16 => {
-            uv__signal_close(handle as *mut uv_signal_t);
-        }
-        _ => {
-            '_c2rust_label_0: {
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_close(mut handle: *mut uv_handle_t, mut close_cb: uv_close_cb) {
+    unsafe {
+        '_c2rust_label: {
+            if !((*handle).flags
+                & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                    as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint)
+            {
+            } else {
                 __assert_fail(
-                    b"0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"!uv__is_closing(handle)\0" as *const u8 as *const ::core::ffi::c_char,
                     b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
                         as *const ::core::ffi::c_char,
-                    222 as ::core::ffi::c_uint,
+                    148 as ::core::ffi::c_uint,
                     b"void uv_close(uv_handle_t *, uv_close_cb)\0" as *const u8
                         as *const ::core::ffi::c_char,
                 );
-            };
+            }
+        };
+        (*handle).flags |= UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint;
+        (*handle).close_cb = close_cb;
+        match (*handle).type_0 as ::core::ffi::c_uint {
+            7 => {
+                uv__pipe_close(handle as *mut uv_pipe_t);
+            }
+            14 => {
+                uv__stream_close(handle as *mut uv_stream_t);
+            }
+            12 => {
+                uv__tcp_close(handle as *mut uv_tcp_t);
+            }
+            15 => {
+                uv__udp_close(handle as *mut uv_udp_t);
+            }
+            9 => {
+                uv__prepare_close(handle as *mut uv_prepare_t);
+            }
+            2 => {
+                uv__check_close(handle as *mut uv_check_t);
+            }
+            6 => {
+                uv__idle_close(handle as *mut uv_idle_t);
+            }
+            1 => {
+                uv__async_close(handle as *mut uv_async_t);
+            }
+            13 => {
+                uv__timer_close(handle as *mut uv_timer_t);
+            }
+            10 => {
+                uv__process_close(handle as *mut uv_process_t);
+            }
+            3 => {
+                uv__fs_event_close(handle as *mut uv_fs_event_t);
+            }
+            8 => {
+                uv__poll_close(handle as *mut uv_poll_t);
+            }
+            4 => {
+                uv__fs_poll_close(handle as *mut uv_fs_poll_t);
+                return;
+            }
+            16 => {
+                uv__signal_close(handle as *mut uv_signal_t);
+            }
+            _ => {
+                '_c2rust_label_0: {
+                    __assert_fail(
+                        b"0\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        222 as ::core::ffi::c_uint,
+                        b"void uv_close(uv_handle_t *, uv_close_cb)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                };
+            }
         }
+        uv__make_close_pending(handle);
     }
-    uv__make_close_pending(handle);
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__socket_sockopt(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__socket_sockopt(
     mut handle: *mut uv_handle_t,
     mut optname: ::core::ffi::c_int,
     mut value: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    let mut fd: ::core::ffi::c_int = 0;
-    let mut len: socklen_t = 0;
-    if handle.is_null() || value.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        let mut fd: ::core::ffi::c_int = 0;
+        let mut len: socklen_t = 0;
+        if handle.is_null() || value.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*handle).type_0 as ::core::ffi::c_uint
+            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
+            || (*handle).type_0 as ::core::ffi::c_uint
+                == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            fd = (*(handle as *mut uv_stream_t)).io_watcher.fd;
+        } else if (*handle).type_0 as ::core::ffi::c_uint
+            == UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            fd = (*(handle as *mut uv_udp_t)).io_watcher.fd;
+        } else {
+            return UV_ENOTSUP as ::core::ffi::c_int;
+        }
+        len = ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t;
+        if *value == 0 as ::core::ffi::c_int {
+            r = getsockopt(
+                fd,
+                SOL_SOCKET,
+                optname,
+                value as *mut ::core::ffi::c_void,
+                &raw mut len,
+            );
+        } else {
+            r = setsockopt(
+                fd,
+                SOL_SOCKET,
+                optname,
+                value as *const ::core::ffi::c_void,
+                len,
+            );
+        }
+        if r < 0 as ::core::ffi::c_int {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if (*handle).type_0 as ::core::ffi::c_uint
-        == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-        || (*handle).type_0 as ::core::ffi::c_uint
-            == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        fd = (*(handle as *mut uv_stream_t)).io_watcher.fd;
-    } else if (*handle).type_0 as ::core::ffi::c_uint
-        == UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        fd = (*(handle as *mut uv_udp_t)).io_watcher.fd;
-    } else {
-        return UV_ENOTSUP as ::core::ffi::c_int;
-    }
-    len = ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t;
-    if *value == 0 as ::core::ffi::c_int {
-        r = getsockopt(
-            fd,
-            SOL_SOCKET,
-            optname,
-            value as *mut ::core::ffi::c_void,
-            &raw mut len,
-        );
-    } else {
-        r = setsockopt(
-            fd,
-            SOL_SOCKET,
-            optname,
-            value as *const ::core::ffi::c_void,
-            len,
-        );
-    }
-    if r < 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__make_close_pending(mut handle: *mut uv_handle_t) {
-    '_c2rust_label: {
-        if (*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        } else {
-            __assert_fail(
-                b"handle->flags & UV_HANDLE_CLOSING\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                257 as ::core::ffi::c_uint,
-                b"void uv__make_close_pending(uv_handle_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if (*handle).flags & UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
-        } else {
-            __assert_fail(
-                b"!(handle->flags & UV_HANDLE_CLOSED)\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                258 as ::core::ffi::c_uint,
-                b"void uv__make_close_pending(uv_handle_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*handle).next_closing = (*(*handle).loop_0).closing_handles;
-    (*(*handle).loop_0).closing_handles = handle;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__getiovmax() -> ::core::ffi::c_int {
-    return IOV_MAX;
-}
-unsafe extern "C" fn uv__finish_close(mut handle: *mut uv_handle_t) {
-    let mut sh: *mut uv_signal_t = ::core::ptr::null_mut::<uv_signal_t>();
-    '_c2rust_label: {
-        if (*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        } else {
-            __assert_fail(
-                b"handle->flags & UV_HANDLE_CLOSING\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                302 as ::core::ffi::c_uint,
-                b"void uv__finish_close(uv_handle_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if (*handle).flags & UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
-        } else {
-            __assert_fail(
-                b"!(handle->flags & UV_HANDLE_CLOSED)\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                303 as ::core::ffi::c_uint,
-                b"void uv__finish_close(uv_handle_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*handle).flags |= UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint;
-    match (*handle).type_0 as ::core::ffi::c_uint {
-        9 | 2 | 6 | 1 | 13 | 10 | 3 | 4 | 8 => {}
-        16 => {
-            sh = handle as *mut uv_signal_t;
-            if (*sh).caught_signals > (*sh).dispatched_signals {
-                (*handle).flags ^= UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint;
-                uv__make_close_pending(handle);
-                return;
-            }
-        }
-        7 | 12 | 14 => {
-            uv__stream_destroy(handle as *mut uv_stream_t);
-        }
-        15 => {
-            uv__udp_finish_close(handle as *mut uv_udp_t);
-        }
-        _ => {
-            '_c2rust_label_1: {
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__make_close_pending(mut handle: *mut uv_handle_t) {
+    unsafe {
+        '_c2rust_label: {
+            if (*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            {
+            } else {
                 __assert_fail(
-                    b"0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"handle->flags & UV_HANDLE_CLOSING\0" as *const u8
+                        as *const ::core::ffi::c_char,
                     b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
                         as *const ::core::ffi::c_char,
-                    343 as ::core::ffi::c_uint,
+                    257 as ::core::ffi::c_uint,
+                    b"void uv__make_close_pending(uv_handle_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if (*handle).flags & UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint == 0
+            {
+            } else {
+                __assert_fail(
+                    b"!(handle->flags & UV_HANDLE_CLOSED)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    258 as ::core::ffi::c_uint,
+                    b"void uv__make_close_pending(uv_handle_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*handle).next_closing = (*(*handle).loop_0).closing_handles;
+        (*(*handle).loop_0).closing_handles = handle;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__getiovmax() -> ::core::ffi::c_int {
+    unsafe {
+        return IOV_MAX;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__finish_close(mut handle: *mut uv_handle_t) {
+    unsafe {
+        let mut sh: *mut uv_signal_t = ::core::ptr::null_mut::<uv_signal_t>();
+        '_c2rust_label: {
+            if (*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            {
+            } else {
+                __assert_fail(
+                    b"handle->flags & UV_HANDLE_CLOSING\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    302 as ::core::ffi::c_uint,
                     b"void uv__finish_close(uv_handle_t *)\0" as *const u8
                         as *const ::core::ffi::c_char,
                 );
-            };
-        }
-    }
-    if !((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_REF as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if !((*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint)
-        {
-            if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0 as ::core::ffi::c_uint
+            }
+        };
+        '_c2rust_label_0: {
+            if (*handle).flags & UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint == 0
             {
-                (*(*handle).loop_0).active_handles =
-                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            } else {
+                __assert_fail(
+                    b"!(handle->flags & UV_HANDLE_CLOSED)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    303 as ::core::ffi::c_uint,
+                    b"void uv__finish_close(uv_handle_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*handle).flags |= UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint;
+        match (*handle).type_0 as ::core::ffi::c_uint {
+            9 | 2 | 6 | 1 | 13 | 10 | 3 | 4 | 8 => {}
+            16 => {
+                sh = handle as *mut uv_signal_t;
+                if (*sh).caught_signals > (*sh).dispatched_signals {
+                    (*handle).flags ^=
+                        UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint;
+                    uv__make_close_pending(handle);
+                    return;
+                }
+            }
+            7 | 12 | 14 => {
+                uv__stream_destroy(handle as *mut uv_stream_t);
+            }
+            15 => {
+                uv__udp_finish_close(handle as *mut uv_udp_t);
+            }
+            _ => {
+                '_c2rust_label_1: {
+                    __assert_fail(
+                        b"0\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        343 as ::core::ffi::c_uint,
+                        b"void uv__finish_close(uv_handle_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                };
             }
         }
-    }
-    uv__queue_remove(&raw mut (*handle).handle_queue);
-    if (*handle).close_cb.is_some() {
-        (*handle).close_cb.expect("non-null function pointer")(handle);
-    }
-}
-unsafe extern "C" fn uv__run_closing_handles(mut loop_0: *mut uv_loop_t) {
-    let mut p: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
-    let mut q: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
-    p = (*loop_0).closing_handles;
-    (*loop_0).closing_handles = ::core::ptr::null_mut::<uv_handle_t>();
-    while !p.is_null() {
-        q = (*p).next_closing;
-        uv__finish_close(p);
-        p = q;
-    }
-}
-pub(crate) unsafe fn uv_is_closing(mut handle: *const uv_handle_t) -> ::core::ffi::c_int {
-    return ((*handle).flags
-        & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-            as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_backend_fd(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
-    return (*loop_0).backend_fd;
-}
-unsafe extern "C" fn uv__loop_alive(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
-    return ((*loop_0).active_handles > 0 as ::core::ffi::c_uint
-        || (*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint
-        || uv__queue_empty(&raw const (*loop_0).pending_queue) == 0
-        || !(*loop_0).closing_handles.is_null()) as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__backend_timeout(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
-    if (*loop_0).stop_flag == 0 as ::core::ffi::c_uint
-        && ((*loop_0).active_handles > 0 as ::core::ffi::c_uint
-            || (*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint)
-        && uv__queue_empty(&raw const (*loop_0).pending_queue) != 0
-        && uv__queue_empty(&raw const (*loop_0).idle_handles) != 0
-        && (*loop_0).flags & UV_LOOP_REAP_CHILDREN as ::core::ffi::c_int as ::core::ffi::c_ulong
-            == 0 as ::core::ffi::c_ulong
-        && (*loop_0).closing_handles.is_null()
-    {
-        return uv__next_timeout(loop_0);
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_backend_timeout(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
-    if uv__queue_empty(&raw const (*loop_0).watcher_queue) != 0 {
-        return uv__backend_timeout(loop_0);
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_loop_alive(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
-    return uv__loop_alive(loop_0);
-}
-pub(crate) unsafe fn uv_run(
-    mut loop_0: *mut uv_loop_t,
-    mut mode: uv_run_mode,
-) -> ::core::ffi::c_int {
-    let mut timeout: ::core::ffi::c_int = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    let mut can_sleep: ::core::ffi::c_int = 0;
-    r = uv__loop_alive(loop_0);
-    if r == 0 {
-        uv__update_time(loop_0);
-    }
-    if mode as ::core::ffi::c_uint == UV_RUN_DEFAULT as ::core::ffi::c_int as ::core::ffi::c_uint
-        && r != 0 as ::core::ffi::c_int
-        && (*loop_0).stop_flag == 0 as ::core::ffi::c_uint
-    {
-        uv__update_time(loop_0);
-        uv__run_timers(loop_0);
-    }
-    while r != 0 as ::core::ffi::c_int && (*loop_0).stop_flag == 0 as ::core::ffi::c_uint {
-        can_sleep = (uv__queue_empty(&raw mut (*loop_0).pending_queue) != 0
-            && uv__queue_empty(&raw mut (*loop_0).idle_handles) != 0)
-            as ::core::ffi::c_int;
-        uv__run_pending(loop_0);
-        uv__run_idle(loop_0);
-        uv__run_prepare(loop_0);
-        timeout = 0 as ::core::ffi::c_int;
-        if mode as ::core::ffi::c_uint == UV_RUN_ONCE as ::core::ffi::c_int as ::core::ffi::c_uint
-            && can_sleep != 0
-            || mode as ::core::ffi::c_uint
-                == UV_RUN_DEFAULT as ::core::ffi::c_int as ::core::ffi::c_uint
+        if !((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
         {
-            timeout = uv__backend_timeout(loop_0);
+            (*handle).flags &= !(UV_HANDLE_REF as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if !((*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint)
+            {
+                if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0 as ::core::ffi::c_uint
+                {
+                    (*(*handle).loop_0).active_handles =
+                        (*(*handle).loop_0).active_handles.wrapping_sub(1);
+                }
+            }
         }
-        let ref mut fresh0 = (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t))
-            .loop_metrics
-            .metrics
-            .loop_count;
-        *fresh0 = (*fresh0).wrapping_add(1);
-        uv__io_poll(loop_0, timeout);
-        crate::unix::fd::process_reap(loop_0.cast());
-        r = 0 as ::core::ffi::c_int;
-        while r < 8 as ::core::ffi::c_int && uv__queue_empty(&raw mut (*loop_0).pending_queue) == 0
+        uv__queue_remove(&raw mut (*handle).handle_queue);
+        if (*handle).close_cb.is_some() {
+            (*handle).close_cb.expect("non-null function pointer")(handle);
+        }
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__run_closing_handles(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut p: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
+        let mut q: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
+        p = (*loop_0).closing_handles;
+        (*loop_0).closing_handles = ::core::ptr::null_mut::<uv_handle_t>();
+        while !p.is_null() {
+            q = (*p).next_closing;
+            uv__finish_close(p);
+            p = q;
+        }
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_is_closing(mut handle: *const uv_handle_t) -> ::core::ffi::c_int {
+    unsafe {
+        return ((*handle).flags
+            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_backend_fd(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        return (*loop_0).backend_fd;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__loop_alive(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        return ((*loop_0).active_handles > 0 as ::core::ffi::c_uint
+            || (*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint
+            || uv__queue_empty(&raw const (*loop_0).pending_queue) == 0
+            || !(*loop_0).closing_handles.is_null()) as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__backend_timeout(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        if (*loop_0).stop_flag == 0 as ::core::ffi::c_uint
+            && ((*loop_0).active_handles > 0 as ::core::ffi::c_uint
+                || (*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint)
+            && uv__queue_empty(&raw const (*loop_0).pending_queue) != 0
+            && uv__queue_empty(&raw const (*loop_0).idle_handles) != 0
+            && (*loop_0).flags & UV_LOOP_REAP_CHILDREN as ::core::ffi::c_int as ::core::ffi::c_ulong
+                == 0 as ::core::ffi::c_ulong
+            && (*loop_0).closing_handles.is_null()
         {
-            uv__run_pending(loop_0);
-            r += 1;
+            return uv__next_timeout(loop_0);
         }
-        uv__metrics_update_idle_time(loop_0);
-        uv__run_check(loop_0);
-        uv__run_closing_handles(loop_0);
-        uv__update_time(loop_0);
-        uv__run_timers(loop_0);
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_backend_timeout(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        if uv__queue_empty(&raw const (*loop_0).watcher_queue) != 0 {
+            return uv__backend_timeout(loop_0);
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_alive(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        return uv__loop_alive(loop_0);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_run(mut loop_0: *mut uv_loop_t, mut mode: uv_run_mode) -> ::core::ffi::c_int {
+    unsafe {
+        let mut timeout: ::core::ffi::c_int = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        let mut can_sleep: ::core::ffi::c_int = 0;
         r = uv__loop_alive(loop_0);
-        if mode as ::core::ffi::c_uint == UV_RUN_ONCE as ::core::ffi::c_int as ::core::ffi::c_uint
-            || mode as ::core::ffi::c_uint
-                == UV_RUN_NOWAIT as ::core::ffi::c_int as ::core::ffi::c_uint
-        {
-            break;
+        if r == 0 {
+            uv__update_time(loop_0);
         }
+        if mode as ::core::ffi::c_uint
+            == UV_RUN_DEFAULT as ::core::ffi::c_int as ::core::ffi::c_uint
+            && r != 0 as ::core::ffi::c_int
+            && (*loop_0).stop_flag == 0 as ::core::ffi::c_uint
+        {
+            uv__update_time(loop_0);
+            uv__run_timers(loop_0);
+        }
+        while r != 0 as ::core::ffi::c_int && (*loop_0).stop_flag == 0 as ::core::ffi::c_uint {
+            can_sleep = (uv__queue_empty(&raw mut (*loop_0).pending_queue) != 0
+                && uv__queue_empty(&raw mut (*loop_0).idle_handles) != 0)
+                as ::core::ffi::c_int;
+            uv__run_pending(loop_0);
+            uv__run_idle(loop_0);
+            uv__run_prepare(loop_0);
+            timeout = 0 as ::core::ffi::c_int;
+            if mode as ::core::ffi::c_uint
+                == UV_RUN_ONCE as ::core::ffi::c_int as ::core::ffi::c_uint
+                && can_sleep != 0
+                || mode as ::core::ffi::c_uint
+                    == UV_RUN_DEFAULT as ::core::ffi::c_int as ::core::ffi::c_uint
+            {
+                timeout = uv__backend_timeout(loop_0);
+            }
+            let ref mut fresh0 = (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t))
+                .loop_metrics
+                .metrics
+                .loop_count;
+            *fresh0 = (*fresh0).wrapping_add(1);
+            uv__io_poll(loop_0, timeout);
+            crate::unix::fd::process_reap(loop_0.cast());
+            r = 0 as ::core::ffi::c_int;
+            while r < 8 as ::core::ffi::c_int
+                && uv__queue_empty(&raw mut (*loop_0).pending_queue) == 0
+            {
+                uv__run_pending(loop_0);
+                r += 1;
+            }
+            uv__metrics_update_idle_time(loop_0);
+            uv__run_check(loop_0);
+            uv__run_closing_handles(loop_0);
+            uv__update_time(loop_0);
+            uv__run_timers(loop_0);
+            r = uv__loop_alive(loop_0);
+            if mode as ::core::ffi::c_uint
+                == UV_RUN_ONCE as ::core::ffi::c_int as ::core::ffi::c_uint
+                || mode as ::core::ffi::c_uint
+                    == UV_RUN_NOWAIT as ::core::ffi::c_int as ::core::ffi::c_uint
+            {
+                break;
+            }
+        }
+        if (*loop_0).stop_flag != 0 as ::core::ffi::c_uint {
+            (*loop_0).stop_flag = 0 as ::core::ffi::c_uint;
+        }
+        return r;
     }
-    if (*loop_0).stop_flag != 0 as ::core::ffi::c_uint {
-        (*loop_0).stop_flag = 0 as ::core::ffi::c_uint;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_update_time(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        uv__update_time(loop_0);
     }
-    return r;
 }
-pub(crate) unsafe fn uv_update_time(mut loop_0: *mut uv_loop_t) {
-    uv__update_time(loop_0);
-}
-pub(crate) unsafe fn uv_is_active(mut handle: *const uv_handle_t) -> ::core::ffi::c_int {
-    return ((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_is_active(mut handle: *const uv_handle_t) -> ::core::ffi::c_int {
+    unsafe {
+        return ((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__socket(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__socket(
     mut domain: ::core::ffi::c_int,
     mut type_0: ::core::ffi::c_int,
     mut protocol: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut sockfd: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    sockfd = socket(
-        domain,
-        type_0 | SOCK_NONBLOCK as ::core::ffi::c_int | SOCK_CLOEXEC as ::core::ffi::c_int,
-        protocol,
-    );
-    if sockfd != -(1 as ::core::ffi::c_int) {
+    unsafe {
+        let mut sockfd: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        sockfd = socket(
+            domain,
+            type_0 | SOCK_NONBLOCK as ::core::ffi::c_int | SOCK_CLOEXEC as ::core::ffi::c_int,
+            protocol,
+        );
+        if sockfd != -(1 as ::core::ffi::c_int) {
+            return sockfd;
+        }
+        if *__errno_location() != EINVAL {
+            return -*__errno_location();
+        }
+        sockfd = socket(domain, type_0, protocol);
+        if sockfd == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
+        }
+        err = uv__nonblock_ioctl(sockfd, 1 as ::core::ffi::c_int);
+        if err == 0 as ::core::ffi::c_int {
+            err = uv__cloexec(sockfd, 1 as ::core::ffi::c_int);
+        }
+        if err != 0 {
+            uv__close(sockfd);
+            return err;
+        }
         return sockfd;
     }
-    if *__errno_location() != EINVAL {
-        return -*__errno_location();
-    }
-    sockfd = socket(domain, type_0, protocol);
-    if sockfd == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
-    }
-    err = uv__nonblock_ioctl(sockfd, 1 as ::core::ffi::c_int);
-    if err == 0 as ::core::ffi::c_int {
-        err = uv__cloexec(sockfd, 1 as ::core::ffi::c_int);
-    }
-    if err != 0 {
-        uv__close(sockfd);
-        return err;
-    }
-    return sockfd;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__open_file(mut path: *const ::core::ffi::c_char) -> *mut FILE {
-    let mut fd: ::core::ffi::c_int = 0;
-    let mut fp: *mut FILE = ::core::ptr::null_mut::<FILE>();
-    fd = uv__open_cloexec(path, O_RDONLY);
-    if fd < 0 as ::core::ffi::c_int {
-        return ::core::ptr::null_mut::<FILE>();
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__open_file(mut path: *const ::core::ffi::c_char) -> *mut FILE {
+    unsafe {
+        let mut fd: ::core::ffi::c_int = 0;
+        let mut fp: *mut FILE = ::core::ptr::null_mut::<FILE>();
+        fd = uv__open_cloexec(path, O_RDONLY);
+        if fd < 0 as ::core::ffi::c_int {
+            return ::core::ptr::null_mut::<FILE>();
+        }
+        fp = fdopen(fd, b"r\0" as *const u8 as *const ::core::ffi::c_char);
+        if fp.is_null() {
+            uv__close(fd);
+        }
+        return fp;
     }
-    fp = fdopen(fd, b"r\0" as *const u8 as *const ::core::ffi::c_char);
-    if fp.is_null() {
-        uv__close(fd);
-    }
-    return fp;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__accept(mut sockfd: ::core::ffi::c_int) -> ::core::ffi::c_int {
-    let mut peerfd: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    &raw mut err;
-    '_c2rust_label: {
-        if sockfd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"sockfd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                552 as ::core::ffi::c_uint,
-                b"int uv__accept(int)\0" as *const u8 as *const ::core::ffi::c_char,
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__accept(mut sockfd: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        let mut peerfd: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        &raw mut err;
+        '_c2rust_label: {
+            if sockfd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"sockfd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    552 as ::core::ffi::c_uint,
+                    b"int uv__accept(int)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        loop {
+            peerfd = accept4(
+                sockfd,
+                __SOCKADDR_ARG {
+                    __sockaddr__: ::core::ptr::null_mut::<::core::ffi::c_void>() as *mut sockaddr,
+                },
+                ::core::ptr::null_mut::<socklen_t>(),
+                SOCK_NONBLOCK as ::core::ffi::c_int | SOCK_CLOEXEC as ::core::ffi::c_int,
             );
+            if !(peerfd == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
         }
-    };
-    loop {
-        peerfd = accept4(
-            sockfd,
-            __SOCKADDR_ARG {
-                __sockaddr__: ::core::ptr::null_mut::<::core::ffi::c_void>() as *mut sockaddr,
-            },
-            ::core::ptr::null_mut::<socklen_t>(),
-            SOCK_NONBLOCK as ::core::ffi::c_int | SOCK_CLOEXEC as ::core::ffi::c_int,
-        );
-        if !(peerfd == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
+        if peerfd == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
         }
+        return peerfd;
     }
-    if peerfd == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__close_nocancel(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        return syscall(SYS_close as ::core::ffi::c_long, fd) as ::core::ffi::c_int;
     }
-    return peerfd;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__close_nocancel(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
-    return syscall(SYS_close as ::core::ffi::c_long, fd) as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__close_nocheckstdio(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
-    let mut saved_errno: ::core::ffi::c_int = 0;
-    let mut rc: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if fd > -(1 as ::core::ffi::c_int) {
-        } else {
-            __assert_fail(
-                b"fd > -1\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                618 as ::core::ffi::c_uint,
-                b"int uv__close_nocheckstdio(int)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__close_nocheckstdio(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        let mut saved_errno: ::core::ffi::c_int = 0;
+        let mut rc: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if fd > -(1 as ::core::ffi::c_int) {
+            } else {
+                __assert_fail(
+                    b"fd > -1\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    618 as ::core::ffi::c_uint,
+                    b"int uv__close_nocheckstdio(int)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        saved_errno = *__errno_location();
+        rc = uv__close_nocancel(fd);
+        if rc == -(1 as ::core::ffi::c_int) {
+            rc = -*__errno_location();
+            if rc == UV_EINTR as ::core::ffi::c_int || rc == -(115 as ::core::ffi::c_int) {
+                rc = 0 as ::core::ffi::c_int;
+            }
+            *__errno_location() = saved_errno;
         }
-    };
-    saved_errno = *__errno_location();
-    rc = uv__close_nocancel(fd);
-    if rc == -(1 as ::core::ffi::c_int) {
-        rc = -*__errno_location();
-        if rc == UV_EINTR as ::core::ffi::c_int || rc == -(115 as ::core::ffi::c_int) {
-            rc = 0 as ::core::ffi::c_int;
-        }
-        *__errno_location() = saved_errno;
+        return rc;
     }
-    return rc;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__close(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
-    '_c2rust_label: {
-        if fd > 2 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"fd > STDERR_FILENO\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                634 as ::core::ffi::c_uint,
-                b"int uv__close(int)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    return uv__close_nocheckstdio(fd);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__close(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        '_c2rust_label: {
+            if fd > 2 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"fd > STDERR_FILENO\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    634 as ::core::ffi::c_uint,
+                    b"int uv__close(int)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        return uv__close_nocheckstdio(fd);
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__nonblock_ioctl(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__nonblock_ioctl(
     mut fd: ::core::ffi::c_int,
     mut set: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    loop {
-        r = ioctl(fd, FIONBIO as ::core::ffi::c_ulong, &raw mut set);
-        if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        loop {
+            r = ioctl(fd, FIONBIO as ::core::ffi::c_ulong, &raw mut set);
+            if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
         }
-    }
-    if r != 0 {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__nonblock_fcntl(
-    mut fd: ::core::ffi::c_int,
-    mut set: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    let mut flags: ::core::ffi::c_int = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    loop {
-        r = fcntl(fd, F_GETFL);
-        if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
+        if r != 0 {
+            return -*__errno_location();
         }
-    }
-    if r == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
-    }
-    if (r & O_NONBLOCK != 0) as ::core::ffi::c_int == (set != 0) as ::core::ffi::c_int {
         return 0 as ::core::ffi::c_int;
     }
-    if set != 0 {
-        flags = r | O_NONBLOCK;
-    } else {
-        flags = r & !O_NONBLOCK;
-    }
-    loop {
-        r = fcntl(fd, F_SETFL, flags);
-        if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
-        }
-    }
-    if r != 0 {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__cloexec(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__nonblock_fcntl(
     mut fd: ::core::ffi::c_int,
     mut set: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut flags: ::core::ffi::c_int = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    flags = 0 as ::core::ffi::c_int;
-    if set != 0 {
-        flags = FD_CLOEXEC;
-    }
-    loop {
-        r = fcntl(fd, F_SETFD, flags);
-        if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
+    unsafe {
+        let mut flags: ::core::ffi::c_int = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        loop {
+            r = fcntl(fd, F_GETFL);
+            if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
         }
+        if r == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
+        }
+        if (r & O_NONBLOCK != 0) as ::core::ffi::c_int == (set != 0) as ::core::ffi::c_int {
+            return 0 as ::core::ffi::c_int;
+        }
+        if set != 0 {
+            flags = r | O_NONBLOCK;
+        } else {
+            flags = r & !O_NONBLOCK;
+        }
+        loop {
+            r = fcntl(fd, F_SETFL, flags);
+            if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        if r != 0 {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if r != 0 {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__recvmsg(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__cloexec(
+    mut fd: ::core::ffi::c_int,
+    mut set: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut flags: ::core::ffi::c_int = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        flags = 0 as ::core::ffi::c_int;
+        if set != 0 {
+            flags = FD_CLOEXEC;
+        }
+        loop {
+            r = fcntl(fd, F_SETFD, flags);
+            if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        if r != 0 {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__recvmsg(
     mut fd: ::core::ffi::c_int,
     mut msg: *mut msghdr,
     mut flags: ::core::ffi::c_int,
 ) -> ssize_t {
-    let mut rc: ssize_t = 0;
-    rc = recvmsg(fd, msg, flags | MSG_CMSG_CLOEXEC as ::core::ffi::c_int);
-    if rc == -(1 as ::core::ffi::c_int) as ssize_t {
-        return -*__errno_location() as ssize_t;
+    unsafe {
+        let mut rc: ssize_t = 0;
+        rc = recvmsg(fd, msg, flags | MSG_CMSG_CLOEXEC as ::core::ffi::c_int);
+        if rc == -(1 as ::core::ffi::c_int) as ssize_t {
+            return -*__errno_location() as ssize_t;
+        }
+        return rc;
     }
-    return rc;
 }
-pub(crate) unsafe fn uv_cwd(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_cwd(
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut scratch: [::core::ffi::c_char; 4097] = [0; 4097];
-    if buffer.is_null() || size.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if getcwd(buffer, *size).is_null() {
-        if *__errno_location() != ERANGE {
-            return -*__errno_location();
+    unsafe {
+        let mut scratch: [::core::ffi::c_char; 4097] = [0; 4097];
+        if buffer.is_null() || size.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
         }
-        if getcwd(
-            &raw mut scratch as *mut ::core::ffi::c_char,
-            ::core::mem::size_of::<[::core::ffi::c_char; 4097]>() as size_t,
-        )
-        .is_null()
+        if getcwd(buffer, *size).is_null() {
+            if *__errno_location() != ERANGE {
+                return -*__errno_location();
+            }
+            if getcwd(
+                &raw mut scratch as *mut ::core::ffi::c_char,
+                ::core::mem::size_of::<[::core::ffi::c_char; 4097]>() as size_t,
+            )
+            .is_null()
+            {
+                return -*__errno_location();
+            }
+            buffer = &raw mut scratch as *mut ::core::ffi::c_char;
+        }
+        *size = strlen(buffer);
+        if *size > 1 as size_t
+            && *buffer.offset((*size).wrapping_sub(1 as size_t) as isize) as ::core::ffi::c_int
+                == '/' as i32
         {
+            *size = (*size).wrapping_sub(1 as size_t);
+            *buffer.offset(*size as isize) = '\0' as i32 as ::core::ffi::c_char;
+        }
+        if buffer == &raw mut scratch as *mut ::core::ffi::c_char {
+            *size = (*size).wrapping_add(1 as size_t);
+            return UV_ENOBUFS as ::core::ffi::c_int;
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_chdir(mut dir: *const ::core::ffi::c_char) -> ::core::ffi::c_int {
+    unsafe {
+        if chdir(dir) != 0 {
             return -*__errno_location();
         }
-        buffer = &raw mut scratch as *mut ::core::ffi::c_char;
-    }
-    *size = strlen(buffer);
-    if *size > 1 as size_t
-        && *buffer.offset((*size).wrapping_sub(1 as size_t) as isize) as ::core::ffi::c_int
-            == '/' as i32
-    {
-        *size = (*size).wrapping_sub(1 as size_t);
-        *buffer.offset(*size as isize) = '\0' as i32 as ::core::ffi::c_char;
-    }
-    if buffer == &raw mut scratch as *mut ::core::ffi::c_char {
-        *size = (*size).wrapping_add(1 as size_t);
-        return UV_ENOBUFS as ::core::ffi::c_int;
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_chdir(mut dir: *const ::core::ffi::c_char) -> ::core::ffi::c_int {
-    if chdir(dir) != 0 {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_disable_stdio_inheritance() {
-    let mut fd: ::core::ffi::c_int = 0;
-    fd = 0 as ::core::ffi::c_int;
-    while !(uv__cloexec(fd, 1 as ::core::ffi::c_int) != 0 && fd > 15 as ::core::ffi::c_int) {
-        fd += 1;
+        return 0 as ::core::ffi::c_int;
     }
 }
-pub(crate) unsafe fn uv_fileno(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_disable_stdio_inheritance() {
+    unsafe {
+        let mut fd: ::core::ffi::c_int = 0;
+        fd = 0 as ::core::ffi::c_int;
+        while !(uv__cloexec(fd, 1 as ::core::ffi::c_int) != 0 && fd > 15 as ::core::ffi::c_int) {
+            fd += 1;
+        }
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_fileno(
     mut handle: *const uv_handle_t,
     mut fd: *mut uv_os_fd_t,
 ) -> ::core::ffi::c_int {
-    let mut fd_out: ::core::ffi::c_int = 0;
-    match (*handle).type_0 as ::core::ffi::c_uint {
-        12 | 7 | 14 => {
-            fd_out = (*(handle as *mut uv_stream_t)).io_watcher.fd;
+    unsafe {
+        let mut fd_out: ::core::ffi::c_int = 0;
+        match (*handle).type_0 as ::core::ffi::c_uint {
+            12 | 7 | 14 => {
+                fd_out = (*(handle as *mut uv_stream_t)).io_watcher.fd;
+            }
+            15 => {
+                fd_out = (*(handle as *mut uv_udp_t)).io_watcher.fd;
+            }
+            8 => {
+                fd_out = (*(handle as *mut uv_poll_t)).io_watcher.fd;
+            }
+            _ => return UV_EINVAL as ::core::ffi::c_int,
         }
-        15 => {
-            fd_out = (*(handle as *mut uv_udp_t)).io_watcher.fd;
-        }
-        8 => {
-            fd_out = (*(handle as *mut uv_poll_t)).io_watcher.fd;
-        }
-        _ => return UV_EINVAL as ::core::ffi::c_int,
-    }
-    if (*handle).flags
-        & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-            as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-        || fd_out == -(1 as ::core::ffi::c_int)
-    {
-        return UV_EBADF as ::core::ffi::c_int;
-    }
-    *fd = fd_out as uv_os_fd_t;
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__run_pending(mut loop_0: *mut uv_loop_t) {
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut pq: uv__queue = uv__queue {
-        next: ::core::ptr::null_mut::<uv__queue>(),
-        prev: ::core::ptr::null_mut::<uv__queue>(),
-    };
-    let mut w: *mut uv__io_t = ::core::ptr::null_mut::<uv__io_t>();
-    uv__queue_move(&raw mut (*loop_0).pending_queue, &raw mut pq);
-    while uv__queue_empty(&raw mut pq) == 0 {
-        q = uv__queue_head(&raw mut pq);
-        uv__queue_remove(q);
-        uv__queue_init(q);
-        w = (q as *mut ::core::ffi::c_char).offset(-(8 as ::core::ffi::c_ulong as isize))
-            as *mut uv__io_t;
-        (*w).cb.expect("non-null function pointer")(
-            loop_0 as *mut uv_loop_s,
-            w as *mut uv__io_s,
-            POLLOUT as ::core::ffi::c_uint,
-        );
-    }
-}
-unsafe extern "C" fn next_power_of_two(mut val: ::core::ffi::c_uint) -> ::core::ffi::c_uint {
-    val = val.wrapping_sub(1 as ::core::ffi::c_uint);
-    val |= val >> 1 as ::core::ffi::c_int;
-    val |= val >> 2 as ::core::ffi::c_int;
-    val |= val >> 4 as ::core::ffi::c_int;
-    val |= val >> 8 as ::core::ffi::c_int;
-    val |= val >> 16 as ::core::ffi::c_int;
-    val = val.wrapping_add(1 as ::core::ffi::c_uint);
-    return val;
-}
-unsafe extern "C" fn maybe_resize(mut loop_0: *mut uv_loop_t, mut len: ::core::ffi::c_uint) {
-    let mut watchers: *mut *mut uv__io_t = ::core::ptr::null_mut::<*mut uv__io_t>();
-    let mut fake_watcher_list: *mut ::core::ffi::c_void =
-        ::core::ptr::null_mut::<::core::ffi::c_void>();
-    let mut fake_watcher_count: *mut ::core::ffi::c_void =
-        ::core::ptr::null_mut::<::core::ffi::c_void>();
-    let mut nwatchers: ::core::ffi::c_uint = 0;
-    let mut i: ::core::ffi::c_uint = 0;
-    if len <= (*loop_0).nwatchers {
-        return;
-    }
-    if !(*loop_0).watchers.is_null() {
-        fake_watcher_list =
-            *(*loop_0).watchers.offset((*loop_0).nwatchers as isize) as *mut ::core::ffi::c_void;
-        fake_watcher_count = *(*loop_0)
-            .watchers
-            .offset((*loop_0).nwatchers.wrapping_add(1 as ::core::ffi::c_uint) as isize)
-            as *mut ::core::ffi::c_void;
-    } else {
-        fake_watcher_list = ::core::ptr::null_mut::<::core::ffi::c_void>();
-        fake_watcher_count = ::core::ptr::null_mut::<::core::ffi::c_void>();
-    }
-    nwatchers = next_power_of_two(len.wrapping_add(2 as ::core::ffi::c_uint))
-        .wrapping_sub(2 as ::core::ffi::c_uint);
-    watchers = uv__reallocf(
-        (*loop_0).watchers as *mut ::core::ffi::c_void,
-        (nwatchers.wrapping_add(2 as ::core::ffi::c_uint) as size_t)
-            .wrapping_mul(::core::mem::size_of::<*mut uv__io_t>() as size_t),
-    ) as *mut *mut uv__io_t;
-    if watchers.is_null() {
-        abort();
-    }
-    i = (*loop_0).nwatchers;
-    while i < nwatchers {
-        let ref mut fresh4 = *watchers.offset(i as isize);
-        *fresh4 = ::core::ptr::null_mut::<uv__io_t>();
-        i = i.wrapping_add(1);
-    }
-    let ref mut fresh5 = *watchers.offset(nwatchers as isize);
-    *fresh5 = fake_watcher_list as *mut uv__io_t;
-    let ref mut fresh6 =
-        *watchers.offset(nwatchers.wrapping_add(1 as ::core::ffi::c_uint) as isize);
-    *fresh6 = fake_watcher_count as *mut uv__io_t;
-    (*loop_0).watchers = watchers;
-    (*loop_0).nwatchers = nwatchers;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__io_init(
-    mut w: *mut uv__io_t,
-    mut cb: uv__io_cb,
-    mut fd: ::core::ffi::c_int,
-) {
-    '_c2rust_label: {
-        if cb.is_some() {
-        } else {
-            __assert_fail(
-                b"cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                894 as ::core::ffi::c_uint,
-                b"void uv__io_init(uv__io_t *, uv__io_cb, int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if fd >= -(1 as ::core::ffi::c_int) {
-        } else {
-            __assert_fail(
-                b"fd >= -1\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                895 as ::core::ffi::c_uint,
-                b"void uv__io_init(uv__io_t *, uv__io_cb, int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    uv__queue_init(&raw mut (*w).pending_queue);
-    uv__queue_init(&raw mut (*w).watcher_queue);
-    (*w).cb = cb;
-    (*w).fd = fd;
-    (*w).events = 0 as ::core::ffi::c_uint;
-    (*w).pevents = 0 as ::core::ffi::c_uint;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__io_start(
-    mut loop_0: *mut uv_loop_t,
-    mut w: *mut uv__io_t,
-    mut events: ::core::ffi::c_uint,
-) {
-    '_c2rust_label: {
-        if 0 as ::core::ffi::c_uint
-            == events
-                & !(0x1 as ::core::ffi::c_int
-                    | 0x4 as ::core::ffi::c_int
-                    | 0x2000 as ::core::ffi::c_int
-                    | 0x2 as ::core::ffi::c_int) as ::core::ffi::c_uint
+        if (*handle).flags
+            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint
+            || fd_out == -(1 as ::core::ffi::c_int)
         {
-        } else {
-            __assert_fail(
-                b"0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI))\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                906 as ::core::ffi::c_uint,
-                b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
+            return UV_EBADF as ::core::ffi::c_int;
         }
-    };
-    '_c2rust_label_0: {
-        if 0 as ::core::ffi::c_uint != events {
-        } else {
-            __assert_fail(
-                b"0 != events\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                907 as ::core::ffi::c_uint,
-                b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_1: {
-        if (*w).fd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"w->fd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                908 as ::core::ffi::c_uint,
-                b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_2: {
-        if (*w).fd < 2147483647 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"w->fd < INT_MAX\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                909 as ::core::ffi::c_uint,
-                b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*w).pevents |= events;
-    maybe_resize(
-        loop_0,
-        ((*w).fd + 1 as ::core::ffi::c_int) as ::core::ffi::c_uint,
-    );
-    if (*w).events == (*w).pevents {
-        return;
+        *fd = fd_out as uv_os_fd_t;
+        return 0 as ::core::ffi::c_int;
     }
-    if uv__queue_empty(&raw mut (*w).watcher_queue) != 0 {
-        uv__queue_insert_tail(
-            &raw mut (*loop_0).watcher_queue,
-            &raw mut (*w).watcher_queue,
-        );
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__run_pending(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut pq: uv__queue = uv__queue {
+            next: ::core::ptr::null_mut::<uv__queue>(),
+            prev: ::core::ptr::null_mut::<uv__queue>(),
+        };
+        let mut w: *mut uv__io_t = ::core::ptr::null_mut::<uv__io_t>();
+        uv__queue_move(&raw mut (*loop_0).pending_queue, &raw mut pq);
+        while uv__queue_empty(&raw mut pq) == 0 {
+            q = uv__queue_head(&raw mut pq);
+            uv__queue_remove(q);
+            uv__queue_init(q);
+            w = (q as *mut ::core::ffi::c_char).offset(-(8 as ::core::ffi::c_ulong as isize))
+                as *mut uv__io_t;
+            (*w).cb.expect("non-null function pointer")(
+                loop_0 as *mut uv_loop_s,
+                w as *mut uv__io_s,
+                POLLOUT as ::core::ffi::c_uint,
+            );
+        }
     }
-    if (*(*loop_0).watchers.offset((*w).fd as isize)).is_null() {
-        let ref mut fresh3 = *(*loop_0).watchers.offset((*w).fd as isize);
-        *fresh3 = w;
-        (*loop_0).nfds = (*loop_0).nfds.wrapping_add(1);
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn next_power_of_two(mut val: ::core::ffi::c_uint) -> ::core::ffi::c_uint {
+    unsafe {
+        val = val.wrapping_sub(1 as ::core::ffi::c_uint);
+        val |= val >> 1 as ::core::ffi::c_int;
+        val |= val >> 2 as ::core::ffi::c_int;
+        val |= val >> 4 as ::core::ffi::c_int;
+        val |= val >> 8 as ::core::ffi::c_int;
+        val |= val >> 16 as ::core::ffi::c_int;
+        val = val.wrapping_add(1 as ::core::ffi::c_uint);
+        return val;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn maybe_resize(mut loop_0: *mut uv_loop_t, mut len: ::core::ffi::c_uint) {
+    unsafe {
+        let mut watchers: *mut *mut uv__io_t = ::core::ptr::null_mut::<*mut uv__io_t>();
+        let mut fake_watcher_list: *mut ::core::ffi::c_void =
+            ::core::ptr::null_mut::<::core::ffi::c_void>();
+        let mut fake_watcher_count: *mut ::core::ffi::c_void =
+            ::core::ptr::null_mut::<::core::ffi::c_void>();
+        let mut nwatchers: ::core::ffi::c_uint = 0;
+        let mut i: ::core::ffi::c_uint = 0;
+        if len <= (*loop_0).nwatchers {
+            return;
+        }
+        if !(*loop_0).watchers.is_null() {
+            fake_watcher_list = *(*loop_0).watchers.offset((*loop_0).nwatchers as isize)
+                as *mut ::core::ffi::c_void;
+            fake_watcher_count = *(*loop_0)
+                .watchers
+                .offset((*loop_0).nwatchers.wrapping_add(1 as ::core::ffi::c_uint) as isize)
+                as *mut ::core::ffi::c_void;
+        } else {
+            fake_watcher_list = ::core::ptr::null_mut::<::core::ffi::c_void>();
+            fake_watcher_count = ::core::ptr::null_mut::<::core::ffi::c_void>();
+        }
+        nwatchers = next_power_of_two(len.wrapping_add(2 as ::core::ffi::c_uint))
+            .wrapping_sub(2 as ::core::ffi::c_uint);
+        watchers = uv__reallocf(
+            (*loop_0).watchers as *mut ::core::ffi::c_void,
+            (nwatchers.wrapping_add(2 as ::core::ffi::c_uint) as size_t)
+                .wrapping_mul(::core::mem::size_of::<*mut uv__io_t>() as size_t),
+        ) as *mut *mut uv__io_t;
+        if watchers.is_null() {
+            abort();
+        }
+        i = (*loop_0).nwatchers;
+        while i < nwatchers {
+            let ref mut fresh4 = *watchers.offset(i as isize);
+            *fresh4 = ::core::ptr::null_mut::<uv__io_t>();
+            i = i.wrapping_add(1);
+        }
+        let ref mut fresh5 = *watchers.offset(nwatchers as isize);
+        *fresh5 = fake_watcher_list as *mut uv__io_t;
+        let ref mut fresh6 =
+            *watchers.offset(nwatchers.wrapping_add(1 as ::core::ffi::c_uint) as isize);
+        *fresh6 = fake_watcher_count as *mut uv__io_t;
+        (*loop_0).watchers = watchers;
+        (*loop_0).nwatchers = nwatchers;
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__io_stop(
-    mut loop_0: *mut uv_loop_t,
-    mut w: *mut uv__io_t,
-    mut events: ::core::ffi::c_uint,
-) {
-    '_c2rust_label: {
-        if 0 as ::core::ffi::c_uint
-            == events
-                & !(0x1 as ::core::ffi::c_int
-                    | 0x4 as ::core::ffi::c_int
-                    | 0x2000 as ::core::ffi::c_int
-                    | 0x2 as ::core::ffi::c_int) as ::core::ffi::c_uint
-        {
-        } else {
-            __assert_fail(
-                b"0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI))\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                934 as ::core::ffi::c_uint,
-                b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if 0 as ::core::ffi::c_uint != events {
-        } else {
-            __assert_fail(
-                b"0 != events\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                935 as ::core::ffi::c_uint,
-                b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*w).fd == -(1 as ::core::ffi::c_int) {
-        return;
-    }
-    '_c2rust_label_1: {
-        if (*w).fd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"w->fd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                940 as ::core::ffi::c_uint,
-                b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*w).fd as ::core::ffi::c_uint >= (*loop_0).nwatchers {
-        return;
-    }
-    (*w).pevents &= !events;
-    if (*w).pevents == 0 as ::core::ffi::c_uint {
-        uv__queue_remove(&raw mut (*w).watcher_queue);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__io_init(mut w: *mut uv__io_t, mut cb: uv__io_cb, mut fd: ::core::ffi::c_int) {
+    unsafe {
+        '_c2rust_label: {
+            if cb.is_some() {
+            } else {
+                __assert_fail(
+                    b"cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    894 as ::core::ffi::c_uint,
+                    b"void uv__io_init(uv__io_t *, uv__io_cb, int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if fd >= -(1 as ::core::ffi::c_int) {
+            } else {
+                __assert_fail(
+                    b"fd >= -1\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    895 as ::core::ffi::c_uint,
+                    b"void uv__io_init(uv__io_t *, uv__io_cb, int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        uv__queue_init(&raw mut (*w).pending_queue);
         uv__queue_init(&raw mut (*w).watcher_queue);
+        (*w).cb = cb;
+        (*w).fd = fd;
         (*w).events = 0 as ::core::ffi::c_uint;
-        if w == *(*loop_0).watchers.offset((*w).fd as isize) {
-            '_c2rust_label_2: {
-                if (*loop_0).nfds > 0 as ::core::ffi::c_uint {
-                } else {
-                    __assert_fail(
-                        b"loop->nfds > 0\0" as *const u8 as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        954 as ::core::ffi::c_uint,
-                        b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            let ref mut fresh7 = *(*loop_0).watchers.offset((*w).fd as isize);
-            *fresh7 = ::core::ptr::null_mut::<uv__io_t>();
-            (*loop_0).nfds = (*loop_0).nfds.wrapping_sub(1);
+        (*w).pevents = 0 as ::core::ffi::c_uint;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__io_start(
+    mut loop_0: *mut uv_loop_t,
+    mut w: *mut uv__io_t,
+    mut events: ::core::ffi::c_uint,
+) {
+    unsafe {
+        '_c2rust_label: {
+            if 0 as ::core::ffi::c_uint
+                == events
+                    & !(0x1 as ::core::ffi::c_int
+                        | 0x4 as ::core::ffi::c_int
+                        | 0x2000 as ::core::ffi::c_int
+                        | 0x2 as ::core::ffi::c_int) as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI))\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    906 as ::core::ffi::c_uint,
+                    b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if 0 as ::core::ffi::c_uint != events {
+            } else {
+                __assert_fail(
+                    b"0 != events\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    907 as ::core::ffi::c_uint,
+                    b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_1: {
+            if (*w).fd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"w->fd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    908 as ::core::ffi::c_uint,
+                    b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_2: {
+            if (*w).fd < 2147483647 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"w->fd < INT_MAX\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    909 as ::core::ffi::c_uint,
+                    b"void uv__io_start(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*w).pevents |= events;
+        maybe_resize(
+            loop_0,
+            ((*w).fd + 1 as ::core::ffi::c_int) as ::core::ffi::c_uint,
+        );
+        if (*w).events == (*w).pevents {
+            return;
         }
-    } else if uv__queue_empty(&raw mut (*w).watcher_queue) != 0 {
-        uv__queue_insert_tail(
-            &raw mut (*loop_0).watcher_queue,
-            &raw mut (*w).watcher_queue,
+        if uv__queue_empty(&raw mut (*w).watcher_queue) != 0 {
+            uv__queue_insert_tail(
+                &raw mut (*loop_0).watcher_queue,
+                &raw mut (*w).watcher_queue,
+            );
+        }
+        if (*(*loop_0).watchers.offset((*w).fd as isize)).is_null() {
+            let ref mut fresh3 = *(*loop_0).watchers.offset((*w).fd as isize);
+            *fresh3 = w;
+            (*loop_0).nfds = (*loop_0).nfds.wrapping_add(1);
+        }
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__io_stop(
+    mut loop_0: *mut uv_loop_t,
+    mut w: *mut uv__io_t,
+    mut events: ::core::ffi::c_uint,
+) {
+    unsafe {
+        '_c2rust_label: {
+            if 0 as ::core::ffi::c_uint
+                == events
+                    & !(0x1 as ::core::ffi::c_int
+                        | 0x4 as ::core::ffi::c_int
+                        | 0x2000 as ::core::ffi::c_int
+                        | 0x2 as ::core::ffi::c_int) as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI))\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    934 as ::core::ffi::c_uint,
+                    b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if 0 as ::core::ffi::c_uint != events {
+            } else {
+                __assert_fail(
+                    b"0 != events\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    935 as ::core::ffi::c_uint,
+                    b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*w).fd == -(1 as ::core::ffi::c_int) {
+            return;
+        }
+        '_c2rust_label_1: {
+            if (*w).fd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"w->fd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    940 as ::core::ffi::c_uint,
+                    b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*w).fd as ::core::ffi::c_uint >= (*loop_0).nwatchers {
+            return;
+        }
+        (*w).pevents &= !events;
+        if (*w).pevents == 0 as ::core::ffi::c_uint {
+            uv__queue_remove(&raw mut (*w).watcher_queue);
+            uv__queue_init(&raw mut (*w).watcher_queue);
+            (*w).events = 0 as ::core::ffi::c_uint;
+            if w == *(*loop_0).watchers.offset((*w).fd as isize) {
+                '_c2rust_label_2: {
+                    if (*loop_0).nfds > 0 as ::core::ffi::c_uint {
+                    } else {
+                        __assert_fail(
+                            b"loop->nfds > 0\0" as *const u8 as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0"
+                                as *const u8
+                                as *const ::core::ffi::c_char,
+                            954 as ::core::ffi::c_uint,
+                            b"void uv__io_stop(uv_loop_t *, uv__io_t *, unsigned int)\0"
+                                as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                let ref mut fresh7 = *(*loop_0).watchers.offset((*w).fd as isize);
+                *fresh7 = ::core::ptr::null_mut::<uv__io_t>();
+                (*loop_0).nfds = (*loop_0).nfds.wrapping_sub(1);
+            }
+        } else if uv__queue_empty(&raw mut (*w).watcher_queue) != 0 {
+            uv__queue_insert_tail(
+                &raw mut (*loop_0).watcher_queue,
+                &raw mut (*w).watcher_queue,
+            );
+        }
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__io_close(mut loop_0: *mut uv_loop_t, mut w: *mut uv__io_t) {
+    unsafe {
+        uv__io_stop(
+            loop_0,
+            w,
+            (POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI) as ::core::ffi::c_uint,
         );
+        uv__queue_remove(&raw mut (*w).pending_queue);
+        if (*w).fd != -(1 as ::core::ffi::c_int) {
+            uv__platform_invalidate_fd(loop_0, (*w).fd);
+        }
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__io_close(mut loop_0: *mut uv_loop_t, mut w: *mut uv__io_t) {
-    uv__io_stop(
-        loop_0,
-        w,
-        (POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI) as ::core::ffi::c_uint,
-    );
-    uv__queue_remove(&raw mut (*w).pending_queue);
-    if (*w).fd != -(1 as ::core::ffi::c_int) {
-        uv__platform_invalidate_fd(loop_0, (*w).fd);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__io_feed(mut loop_0: *mut uv_loop_t, mut w: *mut uv__io_t) {
+    unsafe {
+        if uv__queue_empty(&raw mut (*w).pending_queue) != 0 {
+            uv__queue_insert_tail(
+                &raw mut (*loop_0).pending_queue,
+                &raw mut (*w).pending_queue,
+            );
+        }
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__io_feed(mut loop_0: *mut uv_loop_t, mut w: *mut uv__io_t) {
-    if uv__queue_empty(&raw mut (*w).pending_queue) != 0 {
-        uv__queue_insert_tail(
-            &raw mut (*loop_0).pending_queue,
-            &raw mut (*w).pending_queue,
-        );
-    }
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__io_active(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__io_active(
     mut w: *const uv__io_t,
     mut events: ::core::ffi::c_uint,
 ) -> ::core::ffi::c_int {
-    '_c2rust_label: {
-        if 0 as ::core::ffi::c_uint
-            == events
-                & !(0x1 as ::core::ffi::c_int
-                    | 0x4 as ::core::ffi::c_int
-                    | 0x2000 as ::core::ffi::c_int
-                    | 0x2 as ::core::ffi::c_int) as ::core::ffi::c_uint
-        {
-        } else {
-            __assert_fail(
-                b"0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI))\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                981 as ::core::ffi::c_uint,
-                b"int uv__io_active(const uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if 0 as ::core::ffi::c_uint != events {
-        } else {
-            __assert_fail(
-                b"0 != events\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                982 as ::core::ffi::c_uint,
-                b"int uv__io_active(const uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    return (0 as ::core::ffi::c_uint != (*w).pevents & events) as ::core::ffi::c_int;
+    unsafe {
+        '_c2rust_label: {
+            if 0 as ::core::ffi::c_uint
+                == events
+                    & !(0x1 as ::core::ffi::c_int
+                        | 0x4 as ::core::ffi::c_int
+                        | 0x2000 as ::core::ffi::c_int
+                        | 0x2 as ::core::ffi::c_int) as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI))\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    981 as ::core::ffi::c_uint,
+                    b"int uv__io_active(const uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if 0 as ::core::ffi::c_uint != events {
+            } else {
+                __assert_fail(
+                    b"0 != events\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    982 as ::core::ffi::c_uint,
+                    b"int uv__io_active(const uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        return (0 as ::core::ffi::c_uint != (*w).pevents & events) as ::core::ffi::c_int;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__fd_exists(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__fd_exists(
     mut loop_0: *mut uv_loop_t,
     mut fd: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    return ((fd as ::core::ffi::c_uint) < (*loop_0).nwatchers
-        && !(*(*loop_0).watchers.offset(fd as isize)).is_null()) as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_getrusage(mut rusage: *mut uv_rusage_t) -> ::core::ffi::c_int {
-    let mut usage: rusage = rusage {
-        ru_utime: timeval {
-            tv_sec: 0,
-            tv_usec: 0,
-        },
-        ru_stime: timeval {
-            tv_sec: 0,
-            tv_usec: 0,
-        },
-        c2rust_unnamed: C2RustUnnamed_35 { ru_maxrss: 0 },
-        c2rust_unnamed_0: C2RustUnnamed_34 { ru_ixrss: 0 },
-        c2rust_unnamed_1: C2RustUnnamed_33 { ru_idrss: 0 },
-        c2rust_unnamed_2: C2RustUnnamed_32 { ru_isrss: 0 },
-        c2rust_unnamed_3: C2RustUnnamed_31 { ru_minflt: 0 },
-        c2rust_unnamed_4: C2RustUnnamed_30 { ru_majflt: 0 },
-        c2rust_unnamed_5: C2RustUnnamed_29 { ru_nswap: 0 },
-        c2rust_unnamed_6: C2RustUnnamed_28 { ru_inblock: 0 },
-        c2rust_unnamed_7: C2RustUnnamed_27 { ru_oublock: 0 },
-        c2rust_unnamed_8: C2RustUnnamed_26 { ru_msgsnd: 0 },
-        c2rust_unnamed_9: C2RustUnnamed_25 { ru_msgrcv: 0 },
-        c2rust_unnamed_10: C2RustUnnamed_24 { ru_nsignals: 0 },
-        c2rust_unnamed_11: C2RustUnnamed_23 { ru_nvcsw: 0 },
-        c2rust_unnamed_12: C2RustUnnamed_22 { ru_nivcsw: 0 },
-    };
-    if getrusage(RUSAGE_SELF, &raw mut usage) != 0 {
-        return -*__errno_location();
+    unsafe {
+        return ((fd as ::core::ffi::c_uint) < (*loop_0).nwatchers
+            && !(*(*loop_0).watchers.offset(fd as isize)).is_null())
+            as ::core::ffi::c_int;
     }
-    (*rusage).ru_utime.tv_sec = usage.ru_utime.tv_sec as ::core::ffi::c_long;
-    (*rusage).ru_utime.tv_usec = usage.ru_utime.tv_usec as ::core::ffi::c_long;
-    (*rusage).ru_stime.tv_sec = usage.ru_stime.tv_sec as ::core::ffi::c_long;
-    (*rusage).ru_stime.tv_usec = usage.ru_stime.tv_usec as ::core::ffi::c_long;
-    (*rusage).ru_maxrss = usage.c2rust_unnamed.ru_maxrss as uint64_t;
-    (*rusage).ru_ixrss = usage.c2rust_unnamed_0.ru_ixrss as uint64_t;
-    (*rusage).ru_idrss = usage.c2rust_unnamed_1.ru_idrss as uint64_t;
-    (*rusage).ru_isrss = usage.c2rust_unnamed_2.ru_isrss as uint64_t;
-    (*rusage).ru_minflt = usage.c2rust_unnamed_3.ru_minflt as uint64_t;
-    (*rusage).ru_majflt = usage.c2rust_unnamed_4.ru_majflt as uint64_t;
-    (*rusage).ru_nswap = usage.c2rust_unnamed_5.ru_nswap as uint64_t;
-    (*rusage).ru_inblock = usage.c2rust_unnamed_6.ru_inblock as uint64_t;
-    (*rusage).ru_oublock = usage.c2rust_unnamed_7.ru_oublock as uint64_t;
-    (*rusage).ru_msgsnd = usage.c2rust_unnamed_8.ru_msgsnd as uint64_t;
-    (*rusage).ru_msgrcv = usage.c2rust_unnamed_9.ru_msgrcv as uint64_t;
-    (*rusage).ru_nsignals = usage.c2rust_unnamed_10.ru_nsignals as uint64_t;
-    (*rusage).ru_nvcsw = usage.c2rust_unnamed_11.ru_nvcsw as uint64_t;
-    (*rusage).ru_nivcsw = usage.c2rust_unnamed_12.ru_nivcsw as uint64_t;
-    return 0 as ::core::ffi::c_int;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_getrusage(mut rusage: *mut uv_rusage_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut usage: rusage = rusage {
+            ru_utime: timeval {
+                tv_sec: 0,
+                tv_usec: 0,
+            },
+            ru_stime: timeval {
+                tv_sec: 0,
+                tv_usec: 0,
+            },
+            c2rust_unnamed: C2RustUnnamed_35 { ru_maxrss: 0 },
+            c2rust_unnamed_0: C2RustUnnamed_34 { ru_ixrss: 0 },
+            c2rust_unnamed_1: C2RustUnnamed_33 { ru_idrss: 0 },
+            c2rust_unnamed_2: C2RustUnnamed_32 { ru_isrss: 0 },
+            c2rust_unnamed_3: C2RustUnnamed_31 { ru_minflt: 0 },
+            c2rust_unnamed_4: C2RustUnnamed_30 { ru_majflt: 0 },
+            c2rust_unnamed_5: C2RustUnnamed_29 { ru_nswap: 0 },
+            c2rust_unnamed_6: C2RustUnnamed_28 { ru_inblock: 0 },
+            c2rust_unnamed_7: C2RustUnnamed_27 { ru_oublock: 0 },
+            c2rust_unnamed_8: C2RustUnnamed_26 { ru_msgsnd: 0 },
+            c2rust_unnamed_9: C2RustUnnamed_25 { ru_msgrcv: 0 },
+            c2rust_unnamed_10: C2RustUnnamed_24 { ru_nsignals: 0 },
+            c2rust_unnamed_11: C2RustUnnamed_23 { ru_nvcsw: 0 },
+            c2rust_unnamed_12: C2RustUnnamed_22 { ru_nivcsw: 0 },
+        };
+        if getrusage(RUSAGE_SELF, &raw mut usage) != 0 {
+            return -*__errno_location();
+        }
+        (*rusage).ru_utime.tv_sec = usage.ru_utime.tv_sec as ::core::ffi::c_long;
+        (*rusage).ru_utime.tv_usec = usage.ru_utime.tv_usec as ::core::ffi::c_long;
+        (*rusage).ru_stime.tv_sec = usage.ru_stime.tv_sec as ::core::ffi::c_long;
+        (*rusage).ru_stime.tv_usec = usage.ru_stime.tv_usec as ::core::ffi::c_long;
+        (*rusage).ru_maxrss = usage.c2rust_unnamed.ru_maxrss as uint64_t;
+        (*rusage).ru_ixrss = usage.c2rust_unnamed_0.ru_ixrss as uint64_t;
+        (*rusage).ru_idrss = usage.c2rust_unnamed_1.ru_idrss as uint64_t;
+        (*rusage).ru_isrss = usage.c2rust_unnamed_2.ru_isrss as uint64_t;
+        (*rusage).ru_minflt = usage.c2rust_unnamed_3.ru_minflt as uint64_t;
+        (*rusage).ru_majflt = usage.c2rust_unnamed_4.ru_majflt as uint64_t;
+        (*rusage).ru_nswap = usage.c2rust_unnamed_5.ru_nswap as uint64_t;
+        (*rusage).ru_inblock = usage.c2rust_unnamed_6.ru_inblock as uint64_t;
+        (*rusage).ru_oublock = usage.c2rust_unnamed_7.ru_oublock as uint64_t;
+        (*rusage).ru_msgsnd = usage.c2rust_unnamed_8.ru_msgsnd as uint64_t;
+        (*rusage).ru_msgrcv = usage.c2rust_unnamed_9.ru_msgrcv as uint64_t;
+        (*rusage).ru_nsignals = usage.c2rust_unnamed_10.ru_nsignals as uint64_t;
+        (*rusage).ru_nvcsw = usage.c2rust_unnamed_11.ru_nvcsw as uint64_t;
+        (*rusage).ru_nivcsw = usage.c2rust_unnamed_12.ru_nivcsw as uint64_t;
+        return 0 as ::core::ffi::c_int;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__open_cloexec(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__open_cloexec(
     mut path: *const ::core::ffi::c_char,
     mut flags: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut fd: ::core::ffi::c_int = 0;
-    fd = open(path, flags | O_CLOEXEC);
-    if fd == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
+    unsafe {
+        let mut fd: ::core::ffi::c_int = 0;
+        fd = open(path, flags | O_CLOEXEC);
+        if fd == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
+        }
+        return fd;
     }
-    return fd;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__slurp(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__slurp(
     mut filename: *const ::core::ffi::c_char,
     mut buf: *mut ::core::ffi::c_char,
     mut len: size_t,
 ) -> ::core::ffi::c_int {
-    let mut n: ssize_t = 0;
-    let mut fd: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if len > 0 as size_t {
-        } else {
-            __assert_fail(
-                b"len > 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1066 as ::core::ffi::c_uint,
-                b"int uv__slurp(const char *, char *, size_t)\0" as *const u8
-                    as *const ::core::ffi::c_char,
+    unsafe {
+        let mut n: ssize_t = 0;
+        let mut fd: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if len > 0 as size_t {
+            } else {
+                __assert_fail(
+                    b"len > 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1066 as ::core::ffi::c_uint,
+                    b"int uv__slurp(const char *, char *, size_t)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        fd = uv__open_cloexec(filename, O_RDONLY);
+        if fd < 0 as ::core::ffi::c_int {
+            return fd;
+        }
+        loop {
+            n = read(
+                fd,
+                buf as *mut ::core::ffi::c_void,
+                len.wrapping_sub(1 as size_t),
             );
+            if !(n == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
+                break;
+            }
         }
-    };
-    fd = uv__open_cloexec(filename, O_RDONLY);
-    if fd < 0 as ::core::ffi::c_int {
-        return fd;
-    }
-    loop {
-        n = read(
-            fd,
-            buf as *mut ::core::ffi::c_void,
-            len.wrapping_sub(1 as size_t),
-        );
-        if !(n == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
-            break;
+        if uv__close_nocheckstdio(fd) != 0 {
+            abort();
         }
+        if n < 0 as ssize_t {
+            return -*__errno_location();
+        }
+        *buf.offset(n as isize) = '\0' as i32 as ::core::ffi::c_char;
+        return 0 as ::core::ffi::c_int;
     }
-    if uv__close_nocheckstdio(fd) != 0 {
-        abort();
-    }
-    if n < 0 as ssize_t {
-        return -*__errno_location();
-    }
-    *buf.offset(n as isize) = '\0' as i32 as ::core::ffi::c_char;
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__dup2_cloexec(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__dup2_cloexec(
     mut oldfd: ::core::ffi::c_int,
     mut newfd: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    r = dup3(oldfd, newfd, O_CLOEXEC);
-    if r == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        r = dup3(oldfd, newfd, O_CLOEXEC);
+        if r == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
+        }
+        return r;
     }
-    return r;
 }
-pub(crate) unsafe fn uv_os_homedir(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_homedir(
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut pwd: uv_passwd_t = uv_passwd_s {
-        username: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        uid: 0,
-        gid: 0,
-        shell: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        homedir: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-    };
-    let mut len: size_t = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    r = uv_os_getenv(
-        b"HOME\0" as *const u8 as *const ::core::ffi::c_char,
-        buffer,
-        size,
-    );
-    if r != UV_ENOENT as ::core::ffi::c_int {
-        return r;
-    }
-    r = uv_os_get_passwd(&raw mut pwd);
-    if r != 0 as ::core::ffi::c_int {
-        return r;
-    }
-    len = strlen(pwd.homedir);
-    if len >= *size {
-        *size = len.wrapping_add(1 as size_t);
+    unsafe {
+        let mut pwd: uv_passwd_t = uv_passwd_s {
+            username: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            uid: 0,
+            gid: 0,
+            shell: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            homedir: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+        };
+        let mut len: size_t = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        r = uv_os_getenv(
+            b"HOME\0" as *const u8 as *const ::core::ffi::c_char,
+            buffer,
+            size,
+        );
+        if r != UV_ENOENT as ::core::ffi::c_int {
+            return r;
+        }
+        r = uv_os_get_passwd(&raw mut pwd);
+        if r != 0 as ::core::ffi::c_int {
+            return r;
+        }
+        len = strlen(pwd.homedir);
+        if len >= *size {
+            *size = len.wrapping_add(1 as size_t);
+            uv_os_free_passwd(&raw mut pwd);
+            return UV_ENOBUFS as ::core::ffi::c_int;
+        }
+        memcpy(
+            buffer as *mut ::core::ffi::c_void,
+            pwd.homedir as *const ::core::ffi::c_void,
+            len.wrapping_add(1 as size_t),
+        );
+        *size = len;
         uv_os_free_passwd(&raw mut pwd);
-        return UV_ENOBUFS as ::core::ffi::c_int;
+        return 0 as ::core::ffi::c_int;
     }
-    memcpy(
-        buffer as *mut ::core::ffi::c_void,
-        pwd.homedir as *const ::core::ffi::c_void,
-        len.wrapping_add(1 as size_t),
-    );
-    *size = len;
-    uv_os_free_passwd(&raw mut pwd);
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_os_tmpdir(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_tmpdir(
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut buf: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
-    let mut len: size_t = 0;
-    if buffer.is_null() || size.is_null() || *size == 0 as size_t {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    buf = getenv(b"TMPDIR\0" as *const u8 as *const ::core::ffi::c_char);
-    if buf.is_null() {
-        buf = getenv(b"TMP\0" as *const u8 as *const ::core::ffi::c_char);
+    unsafe {
+        let mut buf: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
+        let mut len: size_t = 0;
+        if buffer.is_null() || size.is_null() || *size == 0 as size_t {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        buf = getenv(b"TMPDIR\0" as *const u8 as *const ::core::ffi::c_char);
         if buf.is_null() {
-            buf = getenv(b"TEMP\0" as *const u8 as *const ::core::ffi::c_char);
+            buf = getenv(b"TMP\0" as *const u8 as *const ::core::ffi::c_char);
             if buf.is_null() {
-                buf = getenv(b"TEMPDIR\0" as *const u8 as *const ::core::ffi::c_char);
+                buf = getenv(b"TEMP\0" as *const u8 as *const ::core::ffi::c_char);
                 if buf.is_null() {
-                    buf = b"/tmp\0" as *const u8 as *const ::core::ffi::c_char;
+                    buf = getenv(b"TEMPDIR\0" as *const u8 as *const ::core::ffi::c_char);
+                    if buf.is_null() {
+                        buf = b"/tmp\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
                 }
             }
         }
-    }
-    len = strlen(buf);
-    if len >= *size {
-        *size = len.wrapping_add(1 as size_t);
-        return UV_ENOBUFS as ::core::ffi::c_int;
-    }
-    if len > 1 as size_t
-        && *buf.offset(len.wrapping_sub(1 as size_t) as isize) as ::core::ffi::c_int == '/' as i32
-    {
-        len = len.wrapping_sub(1);
-    }
-    memcpy(
-        buffer as *mut ::core::ffi::c_void,
-        buf as *const ::core::ffi::c_void,
-        len.wrapping_add(1 as size_t),
-    );
-    *buffer.offset(len as isize) = '\0' as i32 as ::core::ffi::c_char;
-    *size = len;
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__getpwuid_r(
-    mut pwd: *mut uv_passwd_t,
-    mut uid: uid_t,
-) -> ::core::ffi::c_int {
-    let mut pw: passwd = passwd {
-        pw_name: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        pw_passwd: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        pw_uid: 0,
-        pw_gid: 0,
-        pw_gecos: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        pw_dir: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        pw_shell: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-    };
-    let mut result: *mut passwd = ::core::ptr::null_mut::<passwd>();
-    let mut buf: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut bufsize: size_t = 0;
-    let mut name_size: size_t = 0;
-    let mut homedir_size: size_t = 0;
-    let mut shell_size: size_t = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    if pwd.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    bufsize = 2000 as size_t;
-    loop {
-        buf = uv__malloc(bufsize) as *mut ::core::ffi::c_char;
-        if buf.is_null() {
-            return UV_ENOMEM as ::core::ffi::c_int;
+        len = strlen(buf);
+        if len >= *size {
+            *size = len.wrapping_add(1 as size_t);
+            return UV_ENOBUFS as ::core::ffi::c_int;
         }
+        if len > 1 as size_t
+            && *buf.offset(len.wrapping_sub(1 as size_t) as isize) as ::core::ffi::c_int
+                == '/' as i32
+        {
+            len = len.wrapping_sub(1);
+        }
+        memcpy(
+            buffer as *mut ::core::ffi::c_void,
+            buf as *const ::core::ffi::c_void,
+            len.wrapping_add(1 as size_t),
+        );
+        *buffer.offset(len as isize) = '\0' as i32 as ::core::ffi::c_char;
+        *size = len;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__getpwuid_r(mut pwd: *mut uv_passwd_t, mut uid: uid_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut pw: passwd = passwd {
+            pw_name: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            pw_passwd: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            pw_uid: 0,
+            pw_gid: 0,
+            pw_gecos: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            pw_dir: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            pw_shell: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+        };
+        let mut result: *mut passwd = ::core::ptr::null_mut::<passwd>();
+        let mut buf: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut bufsize: size_t = 0;
+        let mut name_size: size_t = 0;
+        let mut homedir_size: size_t = 0;
+        let mut shell_size: size_t = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        if pwd.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        bufsize = 2000 as size_t;
         loop {
-            r = getpwuid_r(uid as __uid_t, &raw mut pw, buf, bufsize, &raw mut result);
-            if !(r == EINTR) {
+            buf = uv__malloc(bufsize) as *mut ::core::ffi::c_char;
+            if buf.is_null() {
+                return UV_ENOMEM as ::core::ffi::c_int;
+            }
+            loop {
+                r = getpwuid_r(uid as __uid_t, &raw mut pw, buf, bufsize, &raw mut result);
+                if !(r == EINTR) {
+                    break;
+                }
+            }
+            if r != 0 as ::core::ffi::c_int || result.is_null() {
+                uv__free(buf as *mut ::core::ffi::c_void);
+            }
+            if r != ERANGE {
                 break;
             }
+            bufsize = bufsize.wrapping_mul(2 as size_t);
         }
-        if r != 0 as ::core::ffi::c_int || result.is_null() {
+        if r != 0 as ::core::ffi::c_int {
+            return -r;
+        }
+        if result.is_null() {
+            return UV_ENOENT as ::core::ffi::c_int;
+        }
+        name_size = strlen(pw.pw_name).wrapping_add(1 as size_t);
+        homedir_size = strlen(pw.pw_dir).wrapping_add(1 as size_t);
+        shell_size = strlen(pw.pw_shell).wrapping_add(1 as size_t);
+        (*pwd).username = uv__malloc(
+            name_size
+                .wrapping_add(homedir_size)
+                .wrapping_add(shell_size),
+        ) as *mut ::core::ffi::c_char;
+        if (*pwd).username.is_null() {
             uv__free(buf as *mut ::core::ffi::c_void);
-        }
-        if r != ERANGE {
-            break;
-        }
-        bufsize = bufsize.wrapping_mul(2 as size_t);
-    }
-    if r != 0 as ::core::ffi::c_int {
-        return -r;
-    }
-    if result.is_null() {
-        return UV_ENOENT as ::core::ffi::c_int;
-    }
-    name_size = strlen(pw.pw_name).wrapping_add(1 as size_t);
-    homedir_size = strlen(pw.pw_dir).wrapping_add(1 as size_t);
-    shell_size = strlen(pw.pw_shell).wrapping_add(1 as size_t);
-    (*pwd).username = uv__malloc(
-        name_size
-            .wrapping_add(homedir_size)
-            .wrapping_add(shell_size),
-    ) as *mut ::core::ffi::c_char;
-    if (*pwd).username.is_null() {
-        uv__free(buf as *mut ::core::ffi::c_void);
-        return UV_ENOMEM as ::core::ffi::c_int;
-    }
-    memcpy(
-        (*pwd).username as *mut ::core::ffi::c_void,
-        pw.pw_name as *const ::core::ffi::c_void,
-        name_size,
-    );
-    (*pwd).homedir = (*pwd).username.offset(name_size as isize);
-    memcpy(
-        (*pwd).homedir as *mut ::core::ffi::c_void,
-        pw.pw_dir as *const ::core::ffi::c_void,
-        homedir_size,
-    );
-    (*pwd).shell = (*pwd).homedir.offset(homedir_size as isize);
-    memcpy(
-        (*pwd).shell as *mut ::core::ffi::c_void,
-        pw.pw_shell as *const ::core::ffi::c_void,
-        shell_size,
-    );
-    (*pwd).uid = pw.pw_uid as ::core::ffi::c_ulong;
-    (*pwd).gid = pw.pw_gid as ::core::ffi::c_ulong;
-    uv__free(buf as *mut ::core::ffi::c_void);
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_os_get_group(
-    mut grp: *mut uv_group_t,
-    mut gid: uv_uid_t,
-) -> ::core::ffi::c_int {
-    let mut gp: group = group {
-        gr_name: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        gr_passwd: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        gr_gid: 0,
-        gr_mem: ::core::ptr::null_mut::<*mut ::core::ffi::c_char>(),
-    };
-    let mut result: *mut group = ::core::ptr::null_mut::<group>();
-    let mut buf: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut gr_mem: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut bufsize: size_t = 0;
-    let mut name_size: size_t = 0;
-    let mut members: ::core::ffi::c_long = 0;
-    let mut mem_size: size_t = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    if grp.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    bufsize = 2000 as size_t;
-    loop {
-        buf = uv__malloc(bufsize) as *mut ::core::ffi::c_char;
-        if buf.is_null() {
             return UV_ENOMEM as ::core::ffi::c_int;
         }
+        memcpy(
+            (*pwd).username as *mut ::core::ffi::c_void,
+            pw.pw_name as *const ::core::ffi::c_void,
+            name_size,
+        );
+        (*pwd).homedir = (*pwd).username.offset(name_size as isize);
+        memcpy(
+            (*pwd).homedir as *mut ::core::ffi::c_void,
+            pw.pw_dir as *const ::core::ffi::c_void,
+            homedir_size,
+        );
+        (*pwd).shell = (*pwd).homedir.offset(homedir_size as isize);
+        memcpy(
+            (*pwd).shell as *mut ::core::ffi::c_void,
+            pw.pw_shell as *const ::core::ffi::c_void,
+            shell_size,
+        );
+        (*pwd).uid = pw.pw_uid as ::core::ffi::c_ulong;
+        (*pwd).gid = pw.pw_gid as ::core::ffi::c_ulong;
+        uv__free(buf as *mut ::core::ffi::c_void);
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_get_group(mut grp: *mut uv_group_t, mut gid: uv_uid_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut gp: group = group {
+            gr_name: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            gr_passwd: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            gr_gid: 0,
+            gr_mem: ::core::ptr::null_mut::<*mut ::core::ffi::c_char>(),
+        };
+        let mut result: *mut group = ::core::ptr::null_mut::<group>();
+        let mut buf: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut gr_mem: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut bufsize: size_t = 0;
+        let mut name_size: size_t = 0;
+        let mut members: ::core::ffi::c_long = 0;
+        let mut mem_size: size_t = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        if grp.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        bufsize = 2000 as size_t;
         loop {
-            r = getgrgid_r(gid as __gid_t, &raw mut gp, buf, bufsize, &raw mut result);
-            if !(r == EINTR) {
+            buf = uv__malloc(bufsize) as *mut ::core::ffi::c_char;
+            if buf.is_null() {
+                return UV_ENOMEM as ::core::ffi::c_int;
+            }
+            loop {
+                r = getgrgid_r(gid as __gid_t, &raw mut gp, buf, bufsize, &raw mut result);
+                if !(r == EINTR) {
+                    break;
+                }
+            }
+            if r != 0 as ::core::ffi::c_int || result.is_null() {
+                uv__free(buf as *mut ::core::ffi::c_void);
+            }
+            if r != ERANGE {
                 break;
             }
+            bufsize = bufsize.wrapping_mul(2 as size_t);
         }
-        if r != 0 as ::core::ffi::c_int || result.is_null() {
+        if r != 0 as ::core::ffi::c_int {
+            return -r;
+        }
+        if result.is_null() {
+            return UV_ENOENT as ::core::ffi::c_int;
+        }
+        name_size = strlen(gp.gr_name).wrapping_add(1 as size_t);
+        members = 0 as ::core::ffi::c_long;
+        mem_size = ::core::mem::size_of::<*mut ::core::ffi::c_char>() as usize as size_t;
+        r = 0 as ::core::ffi::c_int;
+        while !(*gp.gr_mem.offset(r as isize)).is_null() {
+            mem_size = (mem_size as ::core::ffi::c_ulong).wrapping_add(
+                strlen(*gp.gr_mem.offset(r as isize))
+                    .wrapping_add(1 as size_t)
+                    .wrapping_add(::core::mem::size_of::<*mut ::core::ffi::c_char>() as size_t)
+                    as ::core::ffi::c_ulong,
+            ) as size_t as size_t;
+            members += 1;
+            r += 1;
+        }
+        gr_mem = uv__malloc(name_size.wrapping_add(mem_size)) as *mut ::core::ffi::c_char;
+        if gr_mem.is_null() {
             uv__free(buf as *mut ::core::ffi::c_void);
+            return UV_ENOMEM as ::core::ffi::c_int;
         }
-        if r != ERANGE {
-            break;
+        (*grp).members = gr_mem as *mut *mut ::core::ffi::c_char;
+        let ref mut fresh1 = *(*grp).members.offset(members as isize);
+        *fresh1 = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        gr_mem = (*grp)
+            .members
+            .offset((members + 1 as ::core::ffi::c_long) as isize)
+            as *mut *mut ::core::ffi::c_char as *mut ::core::ffi::c_char;
+        r = 0 as ::core::ffi::c_int;
+        while (r as ::core::ffi::c_long) < members {
+            let ref mut fresh2 = *(*grp).members.offset(r as isize);
+            *fresh2 = gr_mem;
+            strcpy(gr_mem, *gp.gr_mem.offset(r as isize));
+            gr_mem = gr_mem.offset(strlen(gr_mem).wrapping_add(1 as size_t) as isize);
+            r += 1;
         }
-        bufsize = bufsize.wrapping_mul(2 as size_t);
-    }
-    if r != 0 as ::core::ffi::c_int {
-        return -r;
-    }
-    if result.is_null() {
-        return UV_ENOENT as ::core::ffi::c_int;
-    }
-    name_size = strlen(gp.gr_name).wrapping_add(1 as size_t);
-    members = 0 as ::core::ffi::c_long;
-    mem_size = ::core::mem::size_of::<*mut ::core::ffi::c_char>() as usize as size_t;
-    r = 0 as ::core::ffi::c_int;
-    while !(*gp.gr_mem.offset(r as isize)).is_null() {
-        mem_size = (mem_size as ::core::ffi::c_ulong).wrapping_add(
-            strlen(*gp.gr_mem.offset(r as isize))
-                .wrapping_add(1 as size_t)
-                .wrapping_add(::core::mem::size_of::<*mut ::core::ffi::c_char>() as size_t)
-                as ::core::ffi::c_ulong,
-        ) as size_t as size_t;
-        members += 1;
-        r += 1;
-    }
-    gr_mem = uv__malloc(name_size.wrapping_add(mem_size)) as *mut ::core::ffi::c_char;
-    if gr_mem.is_null() {
+        '_c2rust_label: {
+            if gr_mem == ((*grp).members as *mut ::core::ffi::c_char).offset(mem_size as isize) {
+            } else {
+                __assert_fail(
+                    b"gr_mem == (char*)grp->members + mem_size\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1342 as ::core::ffi::c_uint,
+                    b"int uv_os_get_group(uv_group_t *, uv_uid_t)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*grp).groupname = gr_mem;
+        memcpy(
+            (*grp).groupname as *mut ::core::ffi::c_void,
+            gp.gr_name as *const ::core::ffi::c_void,
+            name_size,
+        );
+        gr_mem = gr_mem.offset(name_size as isize);
+        (*grp).gid = gp.gr_gid as ::core::ffi::c_ulong;
         uv__free(buf as *mut ::core::ffi::c_void);
-        return UV_ENOMEM as ::core::ffi::c_int;
+        return 0 as ::core::ffi::c_int;
     }
-    (*grp).members = gr_mem as *mut *mut ::core::ffi::c_char;
-    let ref mut fresh1 = *(*grp).members.offset(members as isize);
-    *fresh1 = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    gr_mem = (*grp)
-        .members
-        .offset((members + 1 as ::core::ffi::c_long) as isize)
-        as *mut *mut ::core::ffi::c_char as *mut ::core::ffi::c_char;
-    r = 0 as ::core::ffi::c_int;
-    while (r as ::core::ffi::c_long) < members {
-        let ref mut fresh2 = *(*grp).members.offset(r as isize);
-        *fresh2 = gr_mem;
-        strcpy(gr_mem, *gp.gr_mem.offset(r as isize));
-        gr_mem = gr_mem.offset(strlen(gr_mem).wrapping_add(1 as size_t) as isize);
-        r += 1;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_get_passwd(mut pwd: *mut uv_passwd_t) -> ::core::ffi::c_int {
+    unsafe {
+        return uv__getpwuid_r(pwd, geteuid() as uid_t);
     }
-    '_c2rust_label: {
-        if gr_mem == ((*grp).members as *mut ::core::ffi::c_char).offset(mem_size as isize) {
-        } else {
-            __assert_fail(
-                b"gr_mem == (char*)grp->members + mem_size\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1342 as ::core::ffi::c_uint,
-                b"int uv_os_get_group(uv_group_t *, uv_uid_t)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*grp).groupname = gr_mem;
-    memcpy(
-        (*grp).groupname as *mut ::core::ffi::c_void,
-        gp.gr_name as *const ::core::ffi::c_void,
-        name_size,
-    );
-    gr_mem = gr_mem.offset(name_size as isize);
-    (*grp).gid = gp.gr_gid as ::core::ffi::c_ulong;
-    uv__free(buf as *mut ::core::ffi::c_void);
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_os_get_passwd(mut pwd: *mut uv_passwd_t) -> ::core::ffi::c_int {
-    return uv__getpwuid_r(pwd, geteuid() as uid_t);
-}
-pub(crate) unsafe fn uv_os_get_passwd2(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_get_passwd2(
     mut pwd: *mut uv_passwd_t,
     mut uid: uv_uid_t,
 ) -> ::core::ffi::c_int {
-    return uv__getpwuid_r(pwd, uid as uid_t);
+    unsafe {
+        return uv__getpwuid_r(pwd, uid as uid_t);
+    }
 }
-pub(crate) unsafe fn uv_translate_sys_error(
-    mut sys_errno: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    return if sys_errno <= 0 as ::core::ffi::c_int {
-        sys_errno
-    } else {
-        -sys_errno
-    };
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_translate_sys_error(mut sys_errno: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        return if sys_errno <= 0 as ::core::ffi::c_int {
+            sys_errno
+        } else {
+            -sys_errno
+        };
+    }
 }
-pub(crate) unsafe fn uv_os_environ(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_environ(
     mut envitems: *mut *mut uv_env_item_t,
     mut count: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut current_block: u64;
-    let mut i: ::core::ffi::c_int = 0;
-    let mut j: ::core::ffi::c_int = 0;
-    let mut cnt: ::core::ffi::c_int = 0;
-    let mut envitem: *mut uv_env_item_t = ::core::ptr::null_mut::<uv_env_item_t>();
-    *envitems = ::core::ptr::null_mut::<uv_env_item_t>();
-    *count = 0 as ::core::ffi::c_int;
-    i = 0 as ::core::ffi::c_int;
-    while !(*environ.offset(i as isize)).is_null() {
-        i += 1;
-    }
-    *envitems = uv__calloc(
-        i as size_t,
-        ::core::mem::size_of::<uv_env_item_t>() as size_t,
-    ) as *mut uv_env_item_t;
-    if (*envitems).is_null() {
-        return UV_ENOMEM as ::core::ffi::c_int;
-    }
-    j = 0 as ::core::ffi::c_int;
-    cnt = 0 as ::core::ffi::c_int;
-    loop {
-        if !(j < i) {
-            current_block = 5689001924483802034;
-            break;
+    unsafe {
+        let mut current_block: u64;
+        let mut i: ::core::ffi::c_int = 0;
+        let mut j: ::core::ffi::c_int = 0;
+        let mut cnt: ::core::ffi::c_int = 0;
+        let mut envitem: *mut uv_env_item_t = ::core::ptr::null_mut::<uv_env_item_t>();
+        *envitems = ::core::ptr::null_mut::<uv_env_item_t>();
+        *count = 0 as ::core::ffi::c_int;
+        i = 0 as ::core::ffi::c_int;
+        while !(*environ.offset(i as isize)).is_null() {
+            i += 1;
         }
-        let mut buf: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-        let mut ptr: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-        if (*environ.offset(j as isize)).is_null() {
-            current_block = 5689001924483802034;
-            break;
-        }
-        buf = uv__strdup(*environ.offset(j as isize));
-        if buf.is_null() {
-            current_block = 2025861165427811997;
-            break;
-        }
-        ptr = strchr(buf, '=' as i32);
-        if ptr.is_null() {
-            uv__free(buf as *mut ::core::ffi::c_void);
-        } else {
-            *ptr = '\0' as i32 as ::core::ffi::c_char;
-            envitem = (*envitems).offset(cnt as isize) as *mut uv_env_item_t;
-            (*envitem).name = buf;
-            (*envitem).value = ptr.offset(1 as ::core::ffi::c_int as isize);
-            cnt += 1;
-        }
-        j += 1;
-    }
-    match current_block {
-        2025861165427811997 => {
-            i = 0 as ::core::ffi::c_int;
-            while i < cnt {
-                envitem = (*envitems).offset(cnt as isize) as *mut uv_env_item_t;
-                uv__free((*envitem).name as *mut ::core::ffi::c_void);
-                i += 1;
-            }
-            uv__free(*envitems as *mut ::core::ffi::c_void);
-            *envitems = ::core::ptr::null_mut::<uv_env_item_t>();
-            *count = 0 as ::core::ffi::c_int;
+        *envitems = uv__calloc(
+            i as size_t,
+            ::core::mem::size_of::<uv_env_item_t>() as size_t,
+        ) as *mut uv_env_item_t;
+        if (*envitems).is_null() {
             return UV_ENOMEM as ::core::ffi::c_int;
         }
-        _ => {
-            *count = cnt;
-            return 0 as ::core::ffi::c_int;
+        j = 0 as ::core::ffi::c_int;
+        cnt = 0 as ::core::ffi::c_int;
+        loop {
+            if !(j < i) {
+                current_block = 5689001924483802034;
+                break;
+            }
+            let mut buf: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+            let mut ptr: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+            if (*environ.offset(j as isize)).is_null() {
+                current_block = 5689001924483802034;
+                break;
+            }
+            buf = uv__strdup(*environ.offset(j as isize));
+            if buf.is_null() {
+                current_block = 2025861165427811997;
+                break;
+            }
+            ptr = strchr(buf, '=' as i32);
+            if ptr.is_null() {
+                uv__free(buf as *mut ::core::ffi::c_void);
+            } else {
+                *ptr = '\0' as i32 as ::core::ffi::c_char;
+                envitem = (*envitems).offset(cnt as isize) as *mut uv_env_item_t;
+                (*envitem).name = buf;
+                (*envitem).value = ptr.offset(1 as ::core::ffi::c_int as isize);
+                cnt += 1;
+            }
+            j += 1;
         }
-    };
+        match current_block {
+            2025861165427811997 => {
+                i = 0 as ::core::ffi::c_int;
+                while i < cnt {
+                    envitem = (*envitems).offset(cnt as isize) as *mut uv_env_item_t;
+                    uv__free((*envitem).name as *mut ::core::ffi::c_void);
+                    i += 1;
+                }
+                uv__free(*envitems as *mut ::core::ffi::c_void);
+                *envitems = ::core::ptr::null_mut::<uv_env_item_t>();
+                *count = 0 as ::core::ffi::c_int;
+                return UV_ENOMEM as ::core::ffi::c_int;
+            }
+            _ => {
+                *count = cnt;
+                return 0 as ::core::ffi::c_int;
+            }
+        };
+    }
 }
-pub(crate) unsafe fn uv_os_getenv(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_getenv(
     mut name: *const ::core::ffi::c_char,
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut var: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut len: size_t = 0;
-    if name.is_null() || buffer.is_null() || size.is_null() || *size == 0 as size_t {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        let mut var: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut len: size_t = 0;
+        if name.is_null() || buffer.is_null() || size.is_null() || *size == 0 as size_t {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        var = getenv(name);
+        if var.is_null() {
+            return UV_ENOENT as ::core::ffi::c_int;
+        }
+        len = strlen(var);
+        if len >= *size {
+            *size = len.wrapping_add(1 as size_t);
+            return UV_ENOBUFS as ::core::ffi::c_int;
+        }
+        memcpy(
+            buffer as *mut ::core::ffi::c_void,
+            var as *const ::core::ffi::c_void,
+            len.wrapping_add(1 as size_t),
+        );
+        *size = len;
+        return 0 as ::core::ffi::c_int;
     }
-    var = getenv(name);
-    if var.is_null() {
-        return UV_ENOENT as ::core::ffi::c_int;
-    }
-    len = strlen(var);
-    if len >= *size {
-        *size = len.wrapping_add(1 as size_t);
-        return UV_ENOBUFS as ::core::ffi::c_int;
-    }
-    memcpy(
-        buffer as *mut ::core::ffi::c_void,
-        var as *const ::core::ffi::c_void,
-        len.wrapping_add(1 as size_t),
-    );
-    *size = len;
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_os_setenv(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_setenv(
     mut name: *const ::core::ffi::c_char,
     mut value: *const ::core::ffi::c_char,
 ) -> ::core::ffi::c_int {
-    if name.is_null() || value.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        if name.is_null() || value.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if setenv(name, value, 1 as ::core::ffi::c_int) != 0 as ::core::ffi::c_int {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if setenv(name, value, 1 as ::core::ffi::c_int) != 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_os_unsetenv(mut name: *const ::core::ffi::c_char) -> ::core::ffi::c_int {
-    if name.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_unsetenv(mut name: *const ::core::ffi::c_char) -> ::core::ffi::c_int {
+    unsafe {
+        if name.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if unsetenv(name) != 0 as ::core::ffi::c_int {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if unsetenv(name) != 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_os_gethostname(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_gethostname(
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut buf: [::core::ffi::c_char; 65] = [0; 65];
-    let mut len: size_t = 0;
-    if buffer.is_null() || size.is_null() || *size == 0 as size_t {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        let mut buf: [::core::ffi::c_char; 65] = [0; 65];
+        let mut len: size_t = 0;
+        if buffer.is_null() || size.is_null() || *size == 0 as size_t {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if gethostname(
+            &raw mut buf as *mut ::core::ffi::c_char,
+            ::core::mem::size_of::<[::core::ffi::c_char; 65]>() as size_t,
+        ) != 0 as ::core::ffi::c_int
+        {
+            return -*__errno_location();
+        }
+        buf[(::core::mem::size_of::<[::core::ffi::c_char; 65]>() as usize).wrapping_sub(1 as usize)
+            as usize] = '\0' as i32 as ::core::ffi::c_char;
+        len = strlen(&raw mut buf as *mut ::core::ffi::c_char);
+        if len >= *size {
+            *size = len.wrapping_add(1 as size_t);
+            return UV_ENOBUFS as ::core::ffi::c_int;
+        }
+        memcpy(
+            buffer as *mut ::core::ffi::c_void,
+            &raw mut buf as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
+            len.wrapping_add(1 as size_t),
+        );
+        *size = len;
+        return 0 as ::core::ffi::c_int;
     }
-    if gethostname(
-        &raw mut buf as *mut ::core::ffi::c_char,
-        ::core::mem::size_of::<[::core::ffi::c_char; 65]>() as size_t,
-    ) != 0 as ::core::ffi::c_int
-    {
-        return -*__errno_location();
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_get_osfhandle(mut fd: ::core::ffi::c_int) -> uv_os_fd_t {
+    unsafe {
+        return fd as uv_os_fd_t;
     }
-    buf[(::core::mem::size_of::<[::core::ffi::c_char; 65]>() as usize).wrapping_sub(1 as usize)
-        as usize] = '\0' as i32 as ::core::ffi::c_char;
-    len = strlen(&raw mut buf as *mut ::core::ffi::c_char);
-    if len >= *size {
-        *size = len.wrapping_add(1 as size_t);
-        return UV_ENOBUFS as ::core::ffi::c_int;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_open_osfhandle(mut os_fd: uv_os_fd_t) -> ::core::ffi::c_int {
+    unsafe {
+        return os_fd as ::core::ffi::c_int;
     }
-    memcpy(
-        buffer as *mut ::core::ffi::c_void,
-        &raw mut buf as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
-        len.wrapping_add(1 as size_t),
-    );
-    *size = len;
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_get_osfhandle(mut fd: ::core::ffi::c_int) -> uv_os_fd_t {
-    return fd as uv_os_fd_t;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_getpid() -> uv_pid_t {
+    unsafe {
+        return getpid() as uv_pid_t;
+    }
 }
-pub(crate) unsafe fn uv_open_osfhandle(mut os_fd: uv_os_fd_t) -> ::core::ffi::c_int {
-    return os_fd as ::core::ffi::c_int;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_getppid() -> uv_pid_t {
+    unsafe {
+        return getppid() as uv_pid_t;
+    }
 }
-pub(crate) unsafe fn uv_os_getpid() -> uv_pid_t {
-    return getpid() as uv_pid_t;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_cpumask_size() -> ::core::ffi::c_int {
+    unsafe {
+        return CPU_SETSIZE;
+    }
 }
-pub(crate) unsafe fn uv_os_getppid() -> uv_pid_t {
-    return getppid() as uv_pid_t;
-}
-pub(crate) unsafe fn uv_cpumask_size() -> ::core::ffi::c_int {
-    return CPU_SETSIZE;
-}
-pub(crate) unsafe fn uv_os_getpriority(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_getpriority(
     mut pid: uv_pid_t,
     mut priority: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    if priority.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    *__errno_location() = 0 as ::core::ffi::c_int;
-    r = getpriority(PRIO_PROCESS, pid as id_t);
-    if r == -(1 as ::core::ffi::c_int) && *__errno_location() != 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    *priority = r;
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_os_setpriority(
-    mut pid: uv_pid_t,
-    mut priority: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    if priority < UV_PRIORITY_HIGHEST || priority > UV_PRIORITY_LOW {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if setpriority(PRIO_PROCESS, pid as id_t, priority) != 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_thread_getpriority(
-    mut tid: uv_thread_t,
-    mut priority: *mut ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    let mut policy: ::core::ffi::c_int = 0;
-    let mut param: sched_param = sched_param { sched_priority: 0 };
-    let mut pid: pid_t = syscall(SYS_gettid as ::core::ffi::c_long) as pid_t;
-    if priority.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    r = pthread_getschedparam(tid as pthread_t, &raw mut policy, &raw mut param);
-    if r != 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    if SCHED_OTHER == policy && pthread_equal(tid as pthread_t, pthread_self()) != 0 {
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        if priority.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
         *__errno_location() = 0 as ::core::ffi::c_int;
         r = getpriority(PRIO_PROCESS, pid as id_t);
         if r == -(1 as ::core::ffi::c_int) && *__errno_location() != 0 as ::core::ffi::c_int {
@@ -3416,319 +3590,389 @@ pub(crate) unsafe fn uv_thread_getpriority(
         *priority = r;
         return 0 as ::core::ffi::c_int;
     }
-    *priority = param.sched_priority;
-    return 0 as ::core::ffi::c_int;
 }
-unsafe extern "C" fn set_nice_for_calling_thread(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_setpriority(
+    mut pid: uv_pid_t,
     mut priority: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    let mut nice: ::core::ffi::c_int = 0;
-    if priority < UV_THREAD_PRIORITY_LOWEST as ::core::ffi::c_int
-        || priority > UV_THREAD_PRIORITY_HIGHEST as ::core::ffi::c_int
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        if priority < UV_PRIORITY_HIGHEST || priority > UV_PRIORITY_LOW {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if setpriority(PRIO_PROCESS, pid as id_t, priority) != 0 as ::core::ffi::c_int {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    let mut pid: pid_t = syscall(SYS_gettid as ::core::ffi::c_long) as pid_t;
-    nice = 0 as ::core::ffi::c_int - priority * 2 as ::core::ffi::c_int;
-    r = setpriority(PRIO_PROCESS, pid as id_t, nice);
-    if r != 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_thread_setpriority(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_thread_getpriority(
     mut tid: uv_thread_t,
-    mut priority: ::core::ffi::c_int,
+    mut priority: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    let mut min: ::core::ffi::c_int = 0;
-    let mut max: ::core::ffi::c_int = 0;
-    let mut range: ::core::ffi::c_int = 0;
-    let mut prio: ::core::ffi::c_int = 0;
-    let mut policy: ::core::ffi::c_int = 0;
-    let mut param: sched_param = sched_param { sched_priority: 0 };
-    if priority < UV_THREAD_PRIORITY_LOWEST as ::core::ffi::c_int
-        || priority > UV_THREAD_PRIORITY_HIGHEST as ::core::ffi::c_int
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    r = pthread_getschedparam(tid as pthread_t, &raw mut policy, &raw mut param);
-    if r != 0 as ::core::ffi::c_int {
-        return -*__errno_location();
-    }
-    if SCHED_OTHER == policy && pthread_equal(tid as pthread_t, pthread_self()) != 0 {
-        return set_nice_for_calling_thread(priority);
-    }
-    min = sched_get_priority_min(policy);
-    max = sched_get_priority_max(policy);
-    if min == -(1 as ::core::ffi::c_int) || max == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
-    }
-    range = max - min;
-    match priority {
-        2 => {
-            prio = max;
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        let mut policy: ::core::ffi::c_int = 0;
+        let mut param: sched_param = sched_param { sched_priority: 0 };
+        let mut pid: pid_t = syscall(SYS_gettid as ::core::ffi::c_long) as pid_t;
+        if priority.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
         }
-        1 => {
-            prio = min + range * 3 as ::core::ffi::c_int / 4 as ::core::ffi::c_int;
-        }
-        0 => {
-            prio = min + range / 2 as ::core::ffi::c_int;
-        }
-        -1 => {
-            prio = min + range / 4 as ::core::ffi::c_int;
-        }
-        -2 => {
-            prio = min;
-        }
-        _ => return 0 as ::core::ffi::c_int,
-    }
-    if param.sched_priority != prio {
-        param.sched_priority = prio;
-        r = pthread_setschedparam(tid as pthread_t, policy, &raw mut param);
+        r = pthread_getschedparam(tid as pthread_t, &raw mut policy, &raw mut param);
         if r != 0 as ::core::ffi::c_int {
             return -*__errno_location();
         }
+        if SCHED_OTHER == policy && pthread_equal(tid as pthread_t, pthread_self()) != 0 {
+            *__errno_location() = 0 as ::core::ffi::c_int;
+            r = getpriority(PRIO_PROCESS, pid as id_t);
+            if r == -(1 as ::core::ffi::c_int) && *__errno_location() != 0 as ::core::ffi::c_int {
+                return -*__errno_location();
+            }
+            *priority = r;
+            return 0 as ::core::ffi::c_int;
+        }
+        *priority = param.sched_priority;
+        return 0 as ::core::ffi::c_int;
     }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_os_uname(mut buffer: *mut uv_utsname_t) -> ::core::ffi::c_int {
-    let mut buf: utsname = utsname {
-        sysname: [0; 65],
-        nodename: [0; 65],
-        release: [0; 65],
-        version: [0; 65],
-        machine: [0; 65],
-        domainname: [0; 65],
-    };
-    let mut r: ::core::ffi::c_int = 0;
-    if buffer.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn set_nice_for_calling_thread(mut priority: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        let mut nice: ::core::ffi::c_int = 0;
+        if priority < UV_THREAD_PRIORITY_LOWEST as ::core::ffi::c_int
+            || priority > UV_THREAD_PRIORITY_HIGHEST as ::core::ffi::c_int
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        let mut pid: pid_t = syscall(SYS_gettid as ::core::ffi::c_long) as pid_t;
+        nice = 0 as ::core::ffi::c_int - priority * 2 as ::core::ffi::c_int;
+        r = setpriority(PRIO_PROCESS, pid as id_t, nice);
+        if r != 0 as ::core::ffi::c_int {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if uname(&raw mut buf) == -(1 as ::core::ffi::c_int) {
-        r = -*__errno_location();
-    } else {
-        r = uv__strscpy(
-            &raw mut (*buffer).sysname as *mut ::core::ffi::c_char,
-            &raw mut buf.sysname as *mut ::core::ffi::c_char,
-            ::core::mem::size_of::<[::core::ffi::c_char; 256]>() as size_t,
-        ) as ::core::ffi::c_int;
-        if !(r == UV_E2BIG as ::core::ffi::c_int) {
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_thread_setpriority(
+    mut tid: uv_thread_t,
+    mut priority: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        let mut min: ::core::ffi::c_int = 0;
+        let mut max: ::core::ffi::c_int = 0;
+        let mut range: ::core::ffi::c_int = 0;
+        let mut prio: ::core::ffi::c_int = 0;
+        let mut policy: ::core::ffi::c_int = 0;
+        let mut param: sched_param = sched_param { sched_priority: 0 };
+        if priority < UV_THREAD_PRIORITY_LOWEST as ::core::ffi::c_int
+            || priority > UV_THREAD_PRIORITY_HIGHEST as ::core::ffi::c_int
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        r = pthread_getschedparam(tid as pthread_t, &raw mut policy, &raw mut param);
+        if r != 0 as ::core::ffi::c_int {
+            return -*__errno_location();
+        }
+        if SCHED_OTHER == policy && pthread_equal(tid as pthread_t, pthread_self()) != 0 {
+            return set_nice_for_calling_thread(priority);
+        }
+        min = sched_get_priority_min(policy);
+        max = sched_get_priority_max(policy);
+        if min == -(1 as ::core::ffi::c_int) || max == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
+        }
+        range = max - min;
+        match priority {
+            2 => {
+                prio = max;
+            }
+            1 => {
+                prio = min + range * 3 as ::core::ffi::c_int / 4 as ::core::ffi::c_int;
+            }
+            0 => {
+                prio = min + range / 2 as ::core::ffi::c_int;
+            }
+            -1 => {
+                prio = min + range / 4 as ::core::ffi::c_int;
+            }
+            -2 => {
+                prio = min;
+            }
+            _ => return 0 as ::core::ffi::c_int,
+        }
+        if param.sched_priority != prio {
+            param.sched_priority = prio;
+            r = pthread_setschedparam(tid as pthread_t, policy, &raw mut param);
+            if r != 0 as ::core::ffi::c_int {
+                return -*__errno_location();
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_uname(mut buffer: *mut uv_utsname_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut buf: utsname = utsname {
+            sysname: [0; 65],
+            nodename: [0; 65],
+            release: [0; 65],
+            version: [0; 65],
+            machine: [0; 65],
+            domainname: [0; 65],
+        };
+        let mut r: ::core::ffi::c_int = 0;
+        if buffer.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if uname(&raw mut buf) == -(1 as ::core::ffi::c_int) {
+            r = -*__errno_location();
+        } else {
             r = uv__strscpy(
-                &raw mut (*buffer).release as *mut ::core::ffi::c_char,
-                &raw mut buf.release as *mut ::core::ffi::c_char,
+                &raw mut (*buffer).sysname as *mut ::core::ffi::c_char,
+                &raw mut buf.sysname as *mut ::core::ffi::c_char,
                 ::core::mem::size_of::<[::core::ffi::c_char; 256]>() as size_t,
             ) as ::core::ffi::c_int;
             if !(r == UV_E2BIG as ::core::ffi::c_int) {
                 r = uv__strscpy(
-                    &raw mut (*buffer).version as *mut ::core::ffi::c_char,
-                    &raw mut buf.version as *mut ::core::ffi::c_char,
+                    &raw mut (*buffer).release as *mut ::core::ffi::c_char,
+                    &raw mut buf.release as *mut ::core::ffi::c_char,
                     ::core::mem::size_of::<[::core::ffi::c_char; 256]>() as size_t,
                 ) as ::core::ffi::c_int;
                 if !(r == UV_E2BIG as ::core::ffi::c_int) {
                     r = uv__strscpy(
-                        &raw mut (*buffer).machine as *mut ::core::ffi::c_char,
-                        &raw mut buf.machine as *mut ::core::ffi::c_char,
+                        &raw mut (*buffer).version as *mut ::core::ffi::c_char,
+                        &raw mut buf.version as *mut ::core::ffi::c_char,
                         ::core::mem::size_of::<[::core::ffi::c_char; 256]>() as size_t,
                     ) as ::core::ffi::c_int;
                     if !(r == UV_E2BIG as ::core::ffi::c_int) {
-                        return 0 as ::core::ffi::c_int;
+                        r = uv__strscpy(
+                            &raw mut (*buffer).machine as *mut ::core::ffi::c_char,
+                            &raw mut buf.machine as *mut ::core::ffi::c_char,
+                            ::core::mem::size_of::<[::core::ffi::c_char; 256]>() as size_t,
+                        ) as ::core::ffi::c_int;
+                        if !(r == UV_E2BIG as ::core::ffi::c_int) {
+                            return 0 as ::core::ffi::c_int;
+                        }
                     }
                 }
             }
         }
+        (*buffer).sysname[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
+        (*buffer).release[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
+        (*buffer).version[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
+        (*buffer).machine[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
+        return r;
     }
-    (*buffer).sysname[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
-    (*buffer).release[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
-    (*buffer).version[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
-    (*buffer).machine[0 as ::core::ffi::c_int as usize] = '\0' as i32 as ::core::ffi::c_char;
-    return r;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__getsockpeername(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__getsockpeername(
     mut handle: *const uv_handle_t,
     mut func: uv__peersockfunc,
     mut name: *mut sockaddr,
     mut namelen: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut socklen: socklen_t = 0;
-    let mut fd: uv_os_fd_t = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    r = uv_fileno(handle, &raw mut fd);
-    if r < 0 as ::core::ffi::c_int {
-        return r;
-    }
-    socklen = *namelen as socklen_t;
-    if func.expect("non-null function pointer")(fd as ::core::ffi::c_int, name, &raw mut socklen)
-        != 0
-    {
-        return -*__errno_location();
-    }
-    *namelen = socklen as ::core::ffi::c_int;
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_gettimeofday(mut tv: *mut uv_timeval64_t) -> ::core::ffi::c_int {
-    let mut time: timeval = timeval {
-        tv_sec: 0,
-        tv_usec: 0,
-    };
-    if tv.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if gettimeofday(
-        &raw mut time,
-        ::core::ptr::null_mut::<::core::ffi::c_void>(),
-    ) != 0 as ::core::ffi::c_int
-    {
-        return -*__errno_location();
-    }
-    (*tv).tv_sec = time.tv_sec as int64_t;
-    (*tv).tv_usec = time.tv_usec as int32_t;
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_sleep(mut msec: ::core::ffi::c_uint) {
-    let mut timeout: timespec = timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    let mut rc: ::core::ffi::c_int = 0;
-    timeout.tv_sec = msec.wrapping_div(1000 as ::core::ffi::c_uint) as __time_t;
-    timeout.tv_nsec = msec
-        .wrapping_rem(1000 as ::core::ffi::c_uint)
-        .wrapping_mul(1000 as ::core::ffi::c_uint)
-        .wrapping_mul(1000 as ::core::ffi::c_uint) as __syscall_slong_t;
-    loop {
-        rc = nanosleep(&raw mut timeout, &raw mut timeout);
-        if !(rc == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
+    unsafe {
+        let mut socklen: socklen_t = 0;
+        let mut fd: uv_os_fd_t = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        r = uv_fileno(handle, &raw mut fd);
+        if r < 0 as ::core::ffi::c_int {
+            return r;
         }
-    }
-    '_c2rust_label: {
-        if rc == 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"rc == 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1788 as ::core::ffi::c_uint,
-                b"void uv_sleep(unsigned int)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
+        socklen = *namelen as socklen_t;
+        if func.expect("non-null function pointer")(
+            fd as ::core::ffi::c_int,
+            name,
+            &raw mut socklen,
+        ) != 0
+        {
+            return -*__errno_location();
         }
-    };
+        *namelen = socklen as ::core::ffi::c_int;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_gettimeofday(mut tv: *mut uv_timeval64_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut time: timeval = timeval {
+            tv_sec: 0,
+            tv_usec: 0,
+        };
+        if tv.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if gettimeofday(
+            &raw mut time,
+            ::core::ptr::null_mut::<::core::ffi::c_void>(),
+        ) != 0 as ::core::ffi::c_int
+        {
+            return -*__errno_location();
+        }
+        (*tv).tv_sec = time.tv_sec as int64_t;
+        (*tv).tv_usec = time.tv_usec as int32_t;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_sleep(mut msec: ::core::ffi::c_uint) {
+    unsafe {
+        let mut timeout: timespec = timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        let mut rc: ::core::ffi::c_int = 0;
+        timeout.tv_sec = msec.wrapping_div(1000 as ::core::ffi::c_uint) as __time_t;
+        timeout.tv_nsec =
+            msec.wrapping_rem(1000 as ::core::ffi::c_uint)
+                .wrapping_mul(1000 as ::core::ffi::c_uint)
+                .wrapping_mul(1000 as ::core::ffi::c_uint) as __syscall_slong_t;
+        loop {
+            rc = nanosleep(&raw mut timeout, &raw mut timeout);
+            if !(rc == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        '_c2rust_label: {
+            if rc == 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"rc == 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/core.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1788 as ::core::ffi::c_uint,
+                    b"void uv_sleep(unsigned int)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__search_path(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__search_path(
     mut prog: *const ::core::ffi::c_char,
     mut buf: *mut ::core::ffi::c_char,
     mut buflen: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut abspath: [::core::ffi::c_char; 4096] = [0; 4096];
-    let mut abspath_size: size_t = 0;
-    let mut trypath: [::core::ffi::c_char; 4096] = [0; 4096];
-    let mut cloned_path: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut path_env: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut token: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut itr: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    if buf.is_null() || buflen.is_null() || *buflen == 0 as size_t {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if !strchr(prog, '/' as i32).is_null() {
-        if realpath(prog, &raw mut abspath as *mut ::core::ffi::c_char)
-            != &raw mut abspath as *mut ::core::ffi::c_char
-        {
-            return -*__errno_location();
+    unsafe {
+        let mut abspath: [::core::ffi::c_char; 4096] = [0; 4096];
+        let mut abspath_size: size_t = 0;
+        let mut trypath: [::core::ffi::c_char; 4096] = [0; 4096];
+        let mut cloned_path: *mut ::core::ffi::c_char =
+            ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut path_env: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut token: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut itr: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        if buf.is_null() || buflen.is_null() || *buflen == 0 as size_t {
+            return UV_EINVAL as ::core::ffi::c_int;
         }
-        abspath_size = strlen(&raw mut abspath as *mut ::core::ffi::c_char);
-        *buflen = (*buflen).wrapping_sub(1 as size_t);
-        if *buflen > abspath_size {
-            *buflen = abspath_size;
-        }
-        memcpy(
-            buf as *mut ::core::ffi::c_void,
-            &raw mut abspath as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
-            *buflen,
-        );
-        *buf.offset(*buflen as isize) = '\0' as i32 as ::core::ffi::c_char;
-        return 0 as ::core::ffi::c_int;
-    }
-    cloned_path = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    token = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    path_env = getenv(b"PATH\0" as *const u8 as *const ::core::ffi::c_char);
-    if path_env.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    cloned_path = uv__strdup(path_env);
-    if cloned_path.is_null() {
-        return UV_ENOMEM as ::core::ffi::c_int;
-    }
-    token = uv__strtok(
-        cloned_path,
-        b":\0" as *const u8 as *const ::core::ffi::c_char,
-        &raw mut itr,
-    );
-    while !token.is_null() {
-        snprintf(
-            &raw mut trypath as *mut ::core::ffi::c_char,
-            (::core::mem::size_of::<[::core::ffi::c_char; 4096]>() as size_t)
-                .wrapping_sub(1 as size_t),
-            b"%s/%s\0" as *const u8 as *const ::core::ffi::c_char,
-            token,
-            prog,
-        );
-        if realpath(
-            &raw mut trypath as *mut ::core::ffi::c_char,
-            &raw mut abspath as *mut ::core::ffi::c_char,
-        ) == &raw mut abspath as *mut ::core::ffi::c_char
-        {
-            if access(&raw mut abspath as *mut ::core::ffi::c_char, X_OK) == 0 as ::core::ffi::c_int
+        if !strchr(prog, '/' as i32).is_null() {
+            if realpath(prog, &raw mut abspath as *mut ::core::ffi::c_char)
+                != &raw mut abspath as *mut ::core::ffi::c_char
             {
-                abspath_size = strlen(&raw mut abspath as *mut ::core::ffi::c_char);
-                *buflen = (*buflen).wrapping_sub(1 as size_t);
-                if *buflen > abspath_size {
-                    *buflen = abspath_size;
-                }
-                memcpy(
-                    buf as *mut ::core::ffi::c_void,
-                    &raw mut abspath as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
-                    *buflen,
-                );
-                *buf.offset(*buflen as isize) = '\0' as i32 as ::core::ffi::c_char;
-                uv__free(cloned_path as *mut ::core::ffi::c_void);
-                return 0 as ::core::ffi::c_int;
+                return -*__errno_location();
             }
+            abspath_size = strlen(&raw mut abspath as *mut ::core::ffi::c_char);
+            *buflen = (*buflen).wrapping_sub(1 as size_t);
+            if *buflen > abspath_size {
+                *buflen = abspath_size;
+            }
+            memcpy(
+                buf as *mut ::core::ffi::c_void,
+                &raw mut abspath as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
+                *buflen,
+            );
+            *buf.offset(*buflen as isize) = '\0' as i32 as ::core::ffi::c_char;
+            return 0 as ::core::ffi::c_int;
+        }
+        cloned_path = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        token = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        path_env = getenv(b"PATH\0" as *const u8 as *const ::core::ffi::c_char);
+        if path_env.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        cloned_path = uv__strdup(path_env);
+        if cloned_path.is_null() {
+            return UV_ENOMEM as ::core::ffi::c_int;
         }
         token = uv__strtok(
-            ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            cloned_path,
             b":\0" as *const u8 as *const ::core::ffi::c_char,
             &raw mut itr,
         );
+        while !token.is_null() {
+            snprintf(
+                &raw mut trypath as *mut ::core::ffi::c_char,
+                (::core::mem::size_of::<[::core::ffi::c_char; 4096]>() as size_t)
+                    .wrapping_sub(1 as size_t),
+                b"%s/%s\0" as *const u8 as *const ::core::ffi::c_char,
+                token,
+                prog,
+            );
+            if realpath(
+                &raw mut trypath as *mut ::core::ffi::c_char,
+                &raw mut abspath as *mut ::core::ffi::c_char,
+            ) == &raw mut abspath as *mut ::core::ffi::c_char
+            {
+                if access(&raw mut abspath as *mut ::core::ffi::c_char, X_OK)
+                    == 0 as ::core::ffi::c_int
+                {
+                    abspath_size = strlen(&raw mut abspath as *mut ::core::ffi::c_char);
+                    *buflen = (*buflen).wrapping_sub(1 as size_t);
+                    if *buflen > abspath_size {
+                        *buflen = abspath_size;
+                    }
+                    memcpy(
+                        buf as *mut ::core::ffi::c_void,
+                        &raw mut abspath as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
+                        *buflen,
+                    );
+                    *buf.offset(*buflen as isize) = '\0' as i32 as ::core::ffi::c_char;
+                    uv__free(cloned_path as *mut ::core::ffi::c_void);
+                    return 0 as ::core::ffi::c_int;
+                }
+            }
+            token = uv__strtok(
+                ::core::ptr::null_mut::<::core::ffi::c_char>(),
+                b":\0" as *const u8 as *const ::core::ffi::c_char,
+                &raw mut itr,
+            );
+        }
+        uv__free(cloned_path as *mut ::core::ffi::c_void);
+        return UV_EINVAL as ::core::ffi::c_int;
     }
-    uv__free(cloned_path as *mut ::core::ffi::c_void);
-    return UV_EINVAL as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_available_parallelism() -> ::core::ffi::c_uint {
-    let mut set: cpu_set_t = cpu_set_t { __bits: [0; 16] };
-    let mut rc: ::core::ffi::c_long = 0;
-    memset(
-        &raw mut set as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<cpu_set_t>() as size_t,
-    );
-    if 0 as ::core::ffi::c_int
-        == sched_getaffinity(
-            0 as __pid_t,
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_available_parallelism() -> ::core::ffi::c_uint {
+    unsafe {
+        let mut set: cpu_set_t = cpu_set_t { __bits: [0; 16] };
+        let mut rc: ::core::ffi::c_long = 0;
+        memset(
+            &raw mut set as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
             ::core::mem::size_of::<cpu_set_t>() as size_t,
-            &raw mut set,
-        )
-    {
-        rc = __sched_cpucount(::core::mem::size_of::<cpu_set_t>() as size_t, &raw mut set)
-            as ::core::ffi::c_long;
-    } else {
-        rc = sysconf(_SC_NPROCESSORS_ONLN as ::core::ffi::c_int);
+        );
+        if 0 as ::core::ffi::c_int
+            == sched_getaffinity(
+                0 as __pid_t,
+                ::core::mem::size_of::<cpu_set_t>() as size_t,
+                &raw mut set,
+            )
+        {
+            rc = __sched_cpucount(::core::mem::size_of::<cpu_set_t>() as size_t, &raw mut set)
+                as ::core::ffi::c_long;
+        } else {
+            rc = sysconf(_SC_NPROCESSORS_ONLN as ::core::ffi::c_int);
+        }
+        if rc < 1 as ::core::ffi::c_long {
+            rc = 1 as ::core::ffi::c_long;
+        }
+        return rc as ::core::ffi::c_uint;
     }
-    if rc < 1 as ::core::ffi::c_long {
-        rc = 1 as ::core::ffi::c_long;
-    }
-    return rc as ::core::ffi::c_uint;
 }

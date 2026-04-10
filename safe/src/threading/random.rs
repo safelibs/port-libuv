@@ -24,6 +24,7 @@ struct SysctlArgs {
 }
 
 #[inline]
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn last_errno() -> c_int {
     unsafe { *libc::__errno_location() }
 }
@@ -37,6 +38,7 @@ fn uv_err(errno: c_int) -> c_int {
     }
 }
 
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn random_readpath(path: &[u8], buf: *mut c_void, buflen: usize) -> c_int {
     let fd = unsafe {
         libc::open(
@@ -113,6 +115,7 @@ fn random_devurandom(buf: *mut c_void, buflen: usize) -> c_int {
     random_readpath(b"/dev/urandom\0", buf, buflen)
 }
 
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn random_getrandom(buf: *mut c_void, buflen: usize) -> c_int {
     let mut pos = 0usize;
     while pos < buflen {
@@ -147,6 +150,7 @@ fn random_getrandom(buf: *mut c_void, buflen: usize) -> c_int {
     0
 }
 
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn random_sysctl(buf: *mut c_void, buflen: usize) -> c_int {
     let mut name = [1, 40, 6];
     let mut pos = 0usize;
@@ -203,36 +207,43 @@ fn fill_random(buf: *mut c_void, buflen: usize) -> c_int {
     }
 }
 
-unsafe extern "C" fn random_work(work: *mut abi::uv__work) {
-    let req = unsafe {
-        work.cast::<u8>()
-            .sub(offset_of!(abi::uv_random_t, work_req))
-            .cast::<abi::uv_random_t>()
-    };
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn random_work(work: *mut abi::uv__work) {
     unsafe {
-        (*req).status = fill_random((*req).buf, (*req).buflen);
-    }
-}
-
-unsafe extern "C" fn random_done(work: *mut abi::uv__work, status: c_int) {
-    let req = unsafe {
-        work.cast::<u8>()
-            .sub(offset_of!(abi::uv_random_t, work_req))
-            .cast::<abi::uv_random_t>()
-    };
-    let final_status = if status == 0 {
-        unsafe { (*req).status }
-    } else {
-        status
-    };
-    if let Some(cb) = unsafe { (*req).cb } {
+        let req = unsafe {
+            work.cast::<u8>()
+                .sub(offset_of!(abi::uv_random_t, work_req))
+                .cast::<abi::uv_random_t>()
+        };
         unsafe {
-            cb(req, final_status, (*req).buf, (*req).buflen);
+            (*req).status = fill_random((*req).buf, (*req).buflen);
         }
     }
 }
 
-pub(crate) unsafe fn random(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn random_done(work: *mut abi::uv__work, status: c_int) {
+    unsafe {
+        let req = unsafe {
+            work.cast::<u8>()
+                .sub(offset_of!(abi::uv_random_t, work_req))
+                .cast::<abi::uv_random_t>()
+        };
+        let final_status = if status == 0 {
+            unsafe { (*req).status }
+        } else {
+            status
+        };
+        if let Some(cb) = unsafe { (*req).cb } {
+            unsafe {
+                cb(req, final_status, (*req).buf, (*req).buflen);
+            }
+        }
+    }
+}
+
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn random(
     loop_: *mut abi::uv_loop_t,
     req: *mut abi::uv_random_t,
     buf: *mut c_void,
@@ -240,42 +251,44 @@ pub(crate) unsafe fn random(
     flags: libc::c_uint,
     cb: abi::uv_random_cb,
 ) -> c_int {
-    if buflen > 0x7fff_ffff {
-        return abi::uv_errno_t_UV_E2BIG;
-    }
-    if flags != 0 {
-        return abi::uv_errno_t_UV_EINVAL;
-    }
-
-    if cb.is_none() {
-        return fill_random(buf, buflen);
-    }
-
-    if loop_.is_null() || req.is_null() {
-        return abi::uv_errno_t_UV_EINVAL;
-    }
-
-    let data = unsafe { (*req).data };
     unsafe {
-        std::ptr::write_bytes(req, 0, 1);
-        (*req).data = data;
-        (*req).type_ = abi::uv_req_type_UV_RANDOM;
-        (*req).loop_ = loop_;
-        (*req).status = 0;
-        (*req).buf = buf;
-        (*req).buflen = buflen;
-        (*req).cb = cb;
-        (*req).work_req.work = Some(random_work);
-        (*req).work_req.done = Some(random_done);
-        queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
-    }
+        if buflen > 0x7fff_ffff {
+            return abi::uv_errno_t_UV_E2BIG;
+        }
+        if flags != 0 {
+            return abi::uv_errno_t_UV_EINVAL;
+        }
 
-    unsafe {
-        threadpool::submit(
-            loop_,
-            req.cast(),
-            std::ptr::addr_of_mut!((*req).work_req),
-            TaskClass::Cpu,
-        )
+        if cb.is_none() {
+            return fill_random(buf, buflen);
+        }
+
+        if loop_.is_null() || req.is_null() {
+            return abi::uv_errno_t_UV_EINVAL;
+        }
+
+        let data = unsafe { (*req).data };
+        unsafe {
+            std::ptr::write_bytes(req, 0, 1);
+            (*req).data = data;
+            (*req).type_ = abi::uv_req_type_UV_RANDOM;
+            (*req).loop_ = loop_;
+            (*req).status = 0;
+            (*req).buf = buf;
+            (*req).buflen = buflen;
+            (*req).cb = cb;
+            (*req).work_req.work = Some(random_work);
+            (*req).work_req.done = Some(random_done);
+            queue::init(std::ptr::addr_of_mut!((*req).work_req.wq));
+        }
+
+        unsafe {
+            threadpool::submit(
+                loop_,
+                req.cast(),
+                std::ptr::addr_of_mut!((*req).work_req),
+                TaskClass::Cpu,
+            )
+        }
     }
 }

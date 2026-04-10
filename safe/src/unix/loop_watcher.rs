@@ -414,379 +414,456 @@ pub const UV_HANDLE_CLOSED: C2RustUnnamed_9 = 2;
 pub const UV_HANDLE_CLOSING: C2RustUnnamed_9 = 1;
 pub const NULL: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
-    return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
+    unsafe {
+        return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
-    return (*q).next;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
+    unsafe {
+        return (*q).next;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_split(
-    mut h: *mut uv__queue,
-    mut q: *mut uv__queue,
-    mut n: *mut uv__queue,
-) {
-    (*n).prev = (*h).prev;
-    (*(*n).prev).next = n;
-    (*n).next = q;
-    (*h).prev = (*q).prev;
-    (*(*h).prev).next = h;
-    (*q).prev = n;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_split(mut h: *mut uv__queue, mut q: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        (*n).prev = (*h).prev;
+        (*(*n).prev).next = n;
+        (*n).next = q;
+        (*h).prev = (*q).prev;
+        (*(*h).prev).next = h;
+        (*q).prev = n;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
-    if uv__queue_empty(h) != 0 {
-        uv__queue_init(n);
-    } else {
-        uv__queue_split(h, (*h).next, n);
-    };
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        if uv__queue_empty(h) != 0 {
+            uv__queue_init(n);
+        } else {
+            uv__queue_split(h, (*h).next, n);
+        };
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_insert_head(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = (*h).next;
-    (*q).prev = h;
-    (*(*q).next).prev = q;
-    (*h).next = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_head(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = (*h).next;
+        (*q).prev = h;
+        (*(*q).next).prev = q;
+        (*h).next = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
-    (*(*q).prev).next = (*q).next;
-    (*(*q).next).prev = (*q).prev;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
+    unsafe {
+        (*(*q).prev).next = (*q).next;
+        (*(*q).next).prev = (*q).prev;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__prepare_close(mut handle: *mut uv_prepare_t) {
-    uv_prepare_stop(handle);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__prepare_close(mut handle: *mut uv_prepare_t) {
+    unsafe {
+        uv_prepare_stop(handle);
+    }
 }
-pub(crate) unsafe fn uv_prepare_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_prepare_init(
     mut loop_0: *mut uv_loop_t,
     mut handle: *mut uv_prepare_t,
 ) -> ::core::ffi::c_int {
-    let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
-    *fresh0 = loop_0;
-    (*(handle as *mut uv_handle_t)).type_0 = UV_PREPARE;
-    (*(handle as *mut uv_handle_t)).flags =
-        UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    uv__queue_insert_tail(
-        &raw mut (*loop_0).handle_queue,
-        &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
-    );
-    let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
-    *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
-    (*handle).prepare_cb = None;
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_prepare_stop(mut handle: *mut uv_prepare_t) -> ::core::ffi::c_int {
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
+    unsafe {
+        let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
+        *fresh0 = loop_0;
+        (*(handle as *mut uv_handle_t)).type_0 = UV_PREPARE;
+        (*(handle as *mut uv_handle_t)).flags =
+            UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        uv__queue_insert_tail(
+            &raw mut (*loop_0).handle_queue,
+            &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
+        );
+        let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
+        *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
+        (*handle).prepare_cb = None;
         return 0 as ::core::ffi::c_int;
     }
-    uv__queue_remove(&raw mut (*handle).queue);
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_sub(1);
-        }
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_prepare_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_prepare_stop(mut handle: *mut uv_prepare_t) -> ::core::ffi::c_int {
+    unsafe {
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            return 0 as ::core::ffi::c_int;
+        }
+        uv__queue_remove(&raw mut (*handle).queue);
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_prepare_start(
     mut handle: *mut uv_prepare_t,
     mut cb: uv_prepare_cb,
 ) -> ::core::ffi::c_int {
-    if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-    {
-        return 0 as ::core::ffi::c_int;
-    }
-    if cb.is_none() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    uv__queue_insert_head(
-        &raw mut (*(*handle).loop_0).prepare_handles,
-        &raw mut (*handle).queue,
-    );
-    (*handle).prepare_cb = cb;
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+    unsafe {
+        if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
             != 0 as ::core::ffi::c_uint
         {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_add(1);
+            return 0 as ::core::ffi::c_int;
         }
-    }
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__run_prepare(mut loop_0: *mut uv_loop_t) {
-    let mut h: *mut uv_prepare_t = ::core::ptr::null_mut::<uv_prepare_t>();
-    let mut queue: uv__queue = uv__queue {
-        next: ::core::ptr::null_mut::<uv__queue>(),
-        prev: ::core::ptr::null_mut::<uv__queue>(),
-    };
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    uv__queue_move(&raw mut (*loop_0).prepare_handles, &raw mut queue);
-    while uv__queue_empty(&raw mut queue) == 0 {
-        q = uv__queue_head(&raw mut queue);
-        h = (q as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
-            as *mut uv_prepare_t;
-        uv__queue_remove(q);
-        uv__queue_insert_tail(&raw mut (*loop_0).prepare_handles, q);
-        (*h).prepare_cb.expect("non-null function pointer")(h);
-    }
-}
-pub(crate) unsafe fn uv_check_stop(mut handle: *mut uv_check_t) -> ::core::ffi::c_int {
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
+        if cb.is_none() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        uv__queue_insert_head(
+            &raw mut (*(*handle).loop_0).prepare_handles,
+            &raw mut (*handle).queue,
+        );
+        (*handle).prepare_cb = cb;
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_add(1);
+            }
+        }
         return 0 as ::core::ffi::c_int;
     }
-    uv__queue_remove(&raw mut (*handle).queue);
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_sub(1);
-        }
-    }
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__check_close(mut handle: *mut uv_check_t) {
-    uv_check_stop(handle);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__run_prepare(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut h: *mut uv_prepare_t = ::core::ptr::null_mut::<uv_prepare_t>();
+        let mut queue: uv__queue = uv__queue {
+            next: ::core::ptr::null_mut::<uv__queue>(),
+            prev: ::core::ptr::null_mut::<uv__queue>(),
+        };
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        uv__queue_move(&raw mut (*loop_0).prepare_handles, &raw mut queue);
+        while uv__queue_empty(&raw mut queue) == 0 {
+            q = uv__queue_head(&raw mut queue);
+            h = (q as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
+                as *mut uv_prepare_t;
+            uv__queue_remove(q);
+            uv__queue_insert_tail(&raw mut (*loop_0).prepare_handles, q);
+            (*h).prepare_cb.expect("non-null function pointer")(h);
+        }
+    }
 }
-pub(crate) unsafe fn uv_check_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_check_stop(mut handle: *mut uv_check_t) -> ::core::ffi::c_int {
+    unsafe {
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            return 0 as ::core::ffi::c_int;
+        }
+        uv__queue_remove(&raw mut (*handle).queue);
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__check_close(mut handle: *mut uv_check_t) {
+    unsafe {
+        uv_check_stop(handle);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_check_start(
     mut handle: *mut uv_check_t,
     mut cb: uv_check_cb,
 ) -> ::core::ffi::c_int {
-    if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-    {
-        return 0 as ::core::ffi::c_int;
-    }
-    if cb.is_none() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    uv__queue_insert_head(
-        &raw mut (*(*handle).loop_0).check_handles,
-        &raw mut (*handle).queue,
-    );
-    (*handle).check_cb = cb;
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+    unsafe {
+        if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
             != 0 as ::core::ffi::c_uint
         {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_add(1);
+            return 0 as ::core::ffi::c_int;
         }
+        if cb.is_none() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        uv__queue_insert_head(
+            &raw mut (*(*handle).loop_0).check_handles,
+            &raw mut (*handle).queue,
+        );
+        (*handle).check_cb = cb;
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_add(1);
+            }
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_check_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_check_init(
     mut loop_0: *mut uv_loop_t,
     mut handle: *mut uv_check_t,
 ) -> ::core::ffi::c_int {
-    let ref mut fresh2 = (*(handle as *mut uv_handle_t)).loop_0;
-    *fresh2 = loop_0;
-    (*(handle as *mut uv_handle_t)).type_0 = UV_CHECK;
-    (*(handle as *mut uv_handle_t)).flags =
-        UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    uv__queue_insert_tail(
-        &raw mut (*loop_0).handle_queue,
-        &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
-    );
-    let ref mut fresh3 = (*(handle as *mut uv_handle_t)).next_closing;
-    *fresh3 = ::core::ptr::null_mut::<uv_handle_t>();
-    (*handle).check_cb = None;
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__run_check(mut loop_0: *mut uv_loop_t) {
-    let mut h: *mut uv_check_t = ::core::ptr::null_mut::<uv_check_t>();
-    let mut queue: uv__queue = uv__queue {
-        next: ::core::ptr::null_mut::<uv__queue>(),
-        prev: ::core::ptr::null_mut::<uv__queue>(),
-    };
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    uv__queue_move(&raw mut (*loop_0).check_handles, &raw mut queue);
-    while uv__queue_empty(&raw mut queue) == 0 {
-        q = uv__queue_head(&raw mut queue);
-        h = (q as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
-            as *mut uv_check_t;
-        uv__queue_remove(q);
-        uv__queue_insert_tail(&raw mut (*loop_0).check_handles, q);
-        (*h).check_cb.expect("non-null function pointer")(h);
-    }
-}
-pub(crate) unsafe fn uv_idle_start(
-    mut handle: *mut uv_idle_t,
-    mut cb: uv_idle_cb,
-) -> ::core::ffi::c_int {
-    if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-    {
+    unsafe {
+        let ref mut fresh2 = (*(handle as *mut uv_handle_t)).loop_0;
+        *fresh2 = loop_0;
+        (*(handle as *mut uv_handle_t)).type_0 = UV_CHECK;
+        (*(handle as *mut uv_handle_t)).flags =
+            UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        uv__queue_insert_tail(
+            &raw mut (*loop_0).handle_queue,
+            &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
+        );
+        let ref mut fresh3 = (*(handle as *mut uv_handle_t)).next_closing;
+        *fresh3 = ::core::ptr::null_mut::<uv_handle_t>();
+        (*handle).check_cb = None;
         return 0 as ::core::ffi::c_int;
     }
-    if cb.is_none() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    uv__queue_insert_head(
-        &raw mut (*(*handle).loop_0).idle_handles,
-        &raw mut (*handle).queue,
-    );
-    (*handle).idle_cb = cb;
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_add(1);
-        }
-    }
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__run_idle(mut loop_0: *mut uv_loop_t) {
-    let mut h: *mut uv_idle_t = ::core::ptr::null_mut::<uv_idle_t>();
-    let mut queue: uv__queue = uv__queue {
-        next: ::core::ptr::null_mut::<uv__queue>(),
-        prev: ::core::ptr::null_mut::<uv__queue>(),
-    };
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    uv__queue_move(&raw mut (*loop_0).idle_handles, &raw mut queue);
-    while uv__queue_empty(&raw mut queue) == 0 {
-        q = uv__queue_head(&raw mut queue);
-        h = (q as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
-            as *mut uv_idle_t;
-        uv__queue_remove(q);
-        uv__queue_insert_tail(&raw mut (*loop_0).idle_handles, q);
-        (*h).idle_cb.expect("non-null function pointer")(h);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__run_check(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut h: *mut uv_check_t = ::core::ptr::null_mut::<uv_check_t>();
+        let mut queue: uv__queue = uv__queue {
+            next: ::core::ptr::null_mut::<uv__queue>(),
+            prev: ::core::ptr::null_mut::<uv__queue>(),
+        };
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        uv__queue_move(&raw mut (*loop_0).check_handles, &raw mut queue);
+        while uv__queue_empty(&raw mut queue) == 0 {
+            q = uv__queue_head(&raw mut queue);
+            h = (q as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
+                as *mut uv_check_t;
+            uv__queue_remove(q);
+            uv__queue_insert_tail(&raw mut (*loop_0).check_handles, q);
+            (*h).check_cb.expect("non-null function pointer")(h);
+        }
     }
 }
-pub(crate) unsafe fn uv_idle_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_idle_start(mut handle: *mut uv_idle_t, mut cb: uv_idle_cb) -> ::core::ffi::c_int {
+    unsafe {
+        if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint
+        {
+            return 0 as ::core::ffi::c_int;
+        }
+        if cb.is_none() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        uv__queue_insert_head(
+            &raw mut (*(*handle).loop_0).idle_handles,
+            &raw mut (*handle).queue,
+        );
+        (*handle).idle_cb = cb;
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_add(1);
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__run_idle(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut h: *mut uv_idle_t = ::core::ptr::null_mut::<uv_idle_t>();
+        let mut queue: uv__queue = uv__queue {
+            next: ::core::ptr::null_mut::<uv__queue>(),
+            prev: ::core::ptr::null_mut::<uv__queue>(),
+        };
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        uv__queue_move(&raw mut (*loop_0).idle_handles, &raw mut queue);
+        while uv__queue_empty(&raw mut queue) == 0 {
+            q = uv__queue_head(&raw mut queue);
+            h = (q as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
+                as *mut uv_idle_t;
+            uv__queue_remove(q);
+            uv__queue_insert_tail(&raw mut (*loop_0).idle_handles, q);
+            (*h).idle_cb.expect("non-null function pointer")(h);
+        }
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_idle_init(
     mut loop_0: *mut uv_loop_t,
     mut handle: *mut uv_idle_t,
 ) -> ::core::ffi::c_int {
-    let ref mut fresh4 = (*(handle as *mut uv_handle_t)).loop_0;
-    *fresh4 = loop_0;
-    (*(handle as *mut uv_handle_t)).type_0 = UV_IDLE;
-    (*(handle as *mut uv_handle_t)).flags =
-        UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    uv__queue_insert_tail(
-        &raw mut (*loop_0).handle_queue,
-        &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
-    );
-    let ref mut fresh5 = (*(handle as *mut uv_handle_t)).next_closing;
-    *fresh5 = ::core::ptr::null_mut::<uv_handle_t>();
-    (*handle).idle_cb = None;
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__idle_close(mut handle: *mut uv_idle_t) {
-    uv_idle_stop(handle);
-}
-pub(crate) unsafe fn uv_idle_stop(mut handle: *mut uv_idle_t) -> ::core::ffi::c_int {
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
+    unsafe {
+        let ref mut fresh4 = (*(handle as *mut uv_handle_t)).loop_0;
+        *fresh4 = loop_0;
+        (*(handle as *mut uv_handle_t)).type_0 = UV_IDLE;
+        (*(handle as *mut uv_handle_t)).flags =
+            UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        uv__queue_insert_tail(
+            &raw mut (*loop_0).handle_queue,
+            &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
+        );
+        let ref mut fresh5 = (*(handle as *mut uv_handle_t)).next_closing;
+        *fresh5 = ::core::ptr::null_mut::<uv_handle_t>();
+        (*handle).idle_cb = None;
         return 0 as ::core::ffi::c_int;
     }
-    uv__queue_remove(&raw mut (*handle).queue);
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_sub(1);
-        }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__idle_close(mut handle: *mut uv_idle_t) {
+    unsafe {
+        uv_idle_stop(handle);
     }
-    return 0 as ::core::ffi::c_int;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_idle_stop(mut handle: *mut uv_idle_t) -> ::core::ffi::c_int {
+    unsafe {
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            return 0 as ::core::ffi::c_int;
+        }
+        uv__queue_remove(&raw mut (*handle).queue);
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
 }
 
-pub(crate) unsafe fn prepare_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn prepare_init(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     prepare: *mut crate::abi::linux_x86_64::uv_prepare_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_prepare_init(loop_.cast(), prepare.cast()) }
+    unsafe { unsafe { uv_prepare_init(loop_.cast(), prepare.cast()) } }
 }
 
-pub(crate) unsafe fn prepare_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn prepare_start(
     prepare: *mut crate::abi::linux_x86_64::uv_prepare_t,
     cb: crate::abi::linux_x86_64::uv_prepare_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_prepare_start(prepare.cast(), std::mem::transmute::<_, uv_prepare_cb>(cb)) }
+    unsafe {
+        unsafe { uv_prepare_start(prepare.cast(), std::mem::transmute::<_, uv_prepare_cb>(cb)) }
+    }
 }
 
-pub(crate) unsafe fn prepare_stop(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn prepare_stop(
     prepare: *mut crate::abi::linux_x86_64::uv_prepare_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_prepare_stop(prepare.cast()) }
+    unsafe { unsafe { uv_prepare_stop(prepare.cast()) } }
 }
 
-pub(crate) unsafe fn check_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn check_init(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     check: *mut crate::abi::linux_x86_64::uv_check_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_check_init(loop_.cast(), check.cast()) }
+    unsafe { unsafe { uv_check_init(loop_.cast(), check.cast()) } }
 }
 
-pub(crate) unsafe fn check_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn check_start(
     check: *mut crate::abi::linux_x86_64::uv_check_t,
     cb: crate::abi::linux_x86_64::uv_check_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_check_start(check.cast(), std::mem::transmute::<_, uv_check_cb>(cb)) }
+    unsafe { unsafe { uv_check_start(check.cast(), std::mem::transmute::<_, uv_check_cb>(cb)) } }
 }
 
-pub(crate) unsafe fn check_stop(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn check_stop(
     check: *mut crate::abi::linux_x86_64::uv_check_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_check_stop(check.cast()) }
+    unsafe { unsafe { uv_check_stop(check.cast()) } }
 }
 
-pub(crate) unsafe fn idle_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn idle_init(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     idle: *mut crate::abi::linux_x86_64::uv_idle_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_idle_init(loop_.cast(), idle.cast()) }
+    unsafe { unsafe { uv_idle_init(loop_.cast(), idle.cast()) } }
 }
 
-pub(crate) unsafe fn idle_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn idle_start(
     idle: *mut crate::abi::linux_x86_64::uv_idle_t,
     cb: crate::abi::linux_x86_64::uv_idle_cb,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_idle_start(idle.cast(), std::mem::transmute::<_, uv_idle_cb>(cb)) }
+    unsafe { unsafe { uv_idle_start(idle.cast(), std::mem::transmute::<_, uv_idle_cb>(cb)) } }
 }
 
-pub(crate) unsafe fn idle_stop(
-    idle: *mut crate::abi::linux_x86_64::uv_idle_t,
-) -> ::std::os::raw::c_int {
-    unsafe { uv_idle_stop(idle.cast()) }
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn idle_stop(idle: *mut crate::abi::linux_x86_64::uv_idle_t) -> ::std::os::raw::c_int {
+    unsafe { unsafe { uv_idle_stop(idle.cast()) } }
 }

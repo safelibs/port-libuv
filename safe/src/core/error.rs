@@ -73,7 +73,11 @@ const ENTRIES: &[ErrorEntry] = &[
 
 #[inline]
 fn canonicalize(err: c_int) -> c_int {
-    if err > 0 { -err } else { err }
+    if err > 0 {
+        -err
+    } else {
+        err
+    }
 }
 
 fn lookup(err: c_int) -> Option<&'static ErrorEntry> {
@@ -81,76 +85,94 @@ fn lookup(err: c_int) -> Option<&'static ErrorEntry> {
     ENTRIES.iter().find(|entry| entry.code == err)
 }
 
-unsafe fn copy_to_buffer(src: &[u8], buf: *mut c_char, buflen: usize) -> *mut c_char {
-    if buf.is_null() || buflen == 0 {
-        return buf;
-    }
-
-    let copy_len = src
-        .iter()
-        .position(|byte| *byte == 0)
-        .unwrap_or(src.len())
-        .min(buflen.saturating_sub(1));
-
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+fn copy_to_buffer(src: &[u8], buf: *mut c_char, buflen: usize) -> *mut c_char {
     unsafe {
-        std::ptr::copy_nonoverlapping(src.as_ptr(), buf.cast::<u8>(), copy_len);
-        *buf.cast::<u8>().add(copy_len) = 0;
+        if buf.is_null() || buflen == 0 {
+            return buf;
+        }
+
+        let copy_len = src
+            .iter()
+            .position(|byte| *byte == 0)
+            .unwrap_or(src.len())
+            .min(buflen.saturating_sub(1));
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(src.as_ptr(), buf.cast::<u8>(), copy_len);
+            *buf.cast::<u8>().add(copy_len) = 0;
+        }
+        buf
     }
-    buf
 }
 
-unsafe fn alloc_unknown(prefix: &[u8], err: c_int) -> *const c_char {
-    let text = if prefix == b"name" {
-        format!("Unknown system error {err}")
-    } else {
-        "Unknown error".to_owned()
-    };
-    let bytes = text.as_bytes();
-    let raw = unsafe { allocator::malloc_bytes(bytes.len() + 1) }.cast::<u8>();
-    if raw.is_null() {
-        return if prefix == b"name" {
-            b"UNKNOWN\0".as_ptr().cast()
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+fn alloc_unknown(prefix: &[u8], err: c_int) -> *const c_char {
+    unsafe {
+        let text = if prefix == b"name" {
+            format!("Unknown system error {err}")
         } else {
-            b"Unknown system error\0".as_ptr().cast()
+            "Unknown error".to_owned()
         };
-    }
+        let bytes = text.as_bytes();
+        let raw = unsafe { allocator::malloc_bytes(bytes.len() + 1) }.cast::<u8>();
+        if raw.is_null() {
+            return if prefix == b"name" {
+                b"UNKNOWN\0".as_ptr().cast()
+            } else {
+                b"Unknown system error\0".as_ptr().cast()
+            };
+        }
 
+        unsafe {
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), raw, bytes.len());
+            *raw.add(bytes.len()) = 0;
+        }
+        raw.cast()
+    }
+}
+
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn err_name(err: c_int) -> *const c_char {
     unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), raw, bytes.len());
-        *raw.add(bytes.len()) = 0;
-    }
-    raw.cast()
-}
-
-pub(crate) unsafe fn err_name(err: c_int) -> *const c_char {
-    match lookup(err) {
-        Some(entry) => entry.name.as_ptr().cast(),
-        None => unsafe { alloc_unknown(b"name", err) },
+        match lookup(err) {
+            Some(entry) => entry.name.as_ptr().cast(),
+            None => unsafe { alloc_unknown(b"name", err) },
+        }
     }
 }
 
-pub(crate) unsafe fn err_name_r(err: c_int, buf: *mut c_char, buflen: usize) -> *mut c_char {
-    let text = match lookup(err) {
-        Some(entry) => entry.name,
-        None => format!("Unknown system error {err}\0").into_bytes().leak(),
-    };
-    unsafe { copy_to_buffer(text, buf, buflen) }
-}
-
-pub(crate) unsafe fn strerror(err: c_int) -> *const c_char {
-    match lookup(err) {
-        Some(entry) => entry.message.as_ptr().cast(),
-        None => unsafe { alloc_unknown(b"message", canonicalize(err)) },
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn err_name_r(err: c_int, buf: *mut c_char, buflen: usize) -> *mut c_char {
+    unsafe {
+        let text = match lookup(err) {
+            Some(entry) => entry.name,
+            None => format!("Unknown system error {err}\0").into_bytes().leak(),
+        };
+        unsafe { copy_to_buffer(text, buf, buflen) }
     }
 }
 
-pub(crate) unsafe fn strerror_r(err: c_int, buf: *mut c_char, buflen: usize) -> *mut c_char {
-    let err = canonicalize(err);
-    match lookup(err) {
-        Some(entry) => unsafe { copy_to_buffer(entry.message, buf, buflen) },
-        None => {
-            let owned = format!("Unknown system error {err}\0");
-            unsafe { copy_to_buffer(owned.as_bytes(), buf, buflen) }
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn strerror(err: c_int) -> *const c_char {
+    unsafe {
+        match lookup(err) {
+            Some(entry) => entry.message.as_ptr().cast(),
+            None => unsafe { alloc_unknown(b"message", canonicalize(err)) },
+        }
+    }
+}
+
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn strerror_r(err: c_int, buf: *mut c_char, buflen: usize) -> *mut c_char {
+    unsafe {
+        let err = canonicalize(err);
+        match lookup(err) {
+            Some(entry) => unsafe { copy_to_buffer(entry.message, buf, buflen) },
+            None => {
+                let owned = format!("Unknown system error {err}\0");
+                unsafe { copy_to_buffer(owned.as_bytes(), buf, buflen) }
+            }
         }
     }
 }

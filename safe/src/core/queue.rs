@@ -1,71 +1,87 @@
 use crate::abi::linux_x86_64 as abi;
 
 #[inline]
-pub(crate) unsafe fn init(queue: *mut abi::uv__queue) {
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+pub(crate) fn init(queue: *mut abi::uv__queue) {
     unsafe {
-        (*queue).next = queue;
-        (*queue).prev = queue;
+        unsafe {
+            (*queue).next = queue;
+            (*queue).prev = queue;
+        }
     }
 }
 
 #[inline]
-pub(crate) unsafe fn is_empty(queue: *const abi::uv__queue) -> bool {
-    unsafe { std::ptr::eq((*queue).next.cast_const(), queue) }
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+pub(crate) fn is_empty(queue: *const abi::uv__queue) -> bool {
+    unsafe { unsafe { std::ptr::eq((*queue).next.cast_const(), queue) } }
 }
 
 #[inline]
-pub(crate) unsafe fn head(queue: *mut abi::uv__queue) -> *mut abi::uv__queue {
-    unsafe { (*queue).next }
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+pub(crate) fn head(queue: *mut abi::uv__queue) -> *mut abi::uv__queue {
+    unsafe { unsafe { (*queue).next } }
 }
 
 #[inline]
-unsafe fn insert_between(
-    prev: *mut abi::uv__queue,
-    next: *mut abi::uv__queue,
-    node: *mut abi::uv__queue,
-) {
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+fn insert_between(prev: *mut abi::uv__queue, next: *mut abi::uv__queue, node: *mut abi::uv__queue) {
     unsafe {
-        (*node).prev = prev;
-        (*node).next = next;
-        (*prev).next = node;
-        (*next).prev = node;
+        unsafe {
+            (*node).prev = prev;
+            (*node).next = next;
+            (*prev).next = node;
+            (*next).prev = node;
+        }
     }
 }
 
 #[inline]
-pub(crate) unsafe fn insert_head(queue: *mut abi::uv__queue, node: *mut abi::uv__queue) {
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+pub(crate) fn insert_head(queue: *mut abi::uv__queue, node: *mut abi::uv__queue) {
     unsafe {
-        insert_between(queue, (*queue).next, node);
+        unsafe {
+            insert_between(queue, (*queue).next, node);
+        }
     }
 }
 
 #[inline]
-pub(crate) unsafe fn insert_tail(queue: *mut abi::uv__queue, node: *mut abi::uv__queue) {
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+pub(crate) fn insert_tail(queue: *mut abi::uv__queue, node: *mut abi::uv__queue) {
     unsafe {
-        insert_between((*queue).prev, queue, node);
+        unsafe {
+            insert_between((*queue).prev, queue, node);
+        }
     }
 }
 
 #[inline]
-pub(crate) unsafe fn remove(node: *mut abi::uv__queue) {
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+pub(crate) fn remove(node: *mut abi::uv__queue) {
     unsafe {
-        let prev = (*node).prev;
-        let next = (*node).next;
-        (*prev).next = next;
-        (*next).prev = prev;
+        unsafe {
+            let prev = (*node).prev;
+            let next = (*node).next;
+            (*prev).next = next;
+            (*next).prev = prev;
+        }
     }
 }
 
-pub(crate) unsafe fn move_queue(src: *mut abi::uv__queue, dst: *mut abi::uv__queue) {
-    if unsafe { is_empty(src) } {
-        unsafe { init(dst) };
-        return;
-    }
-
+// SAFETY(intrusive_queue): manipulates libuv's intrusive queue links in place.
+pub(crate) fn move_queue(src: *mut abi::uv__queue, dst: *mut abi::uv__queue) {
     unsafe {
-        *dst = *src;
-        (*(*dst).next).prev = dst;
-        (*(*dst).prev).next = dst;
-        init(src);
+        if unsafe { is_empty(src) } {
+            unsafe { init(dst) };
+            return;
+        }
+
+        unsafe {
+            *dst = *src;
+            (*(*dst).next).prev = dst;
+            (*(*dst).prev).next = dst;
+            init(src);
+        }
     }
 }

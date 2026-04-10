@@ -393,11 +393,14 @@ pub const UV_HANDLE_ENDGAME_QUEUED: C2RustUnnamed_7 = 32;
 pub const UV_HANDLE_INTERNAL: C2RustUnnamed_7 = 16;
 pub const NULL: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
 #[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
 }
 pub const POLLIN: ::core::ffi::c_int = 0x1 as ::core::ffi::c_int;
 pub const POLLPRI: ::core::ffi::c_int = 0x2 as ::core::ffi::c_int;
@@ -406,21 +409,128 @@ pub const POLLRDHUP: ::core::ffi::c_int = 0x2000 as ::core::ffi::c_int;
 pub const POLLERR: ::core::ffi::c_int = 0x8 as ::core::ffi::c_int;
 pub const UV__POLLRDHUP: ::core::ffi::c_int = POLLRDHUP;
 pub const UV__POLLPRI: ::core::ffi::c_int = POLLPRI;
-unsafe extern "C" fn uv__poll_io(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__poll_io(
     mut loop_0: *mut uv_loop_t,
     mut w: *mut uv__io_t,
     mut events: ::core::ffi::c_uint,
 ) {
-    let mut handle: *mut uv_poll_t = ::core::ptr::null_mut::<uv_poll_t>();
-    let mut pevents: ::core::ffi::c_int = 0;
-    handle = (w as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
-        as *mut uv_poll_t;
-    if events & POLLERR as ::core::ffi::c_uint != 0
-        && events & UV__POLLPRI as ::core::ffi::c_uint == 0
-    {
+    unsafe {
+        let mut handle: *mut uv_poll_t = ::core::ptr::null_mut::<uv_poll_t>();
+        let mut pevents: ::core::ffi::c_int = 0;
+        handle = (w as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
+            as *mut uv_poll_t;
+        if events & POLLERR as ::core::ffi::c_uint != 0
+            && events & UV__POLLPRI as ::core::ffi::c_uint == 0
+        {
+            uv__io_stop(
+                loop_0,
+                w,
+                (POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI) as ::core::ffi::c_uint,
+            );
+            if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                == 0 as ::core::ffi::c_uint)
+            {
+                (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+                if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0 as ::core::ffi::c_uint
+                {
+                    (*(*handle).loop_0).active_handles =
+                        (*(*handle).loop_0).active_handles.wrapping_sub(1);
+                }
+            }
+            (*handle).poll_cb.expect("non-null function pointer")(
+                handle,
+                UV_EBADF as ::core::ffi::c_int,
+                0 as ::core::ffi::c_int,
+            );
+            return;
+        }
+        pevents = 0 as ::core::ffi::c_int;
+        if events & POLLIN as ::core::ffi::c_uint != 0 {
+            pevents |= UV_READABLE as ::core::ffi::c_int;
+        }
+        if events & UV__POLLPRI as ::core::ffi::c_uint != 0 {
+            pevents |= UV_PRIORITIZED as ::core::ffi::c_int;
+        }
+        if events & POLLOUT as ::core::ffi::c_uint != 0 {
+            pevents |= UV_WRITABLE as ::core::ffi::c_int;
+        }
+        if events & UV__POLLRDHUP as ::core::ffi::c_uint != 0 {
+            pevents |= UV_DISCONNECT as ::core::ffi::c_int;
+        }
+        (*handle).poll_cb.expect("non-null function pointer")(
+            handle,
+            0 as ::core::ffi::c_int,
+            pevents,
+        );
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_poll_init(
+    mut loop_0: *mut uv_loop_t,
+    mut handle: *mut uv_poll_t,
+    mut fd: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if uv__fd_exists(loop_0, fd) != 0 {
+            return UV_EEXIST as ::core::ffi::c_int;
+        }
+        err = uv__io_check_fd(loop_0, fd);
+        if err != 0 {
+            return err;
+        }
+        err = uv__nonblock_ioctl(fd, 1 as ::core::ffi::c_int);
+        if err == UV_ENOTTY as ::core::ffi::c_int {
+            err = uv__nonblock_fcntl(fd, 1 as ::core::ffi::c_int);
+        }
+        if err != 0 {
+            return err;
+        }
+        let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
+        *fresh0 = loop_0;
+        (*(handle as *mut uv_handle_t)).type_0 = UV_POLL;
+        (*(handle as *mut uv_handle_t)).flags =
+            UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        uv__queue_insert_tail(
+            &raw mut (*loop_0).handle_queue,
+            &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
+        );
+        let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
+        *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
+        uv__io_init(
+            &raw mut (*handle).io_watcher,
+            Some(
+                uv__poll_io
+                    as unsafe extern "C" fn(
+                        *mut uv_loop_t,
+                        *mut uv__io_t,
+                        ::core::ffi::c_uint,
+                    ) -> (),
+            ),
+            fd,
+        );
+        (*handle).poll_cb = None;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_poll_init_socket(
+    mut loop_0: *mut uv_loop_t,
+    mut handle: *mut uv_poll_t,
+    mut socket: uv_os_sock_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        return uv_poll_init(loop_0, handle, socket as ::core::ffi::c_int);
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__poll_stop(mut handle: *mut uv_poll_t) {
+    unsafe {
         uv__io_stop(
-            loop_0,
-            w,
+            (*handle).loop_0,
+            &raw mut (*handle).io_watcher,
             (POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI) as ::core::ffi::c_uint,
         );
         if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
@@ -434,239 +544,167 @@ unsafe extern "C" fn uv__poll_io(
                     (*(*handle).loop_0).active_handles.wrapping_sub(1);
             }
         }
-        (*handle).poll_cb.expect("non-null function pointer")(
-            handle,
-            UV_EBADF as ::core::ffi::c_int,
-            0 as ::core::ffi::c_int,
-        );
-        return;
+        uv__platform_invalidate_fd((*handle).loop_0, (*handle).io_watcher.fd);
     }
-    pevents = 0 as ::core::ffi::c_int;
-    if events & POLLIN as ::core::ffi::c_uint != 0 {
-        pevents |= UV_READABLE as ::core::ffi::c_int;
-    }
-    if events & UV__POLLPRI as ::core::ffi::c_uint != 0 {
-        pevents |= UV_PRIORITIZED as ::core::ffi::c_int;
-    }
-    if events & POLLOUT as ::core::ffi::c_uint != 0 {
-        pevents |= UV_WRITABLE as ::core::ffi::c_int;
-    }
-    if events & UV__POLLRDHUP as ::core::ffi::c_uint != 0 {
-        pevents |= UV_DISCONNECT as ::core::ffi::c_int;
-    }
-    (*handle).poll_cb.expect("non-null function pointer")(handle, 0 as ::core::ffi::c_int, pevents);
 }
-pub(crate) unsafe fn uv_poll_init(
-    mut loop_0: *mut uv_loop_t,
-    mut handle: *mut uv_poll_t,
-    mut fd: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if uv__fd_exists(loop_0, fd) != 0 {
-        return UV_EEXIST as ::core::ffi::c_int;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_poll_stop(mut handle: *mut uv_poll_t) -> ::core::ffi::c_int {
+    unsafe {
+        '_c2rust_label: {
+            if !((*handle).flags
+                & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                    as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint)
+            {
+            } else {
+                __assert_fail(
+                    b"!uv__is_closing(handle)\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/poll.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    113 as ::core::ffi::c_uint,
+                    b"int uv_poll_stop(uv_poll_t *)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        uv__poll_stop(handle);
+        return 0 as ::core::ffi::c_int;
     }
-    err = uv__io_check_fd(loop_0, fd);
-    if err != 0 {
-        return err;
-    }
-    err = uv__nonblock_ioctl(fd, 1 as ::core::ffi::c_int);
-    if err == UV_ENOTTY as ::core::ffi::c_int {
-        err = uv__nonblock_fcntl(fd, 1 as ::core::ffi::c_int);
-    }
-    if err != 0 {
-        return err;
-    }
-    let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
-    *fresh0 = loop_0;
-    (*(handle as *mut uv_handle_t)).type_0 = UV_POLL;
-    (*(handle as *mut uv_handle_t)).flags =
-        UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    uv__queue_insert_tail(
-        &raw mut (*loop_0).handle_queue,
-        &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
-    );
-    let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
-    *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
-    uv__io_init(
-        &raw mut (*handle).io_watcher,
-        Some(
-            uv__poll_io
-                as unsafe extern "C" fn(*mut uv_loop_t, *mut uv__io_t, ::core::ffi::c_uint) -> (),
-        ),
-        fd,
-    );
-    (*handle).poll_cb = None;
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_poll_init_socket(
-    mut loop_0: *mut uv_loop_t,
-    mut handle: *mut uv_poll_t,
-    mut socket: uv_os_sock_t,
-) -> ::core::ffi::c_int {
-    return uv_poll_init(loop_0, handle, socket as ::core::ffi::c_int);
-}
-unsafe extern "C" fn uv__poll_stop(mut handle: *mut uv_poll_t) {
-    uv__io_stop(
-        (*handle).loop_0,
-        &raw mut (*handle).io_watcher,
-        (POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI) as ::core::ffi::c_uint,
-    );
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_sub(1);
-        }
-    }
-    uv__platform_invalidate_fd((*handle).loop_0, (*handle).io_watcher.fd);
-}
-pub(crate) unsafe fn uv_poll_stop(mut handle: *mut uv_poll_t) -> ::core::ffi::c_int {
-    '_c2rust_label: {
-        if !((*handle).flags
-            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-                as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint)
-        {
-        } else {
-            __assert_fail(
-                b"!uv__is_closing(handle)\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/poll.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                113 as ::core::ffi::c_uint,
-                b"int uv_poll_stop(uv_poll_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    uv__poll_stop(handle);
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_poll_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_poll_start(
     mut handle: *mut uv_poll_t,
     mut pevents: ::core::ffi::c_int,
     mut poll_cb: uv_poll_cb,
 ) -> ::core::ffi::c_int {
-    let mut watchers: *mut *mut uv__io_t = ::core::ptr::null_mut::<*mut uv__io_t>();
-    let mut w: *mut uv__io_t = ::core::ptr::null_mut::<uv__io_t>();
-    let mut events: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if pevents
-            & !(UV_READABLE as ::core::ffi::c_int
-                | UV_WRITABLE as ::core::ffi::c_int
-                | UV_DISCONNECT as ::core::ffi::c_int
-                | UV_PRIORITIZED as ::core::ffi::c_int)
-            == 0 as ::core::ffi::c_int
-        {
-        } else {
-            __assert_fail(
-                b"(pevents & ~(UV_READABLE | UV_WRITABLE | UV_DISCONNECT | UV_PRIORITIZED)) == 0\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/poll.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                125 as ::core::ffi::c_uint,
-                b"int uv_poll_start(uv_poll_t *, int, uv_poll_cb)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
+    unsafe {
+        let mut watchers: *mut *mut uv__io_t = ::core::ptr::null_mut::<*mut uv__io_t>();
+        let mut w: *mut uv__io_t = ::core::ptr::null_mut::<uv__io_t>();
+        let mut events: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if pevents
+                & !(UV_READABLE as ::core::ffi::c_int
+                    | UV_WRITABLE as ::core::ffi::c_int
+                    | UV_DISCONNECT as ::core::ffi::c_int
+                    | UV_PRIORITIZED as ::core::ffi::c_int)
+                == 0 as ::core::ffi::c_int
+            {
+            } else {
+                __assert_fail(
+                    b"(pevents & ~(UV_READABLE | UV_WRITABLE | UV_DISCONNECT | UV_PRIORITIZED)) == 0\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/poll.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    125 as ::core::ffi::c_uint,
+                    b"int uv_poll_start(uv_poll_t *, int, uv_poll_cb)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if !((*handle).flags
+                & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                    as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint)
+            {
+            } else {
+                __assert_fail(
+                    b"!uv__is_closing(handle)\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/poll.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    126 as ::core::ffi::c_uint,
+                    b"int uv_poll_start(uv_poll_t *, int, uv_poll_cb)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        watchers = (*(*handle).loop_0).watchers;
+        w = &raw mut (*handle).io_watcher;
+        if uv__fd_exists((*handle).loop_0, (*w).fd) != 0 {
+            if *watchers.offset((*w).fd as isize) != w {
+                return UV_EEXIST as ::core::ffi::c_int;
+            }
         }
-    };
-    '_c2rust_label_0: {
-        if !((*handle).flags
-            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-                as ::core::ffi::c_uint
+        uv__poll_stop(handle);
+        if pevents == 0 as ::core::ffi::c_int {
+            return 0 as ::core::ffi::c_int;
+        }
+        events = 0 as ::core::ffi::c_int;
+        if pevents & UV_READABLE as ::core::ffi::c_int != 0 {
+            events |= POLLIN;
+        }
+        if pevents & UV_PRIORITIZED as ::core::ffi::c_int != 0 {
+            events |= UV__POLLPRI;
+        }
+        if pevents & UV_WRITABLE as ::core::ffi::c_int != 0 {
+            events |= POLLOUT;
+        }
+        if pevents & UV_DISCONNECT as ::core::ffi::c_int != 0 {
+            events |= UV__POLLRDHUP;
+        }
+        uv__io_start(
+            (*handle).loop_0,
+            &raw mut (*handle).io_watcher,
+            events as ::core::ffi::c_uint,
+        );
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
             != 0 as ::core::ffi::c_uint)
         {
-        } else {
-            __assert_fail(
-                b"!uv__is_closing(handle)\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/poll.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                126 as ::core::ffi::c_uint,
-                b"int uv_poll_start(uv_poll_t *, int, uv_poll_cb)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
+            (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_add(1);
+            }
         }
-    };
-    watchers = (*(*handle).loop_0).watchers;
-    w = &raw mut (*handle).io_watcher;
-    if uv__fd_exists((*handle).loop_0, (*w).fd) != 0 {
-        if *watchers.offset((*w).fd as isize) != w {
-            return UV_EEXIST as ::core::ffi::c_int;
-        }
-    }
-    uv__poll_stop(handle);
-    if pevents == 0 as ::core::ffi::c_int {
+        (*handle).poll_cb = poll_cb;
         return 0 as ::core::ffi::c_int;
     }
-    events = 0 as ::core::ffi::c_int;
-    if pevents & UV_READABLE as ::core::ffi::c_int != 0 {
-        events |= POLLIN;
-    }
-    if pevents & UV_PRIORITIZED as ::core::ffi::c_int != 0 {
-        events |= UV__POLLPRI;
-    }
-    if pevents & UV_WRITABLE as ::core::ffi::c_int != 0 {
-        events |= POLLOUT;
-    }
-    if pevents & UV_DISCONNECT as ::core::ffi::c_int != 0 {
-        events |= UV__POLLRDHUP;
-    }
-    uv__io_start(
-        (*handle).loop_0,
-        &raw mut (*handle).io_watcher,
-        events as ::core::ffi::c_uint,
-    );
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_add(1);
-        }
-    }
-    (*handle).poll_cb = poll_cb;
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__poll_close(mut handle: *mut uv_poll_t) {
-    uv__poll_stop(handle);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__poll_close(mut handle: *mut uv_poll_t) {
+    unsafe {
+        uv__poll_stop(handle);
+    }
 }
 
-pub(crate) unsafe fn init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     handle: *mut crate::abi::linux_x86_64::uv_poll_t,
     fd: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_poll_init(loop_.cast(), handle.cast(), fd) }
+    unsafe { unsafe { uv_poll_init(loop_.cast(), handle.cast(), fd) } }
 }
 
-pub(crate) unsafe fn init_socket(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init_socket(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     handle: *mut crate::abi::linux_x86_64::uv_poll_t,
     socket: crate::abi::linux_x86_64::uv_os_sock_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_poll_init_socket(loop_.cast(), handle.cast(), socket) }
+    unsafe { unsafe { uv_poll_init_socket(loop_.cast(), handle.cast(), socket) } }
 }
 
-pub(crate) unsafe fn start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn start(
     handle: *mut crate::abi::linux_x86_64::uv_poll_t,
     events: ::std::os::raw::c_int,
     cb: crate::abi::linux_x86_64::uv_poll_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_poll_start(
-            handle.cast(),
-            events,
-            std::mem::transmute::<_, uv_poll_cb>(cb),
-        )
+        unsafe {
+            uv_poll_start(
+                handle.cast(),
+                events,
+                std::mem::transmute::<_, uv_poll_cb>(cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn stop(
-    handle: *mut crate::abi::linux_x86_64::uv_poll_t,
-) -> ::std::os::raw::c_int {
-    unsafe { uv_poll_stop(handle.cast()) }
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn stop(handle: *mut crate::abi::linux_x86_64::uv_poll_t) -> ::std::os::raw::c_int {
+    unsafe { unsafe { uv_poll_stop(handle.cast()) } }
 }

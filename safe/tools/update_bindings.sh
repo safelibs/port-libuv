@@ -240,7 +240,7 @@ def qualify_types(signature: str) -> str:
     return identifier.sub(repl, signature)
 
 lines = [
-    "use crate::{abi::linux_x86_64 as abi, stub};",
+    "use crate::abi::linux_x86_64 as abi;",
     "",
 ]
 
@@ -253,21 +253,22 @@ for name in exports:
     ret = qualify_types(raw_ret)
 
     if not ret:
-        body = f'    stub::void("{name}");'
+        body = f'    panic!("missing manual implementation for {name}")'
     elif ret == "::std::os::raw::c_int":
         if name in int_neg_one_impls:
-            body = f'    stub::int_neg_one("{name}")'
+            body = "    -1"
         elif name in int_zero_impls:
-            body = f'    stub::int_zero("{name}")'
+            body = "    0"
         else:
-            body = f'    stub::status("{name}")'
+            body = f'    panic!("missing manual implementation for {name}")'
     else:
-        body = f'    unsafe {{ stub::zeroed::<{ret}>("{name}") }}'
+        body = f'    panic!("missing manual implementation for {name}")'
 
     lines.extend(
         [
             "#[unsafe(no_mangle)]",
-            f'pub unsafe extern "C" fn {name}({args})' + (f" -> {ret}" if ret else "") + " {",
+            "// SAFETY(ffi_callback): generated exports bridge the libuv C ABI and require a manual implementation.",
+            f'pub extern "C" fn {name}({args})' + (f" -> {ret}" if ret else "") + " {",
             body,
             "}",
             "",

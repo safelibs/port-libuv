@@ -6,40 +6,70 @@ use std::mem::offset_of;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 #[inline]
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn pending_atomic<'a>(handle: *mut abi::uv_async_t) -> &'a AtomicI32 {
     unsafe { &*(std::ptr::addr_of!((*handle).pending).cast::<AtomicI32>()) }
 }
 
 #[inline]
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn busy_atomic<'a>(handle: *mut abi::uv_async_t) -> &'a AtomicI32 {
     unsafe { &*(std::ptr::addr_of!((*handle).u.fd).cast::<AtomicI32>()) }
 }
 
 #[inline]
-unsafe fn async_handle_from_queue(node: *mut abi::uv__queue) -> *mut abi::uv_async_t {
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+fn async_handle_from_queue(node: *mut abi::uv__queue) -> *mut abi::uv_async_t {
     unsafe {
-        node.cast::<u8>()
-            .sub(offset_of!(abi::uv_async_t, queue))
-            .cast::<abi::uv_async_t>()
+        unsafe {
+            node.cast::<u8>()
+                .sub(offset_of!(abi::uv_async_t, queue))
+                .cast::<abi::uv_async_t>()
+        }
     }
 }
 
-unsafe fn drain_wakeup_fd(loop_: *mut abi::uv_loop_t) {
-    let fd = unsafe { (*loop_).async_io_watcher.fd };
-    if fd < 0 {
-        return;
-    }
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+fn drain_wakeup_fd(loop_: *mut abi::uv_loop_t) {
+    unsafe {
+        let fd = unsafe { (*loop_).async_io_watcher.fd };
+        if fd < 0 {
+            return;
+        }
 
-    if unsafe { (*loop_).async_wfd } == -1 {
-        let mut value = 0u64;
+        if unsafe { (*loop_).async_wfd } == -1 {
+            let mut value = 0u64;
+            loop {
+                let rc = unsafe {
+                    libc::read(
+                        fd,
+                        std::ptr::addr_of_mut!(value).cast(),
+                        std::mem::size_of::<u64>(),
+                    )
+                };
+                if rc == -1 {
+                    let err = unsafe { *libc::__errno_location() };
+                    if err == libc::EINTR {
+                        continue;
+                    }
+                    if err == libc::EAGAIN || err == libc::EWOULDBLOCK {
+                        break;
+                    }
+                    unsafe {
+                        libc::abort();
+                    }
+                }
+                break;
+            }
+            return;
+        }
+
+        let mut buf = [0u8; 1024];
         loop {
-            let rc = unsafe {
-                libc::read(
-                    fd,
-                    std::ptr::addr_of_mut!(value).cast(),
-                    std::mem::size_of::<u64>(),
-                )
-            };
+            let rc = unsafe { libc::read(fd, buf.as_mut_ptr().cast(), buf.len()) };
+            if rc as usize == buf.len() {
+                continue;
+            }
             if rc == -1 {
                 let err = unsafe { *libc::__errno_location() };
                 if err == libc::EINTR {
@@ -54,41 +84,19 @@ unsafe fn drain_wakeup_fd(loop_: *mut abi::uv_loop_t) {
             }
             break;
         }
-        return;
-    }
-
-    let mut buf = [0u8; 1024];
-    loop {
-        let rc = unsafe { libc::read(fd, buf.as_mut_ptr().cast(), buf.len()) };
-        if rc as usize == buf.len() {
-            continue;
-        }
-        if rc == -1 {
-            let err = unsafe { *libc::__errno_location() };
-            if err == libc::EINTR {
-                continue;
-            }
-            if err == libc::EAGAIN || err == libc::EWOULDBLOCK {
-                break;
-            }
-            unsafe {
-                libc::abort();
-            }
-        }
-        break;
     }
 }
 
-unsafe extern "C" fn async_io(
-    loop_: *mut abi::uv_loop_t,
-    _watcher: *mut abi::uv__io_t,
-    _events: c_uint,
-) {
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn async_io(loop_: *mut abi::uv_loop_t, _watcher: *mut abi::uv__io_t, _events: c_uint) {
     unsafe {
-        run(loop_);
+        unsafe {
+            run(loop_);
+        }
     }
 }
 
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn set_nonblocking_cloexec(fd: c_int) -> bool {
     unsafe {
         if libc::fcntl(fd, libc::F_SETFL, libc::O_NONBLOCK) != 0 {
@@ -101,47 +109,51 @@ fn set_nonblocking_cloexec(fd: c_int) -> bool {
     true
 }
 
-unsafe fn start_backend(loop_: *mut abi::uv_loop_t) -> c_int {
-    let mut read_fd = unsafe { libc::eventfd(0, libc::EFD_CLOEXEC | libc::EFD_NONBLOCK) };
-    let mut write_fd = -1;
-
-    if read_fd < 0 {
-        let mut fds = [0; 2];
-        if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
-            return -unsafe { *libc::__errno_location() };
-        }
-
-        if !set_nonblocking_cloexec(fds[0]) || !set_nonblocking_cloexec(fds[1]) {
-            unsafe {
-                libc::close(fds[0]);
-                libc::close(fds[1]);
-            }
-            return -unsafe { *libc::__errno_location() };
-        }
-
-        read_fd = fds[0];
-        write_fd = fds[1];
-    }
-
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+fn start_backend(loop_: *mut abi::uv_loop_t) -> c_int {
     unsafe {
-        unix_core::uv__io_init(
-            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
-            std::mem::transmute::<abi::uv__io_cb, crate::upstream_support::unix_core::uv__io_cb>(
-                Some(async_io),
-            ),
-            read_fd,
-        );
-        unix_core::uv__io_start(
-            loop_.cast(),
-            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
-            libc::POLLIN as c_uint,
-        );
-        (*loop_).async_wfd = write_fd;
-    }
+        let mut read_fd = unsafe { libc::eventfd(0, libc::EFD_CLOEXEC | libc::EFD_NONBLOCK) };
+        let mut write_fd = -1;
 
-    0
+        if read_fd < 0 {
+            let mut fds = [0; 2];
+            if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+                return -unsafe { *libc::__errno_location() };
+            }
+
+            if !set_nonblocking_cloexec(fds[0]) || !set_nonblocking_cloexec(fds[1]) {
+                unsafe {
+                    libc::close(fds[0]);
+                    libc::close(fds[1]);
+                }
+                return -unsafe { *libc::__errno_location() };
+            }
+
+            read_fd = fds[0];
+            write_fd = fds[1];
+        }
+
+        unsafe {
+            unix_core::uv__io_init(
+                std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+                std::mem::transmute::<abi::uv__io_cb, crate::upstream_support::unix_core::uv__io_cb>(
+                    Some(async_io),
+                ),
+                read_fd,
+            );
+            unix_core::uv__io_start(
+                loop_.cast(),
+                std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+                libc::POLLIN as c_uint,
+            );
+            (*loop_).async_wfd = write_fd;
+        }
+
+        0
+    }
 }
 
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn init_handle(loop_: *mut abi::uv_loop_t, handle_ptr: *mut abi::uv_async_t) {
     let data = unsafe { (*handle_ptr).data };
     unsafe {
@@ -160,74 +172,84 @@ fn init_handle(loop_: *mut abi::uv_loop_t, handle_ptr: *mut abi::uv_async_t) {
     }
 }
 
-pub(crate) unsafe fn ensure_backend(loop_: *mut abi::uv_loop_t) -> c_int {
-    if loop_.is_null() {
-        return abi::uv_errno_t_UV_EINVAL;
-    }
-    if unsafe { (*loop_).async_io_watcher.fd } != -1 {
-        return 0;
-    }
-    unsafe { start_backend(loop_) }
-}
-
-pub(crate) unsafe fn init_internal(loop_: *mut abi::uv_loop_t) -> c_int {
-    let rc = unsafe { ensure_backend(loop_) };
-    if rc != 0 {
-        return rc;
-    }
-
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn ensure_backend(loop_: *mut abi::uv_loop_t) -> c_int {
     unsafe {
-        std::ptr::write_bytes(std::ptr::addr_of_mut!((*loop_).wq_async), 0, 1);
-        (*loop_).wq_async.loop_ = loop_;
-        (*loop_).wq_async.type_ = abi::uv_handle_type_UV_ASYNC;
-        (*loop_).wq_async.flags = UV_HANDLE_INTERNAL;
-        (*loop_).wq_async.async_cb = Some(crate::threading::threadpool::loop_wq_async_cb);
-        queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.handle_queue));
-        queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.queue));
-        queue::insert_tail(
-            std::ptr::addr_of_mut!((*loop_).handle_queue),
-            std::ptr::addr_of_mut!((*loop_).wq_async.handle_queue),
-        );
-        queue::insert_tail(
-            std::ptr::addr_of_mut!((*loop_).async_handles),
-            std::ptr::addr_of_mut!((*loop_).wq_async.queue),
-        );
+        if loop_.is_null() {
+            return abi::uv_errno_t_UV_EINVAL;
+        }
+        if unsafe { (*loop_).async_io_watcher.fd } != -1 {
+            return 0;
+        }
+        unsafe { start_backend(loop_) }
     }
-
-    0
 }
 
-pub(crate) unsafe fn init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init_internal(loop_: *mut abi::uv_loop_t) -> c_int {
+    unsafe {
+        let rc = unsafe { ensure_backend(loop_) };
+        if rc != 0 {
+            return rc;
+        }
+
+        unsafe {
+            std::ptr::write_bytes(std::ptr::addr_of_mut!((*loop_).wq_async), 0, 1);
+            (*loop_).wq_async.loop_ = loop_;
+            (*loop_).wq_async.type_ = abi::uv_handle_type_UV_ASYNC;
+            (*loop_).wq_async.flags = UV_HANDLE_INTERNAL;
+            (*loop_).wq_async.async_cb = Some(crate::threading::threadpool::loop_wq_async_cb);
+            queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.handle_queue));
+            queue::init(std::ptr::addr_of_mut!((*loop_).wq_async.queue));
+            queue::insert_tail(
+                std::ptr::addr_of_mut!((*loop_).handle_queue),
+                std::ptr::addr_of_mut!((*loop_).wq_async.handle_queue),
+            );
+            queue::insert_tail(
+                std::ptr::addr_of_mut!((*loop_).async_handles),
+                std::ptr::addr_of_mut!((*loop_).wq_async.queue),
+            );
+        }
+
+        0
+    }
+}
+
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init(
     loop_: *mut abi::uv_loop_t,
     handle_ptr: *mut abi::uv_async_t,
     cb: abi::uv_async_cb,
 ) -> c_int {
-    if loop_.is_null() || handle_ptr.is_null() {
-        return abi::uv_errno_t_UV_EINVAL;
-    }
-
-    let rc = unsafe { ensure_backend(loop_) };
-    if rc != 0 {
-        return rc;
-    }
-
-    init_handle(loop_, handle_ptr);
-
     unsafe {
-        (*handle_ptr).async_cb = cb;
-        (*handle_ptr).pending = 0;
-        (*handle_ptr).u.fd = 0;
-        queue::init(std::ptr::addr_of_mut!((*handle_ptr).queue));
-        queue::insert_tail(
-            std::ptr::addr_of_mut!((*loop_).async_handles),
-            std::ptr::addr_of_mut!((*handle_ptr).queue),
-        );
-        handle::handle_start(handle_ptr.cast());
-    }
+        if loop_.is_null() || handle_ptr.is_null() {
+            return abi::uv_errno_t_UV_EINVAL;
+        }
 
-    0
+        let rc = unsafe { ensure_backend(loop_) };
+        if rc != 0 {
+            return rc;
+        }
+
+        init_handle(loop_, handle_ptr);
+
+        unsafe {
+            (*handle_ptr).async_cb = cb;
+            (*handle_ptr).pending = 0;
+            (*handle_ptr).u.fd = 0;
+            queue::init(std::ptr::addr_of_mut!((*handle_ptr).queue));
+            queue::insert_tail(
+                std::ptr::addr_of_mut!((*loop_).async_handles),
+                std::ptr::addr_of_mut!((*handle_ptr).queue),
+            );
+            handle::handle_start(handle_ptr.cast());
+        }
+
+        0
+    }
 }
 
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 fn send_wakeup(loop_: *mut abi::uv_loop_t) {
     let mut buf_ptr: *const libc::c_void = b"\0".as_ptr().cast();
     let mut len = 1usize;
@@ -260,25 +282,28 @@ fn send_wakeup(loop_: *mut abi::uv_loop_t) {
     }
 }
 
-pub(crate) unsafe fn send(handle_ptr: *mut abi::uv_async_t) -> c_int {
-    if handle_ptr.is_null() {
-        return abi::uv_errno_t_UV_EINVAL;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn send(handle_ptr: *mut abi::uv_async_t) -> c_int {
+    unsafe {
+        if handle_ptr.is_null() {
+            return abi::uv_errno_t_UV_EINVAL;
+        }
+
+        let pending = pending_atomic(handle_ptr);
+        let busy = busy_atomic(handle_ptr);
+
+        if pending.load(Ordering::Relaxed) != 0 {
+            return 0;
+        }
+
+        busy.fetch_add(1, Ordering::AcqRel);
+        if pending.swap(1, Ordering::AcqRel) == 0 {
+            send_wakeup(unsafe { (*handle_ptr).loop_ });
+        }
+        busy.fetch_sub(1, Ordering::AcqRel);
+
+        0
     }
-
-    let pending = pending_atomic(handle_ptr);
-    let busy = busy_atomic(handle_ptr);
-
-    if pending.load(Ordering::Relaxed) != 0 {
-        return 0;
-    }
-
-    busy.fetch_add(1, Ordering::AcqRel);
-    if pending.swap(1, Ordering::AcqRel) == 0 {
-        send_wakeup(unsafe { (*handle_ptr).loop_ });
-    }
-    busy.fetch_sub(1, Ordering::AcqRel);
-
-    0
 }
 
 fn spin_until_idle(handle_ptr: *mut abi::uv_async_t) {
@@ -294,155 +319,170 @@ fn spin_until_idle(handle_ptr: *mut abi::uv_async_t) {
     }
 }
 
-pub(crate) unsafe fn close(handle_ptr: *mut abi::uv_async_t) {
-    if handle_ptr.is_null() {
-        return;
-    }
-    spin_until_idle(handle_ptr);
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn close(handle_ptr: *mut abi::uv_async_t) {
     unsafe {
-        queue::remove(std::ptr::addr_of_mut!((*handle_ptr).queue));
-        queue::init(std::ptr::addr_of_mut!((*handle_ptr).queue));
-        handle::handle_stop(handle_ptr.cast());
-    }
-}
-
-pub(crate) unsafe fn has_pending(loop_: *mut abi::uv_loop_t) -> bool {
-    if loop_.is_null() {
-        return false;
-    }
-    let head = unsafe { std::ptr::addr_of!((*loop_).async_handles) };
-    let mut node = unsafe { (*head).next };
-    while !std::ptr::eq(node, head.cast_mut()) {
-        let handle_ptr = unsafe { async_handle_from_queue(node) };
-        if pending_atomic(handle_ptr).load(Ordering::Acquire) != 0 {
-            return true;
+        if handle_ptr.is_null() {
+            return;
         }
-        node = unsafe { (*node).next };
+        spin_until_idle(handle_ptr);
+        unsafe {
+            queue::remove(std::ptr::addr_of_mut!((*handle_ptr).queue));
+            queue::init(std::ptr::addr_of_mut!((*handle_ptr).queue));
+            handle::handle_stop(handle_ptr.cast());
+        }
     }
-    false
 }
 
-pub(crate) unsafe fn run(loop_: *mut abi::uv_loop_t) {
-    if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
-        return;
-    }
-
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn has_pending(loop_: *mut abi::uv_loop_t) -> bool {
     unsafe {
-        drain_wakeup_fd(loop_);
+        if loop_.is_null() {
+            return false;
+        }
+        let head = unsafe { std::ptr::addr_of!((*loop_).async_handles) };
+        let mut node = unsafe { (*head).next };
+        while !std::ptr::eq(node, head.cast_mut()) {
+            let handle_ptr = unsafe { async_handle_from_queue(node) };
+            if pending_atomic(handle_ptr).load(Ordering::Acquire) != 0 {
+                return true;
+            }
+            node = unsafe { (*node).next };
+        }
+        false
     }
+}
 
-    let mut local = abi::uv__queue::default();
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn run(loop_: *mut abi::uv_loop_t) {
     unsafe {
-        queue::move_queue(
-            std::ptr::addr_of_mut!((*loop_).async_handles),
-            std::ptr::addr_of_mut!(local),
-        );
-    }
+        if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
+            return;
+        }
 
-    while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
-        let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
-        let handle_ptr = unsafe { async_handle_from_queue(node) };
         unsafe {
-            queue::remove(node);
-            queue::insert_tail(
+            drain_wakeup_fd(loop_);
+        }
+
+        let mut local = abi::uv__queue::default();
+        unsafe {
+            queue::move_queue(
                 std::ptr::addr_of_mut!((*loop_).async_handles),
-                std::ptr::addr_of_mut!((*handle_ptr).queue),
+                std::ptr::addr_of_mut!(local),
             );
         }
 
-        if pending_atomic(handle_ptr).swap(0, Ordering::AcqRel) == 0 {
-            continue;
-        }
-
-        if let Some(cb) = unsafe { (*handle_ptr).async_cb } {
+        while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
+            let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
+            let handle_ptr = unsafe { async_handle_from_queue(node) };
             unsafe {
-                cb(handle_ptr);
+                queue::remove(node);
+                queue::insert_tail(
+                    std::ptr::addr_of_mut!((*loop_).async_handles),
+                    std::ptr::addr_of_mut!((*handle_ptr).queue),
+                );
+            }
+
+            if pending_atomic(handle_ptr).swap(0, Ordering::AcqRel) == 0 {
+                continue;
+            }
+
+            if let Some(cb) = unsafe { (*handle_ptr).async_cb } {
+                unsafe {
+                    cb(handle_ptr);
+                }
             }
         }
     }
 }
 
-pub(crate) unsafe fn shutdown(loop_: *mut abi::uv_loop_t) {
-    if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
-        return;
-    }
-
-    let mut local = abi::uv__queue::default();
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn shutdown(loop_: *mut abi::uv_loop_t) {
     unsafe {
-        queue::move_queue(
-            std::ptr::addr_of_mut!((*loop_).async_handles),
-            std::ptr::addr_of_mut!(local),
-        );
-    }
+        if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
+            return;
+        }
 
-    while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
-        let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
-        let handle_ptr = unsafe { async_handle_from_queue(node) };
+        let mut local = abi::uv__queue::default();
         unsafe {
-            queue::remove(node);
-            queue::insert_tail(
+            queue::move_queue(
                 std::ptr::addr_of_mut!((*loop_).async_handles),
-                std::ptr::addr_of_mut!((*handle_ptr).queue),
+                std::ptr::addr_of_mut!(local),
             );
         }
-        spin_until_idle(handle_ptr);
-    }
 
-    unsafe {
-        if (*loop_).async_wfd != -1 && (*loop_).async_wfd != (*loop_).async_io_watcher.fd {
-            libc::close((*loop_).async_wfd);
+        while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
+            let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
+            let handle_ptr = unsafe { async_handle_from_queue(node) };
+            unsafe {
+                queue::remove(node);
+                queue::insert_tail(
+                    std::ptr::addr_of_mut!((*loop_).async_handles),
+                    std::ptr::addr_of_mut!((*handle_ptr).queue),
+                );
+            }
+            spin_until_idle(handle_ptr);
         }
-        (*loop_).async_wfd = -1;
-        unix_core::uv__io_stop(
-            loop_.cast(),
-            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
-            libc::POLLIN as c_uint,
-        );
-        libc::close((*loop_).async_io_watcher.fd);
-        (*loop_).async_io_watcher.fd = -1;
+
+        unsafe {
+            if (*loop_).async_wfd != -1 && (*loop_).async_wfd != (*loop_).async_io_watcher.fd {
+                libc::close((*loop_).async_wfd);
+            }
+            (*loop_).async_wfd = -1;
+            unix_core::uv__io_stop(
+                loop_.cast(),
+                std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+                libc::POLLIN as c_uint,
+            );
+            libc::close((*loop_).async_io_watcher.fd);
+            (*loop_).async_io_watcher.fd = -1;
+        }
     }
 }
 
-pub(crate) unsafe fn fork(loop_: *mut abi::uv_loop_t) -> c_int {
-    if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
-        return 0;
-    }
-
-    let mut local = abi::uv__queue::default();
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn fork(loop_: *mut abi::uv_loop_t) -> c_int {
     unsafe {
-        queue::move_queue(
-            std::ptr::addr_of_mut!((*loop_).async_handles),
-            std::ptr::addr_of_mut!(local),
-        );
-    }
+        if loop_.is_null() || unsafe { (*loop_).async_io_watcher.fd } == -1 {
+            return 0;
+        }
 
-    while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
-        let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
-        let handle_ptr = unsafe { async_handle_from_queue(node) };
+        let mut local = abi::uv__queue::default();
         unsafe {
-            queue::remove(node);
-            queue::insert_tail(
+            queue::move_queue(
                 std::ptr::addr_of_mut!((*loop_).async_handles),
-                std::ptr::addr_of_mut!((*handle_ptr).queue),
+                std::ptr::addr_of_mut!(local),
             );
-            (*handle_ptr).pending = 0;
-            (*handle_ptr).u.fd = 0;
         }
-    }
 
-    unsafe {
-        if (*loop_).async_wfd != -1 && (*loop_).async_wfd != (*loop_).async_io_watcher.fd {
-            libc::close((*loop_).async_wfd);
+        while unsafe { !queue::is_empty(std::ptr::addr_of!(local)) } {
+            let node = unsafe { queue::head(std::ptr::addr_of_mut!(local)) };
+            let handle_ptr = unsafe { async_handle_from_queue(node) };
+            unsafe {
+                queue::remove(node);
+                queue::insert_tail(
+                    std::ptr::addr_of_mut!((*loop_).async_handles),
+                    std::ptr::addr_of_mut!((*handle_ptr).queue),
+                );
+                (*handle_ptr).pending = 0;
+                (*handle_ptr).u.fd = 0;
+            }
         }
-        (*loop_).async_wfd = -1;
-        unix_core::uv__io_stop(
-            loop_.cast(),
-            std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
-            libc::POLLIN as c_uint,
-        );
-        libc::close((*loop_).async_io_watcher.fd);
-        (*loop_).async_io_watcher.fd = -1;
-    }
 
-    unsafe { ensure_backend(loop_) }
+        unsafe {
+            if (*loop_).async_wfd != -1 && (*loop_).async_wfd != (*loop_).async_io_watcher.fd {
+                libc::close((*loop_).async_wfd);
+            }
+            (*loop_).async_wfd = -1;
+            unix_core::uv__io_stop(
+                loop_.cast(),
+                std::ptr::addr_of_mut!((*loop_).async_io_watcher).cast(),
+                libc::POLLIN as c_uint,
+            );
+            libc::close((*loop_).async_io_watcher.fd);
+            (*loop_).async_io_watcher.fd = -1;
+        }
+
+        unsafe { ensure_backend(loop_) }
+    }
 }

@@ -776,6 +776,7 @@ pub const TCP_KEEPIDLE: ::core::ffi::c_int = 4 as ::core::ffi::c_int;
 pub const TCP_KEEPINTVL: ::core::ffi::c_int = 5 as ::core::ffi::c_int;
 pub const TCP_KEEPCNT: ::core::ffi::c_int = 6 as ::core::ffi::c_int;
 pub const UV_FS_O_NONBLOCK: ::core::ffi::c_int = O_NONBLOCK;
+// SAFETY(ffi_callback): this translated constant materializes a C string literal with the expected ABI type.
 pub const __ASSERT_FUNCTION: [::core::ffi::c_char; 102] = unsafe {
     ::core::mem::transmute::<
         [u8; 102],
@@ -785,20 +786,312 @@ pub const __ASSERT_FUNCTION: [::core::ffi::c_char; 102] = unsafe {
     )
 };
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
-    (*(*q).prev).next = (*q).next;
-    (*(*q).next).prev = (*q).prev;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
+    unsafe {
+        (*(*q).prev).next = (*q).next;
+        (*(*q).next).prev = (*q).prev;
+    }
 }
 pub const POLLIN: ::core::ffi::c_int = 0x1 as ::core::ffi::c_int;
 pub const POLLOUT: ::core::ffi::c_int = 0x4 as ::core::ffi::c_int;
-unsafe extern "C" fn maybe_bind_socket(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
-    let mut s: uv__sockaddr = uv__sockaddr {
-        in6: sockaddr_in6 {
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn maybe_bind_socket(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        let mut s: uv__sockaddr = uv__sockaddr {
+            in6: sockaddr_in6 {
+                sin6_family: 0,
+                sin6_port: 0,
+                sin6_flowinfo: 0,
+                sin6_addr: in6_addr {
+                    __in6_u: C2RustUnnamed {
+                        __u6_addr8: [0; 16],
+                    },
+                },
+                sin6_scope_id: 0,
+            },
+        };
+        let mut slen: socklen_t = 0;
+        slen = ::core::mem::size_of::<uv__sockaddr>() as socklen_t;
+        memset(
+            &raw mut s as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<uv__sockaddr>() as size_t,
+        );
+        if getsockname(
+            fd,
+            __SOCKADDR_ARG {
+                __sockaddr__: &raw mut s.addr,
+            },
+            &raw mut slen,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        if s.addr.sa_family as ::core::ffi::c_int == AF_INET {
+            if s.in_0.sin_port as ::core::ffi::c_int != 0 as ::core::ffi::c_int {
+                return 0 as ::core::ffi::c_int;
+            }
+        }
+        if s.addr.sa_family as ::core::ffi::c_int == AF_INET6 {
+            if s.in6.sin6_port as ::core::ffi::c_int != 0 as ::core::ffi::c_int {
+                return 0 as ::core::ffi::c_int;
+            }
+        }
+        if bind(
+            fd,
+            __CONST_SOCKADDR_ARG {
+                __sockaddr__: &raw mut s.addr,
+            },
+            slen,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn new_socket(
+    mut handle: *mut uv_tcp_t,
+    mut domain: ::core::ffi::c_int,
+    mut flags: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut sockfd: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        sockfd = uv__socket(
+            domain,
+            SOCK_STREAM as ::core::ffi::c_int,
+            0 as ::core::ffi::c_int,
+        );
+        if sockfd < 0 as ::core::ffi::c_int {
+            return sockfd;
+        }
+        err = uv__stream_open(
+            handle as *mut uv_stream_t,
+            sockfd,
+            flags as ::core::ffi::c_int,
+        );
+        if err != 0 {
+            uv__close(sockfd);
+            return err;
+        }
+        if flags & UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            return maybe_bind_socket(sockfd);
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn maybe_new_socket(
+    mut handle: *mut uv_tcp_t,
+    mut domain: ::core::ffi::c_int,
+    mut flags: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut sockfd: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        if !(domain == AF_UNSPEC) {
+            sockfd = (*handle).io_watcher.fd;
+            if sockfd == -(1 as ::core::ffi::c_int) {
+                return new_socket(handle, domain, flags);
+            }
+            if !(flags & UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint == 0) {
+                if !((*handle).flags & UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0)
+                {
+                    err = maybe_bind_socket(sockfd);
+                    if err != 0 {
+                        return err;
+                    }
+                }
+            }
+        }
+        (*handle).flags |= flags;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_init_ex(
+    mut loop_0: *mut uv_loop_t,
+    mut tcp: *mut uv_tcp_t,
+    mut flags: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut domain: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        domain = (flags & 0xff as ::core::ffi::c_uint) as ::core::ffi::c_int;
+        if domain != AF_INET && domain != AF_INET6 && domain != AF_UNSPEC {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if flags & !(0xff as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        uv__stream_init(loop_0, tcp as *mut uv_stream_t, UV_TCP);
+        if domain != AF_UNSPEC {
+            err = new_socket(tcp, domain, 0 as ::core::ffi::c_uint);
+            if err != 0 {
+                uv__queue_remove(&raw mut (*tcp).handle_queue);
+                if (*tcp).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+                    uv__close((*tcp).io_watcher.fd);
+                }
+                (*tcp).io_watcher.fd = -(1 as ::core::ffi::c_int);
+                return err;
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_init(
+    mut loop_0: *mut uv_loop_t,
+    mut tcp: *mut uv_tcp_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        return uv_tcp_init_ex(loop_0, tcp, AF_UNSPEC as ::core::ffi::c_uint);
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__tcp_bind(
+    mut tcp: *mut uv_tcp_t,
+    mut addr: *const sockaddr,
+    mut addrlen: ::core::ffi::c_uint,
+    mut flags: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut on: ::core::ffi::c_int = 0;
+        if flags & UV_TCP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            && (*addr).sa_family as ::core::ffi::c_int != AF_INET6
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        err = maybe_new_socket(
+            tcp,
+            (*addr).sa_family as ::core::ffi::c_int,
+            0 as ::core::ffi::c_uint,
+        );
+        if err != 0 {
+            return err;
+        }
+        on = 1 as ::core::ffi::c_int;
+        if setsockopt(
+            (*tcp).io_watcher.fd,
+            SOL_SOCKET,
+            SO_REUSEADDR,
+            &raw mut on as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
+            on = (flags & UV_TCP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
+            if setsockopt(
+                (*tcp).io_watcher.fd,
+                IPPROTO_IPV6 as ::core::ffi::c_int,
+                IPV6_V6ONLY,
+                &raw mut on as *const ::core::ffi::c_void,
+                ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+            ) == -(1 as ::core::ffi::c_int)
+            {
+                return -*__errno_location();
+            }
+        }
+        *__errno_location() = 0 as ::core::ffi::c_int;
+        err = bind(
+            (*tcp).io_watcher.fd,
+            __CONST_SOCKADDR_ARG { __sockaddr__: addr },
+            addrlen as socklen_t,
+        );
+        if err == -(1 as ::core::ffi::c_int) && *__errno_location() != EADDRINUSE {
+            if *__errno_location() == EAFNOSUPPORT {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+            return -*__errno_location();
+        }
+        (*tcp).delayed_error = if err == -(1 as ::core::ffi::c_int) {
+            -*__errno_location()
+        } else {
+            0 as ::core::ffi::c_int
+        };
+        (*tcp).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
+        if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
+            (*tcp).flags |= UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint;
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__is_ipv6_link_local(mut addr: *const sockaddr) -> ::core::ffi::c_int {
+    unsafe {
+        let mut a6: *const sockaddr_in6 = ::core::ptr::null::<sockaddr_in6>();
+        let mut b: [uint8_t; 2] = [0; 2];
+        if (*addr).sa_family as ::core::ffi::c_int != AF_INET6 {
+            return 0 as ::core::ffi::c_int;
+        }
+        a6 = addr as *const sockaddr_in6;
+        memcpy(
+            &raw mut b as *mut uint8_t as *mut ::core::ffi::c_void,
+            &raw const (*a6).sin6_addr as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<[uint8_t; 2]>() as size_t,
+        );
+        return (b[0 as ::core::ffi::c_int as usize] as ::core::ffi::c_int
+            == 0xfe as ::core::ffi::c_int
+            && b[1 as ::core::ffi::c_int as usize] as ::core::ffi::c_int
+                == 0x80 as ::core::ffi::c_int) as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__ipv6_link_local_scope_id() -> ::core::ffi::c_int {
+    unsafe {
+        let mut a6: *mut sockaddr_in6 = ::core::ptr::null_mut::<sockaddr_in6>();
+        let mut rv: ::core::ffi::c_int = 0;
+        let mut ifa: *mut ifaddrs = ::core::ptr::null_mut::<ifaddrs>();
+        let mut p: *mut ifaddrs = ::core::ptr::null_mut::<ifaddrs>();
+        if getifaddrs(&raw mut ifa) != 0 {
+            return 0 as ::core::ffi::c_int;
+        }
+        p = ifa;
+        while !p.is_null() {
+            if !(*p).ifa_addr.is_null() {
+                if uv__is_ipv6_link_local((*p).ifa_addr) != 0 {
+                    break;
+                }
+            }
+            p = (*p).ifa_next;
+        }
+        rv = 0 as ::core::ffi::c_int;
+        if !p.is_null() {
+            a6 = (*p).ifa_addr as *mut sockaddr_in6;
+            rv = (*a6).sin6_scope_id as ::core::ffi::c_int;
+        }
+        freeifaddrs(ifa);
+        return rv;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__tcp_connect(
+    mut req: *mut uv_connect_t,
+    mut handle: *mut uv_tcp_t,
+    mut addr: *const sockaddr,
+    mut addrlen: ::core::ffi::c_uint,
+    mut cb: uv_connect_cb,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut tmp6: sockaddr_in6 = sockaddr_in6 {
             sin6_family: 0,
             sin6_port: 0,
             sin6_flowinfo: 0,
@@ -808,781 +1101,579 @@ unsafe extern "C" fn maybe_bind_socket(mut fd: ::core::ffi::c_int) -> ::core::ff
                 },
             },
             sin6_scope_id: 0,
-        },
-    };
-    let mut slen: socklen_t = 0;
-    slen = ::core::mem::size_of::<uv__sockaddr>() as socklen_t;
-    memset(
-        &raw mut s as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<uv__sockaddr>() as size_t,
-    );
-    if getsockname(
-        fd,
-        __SOCKADDR_ARG {
-            __sockaddr__: &raw mut s.addr,
-        },
-        &raw mut slen,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    if s.addr.sa_family as ::core::ffi::c_int == AF_INET {
-        if s.in_0.sin_port as ::core::ffi::c_int != 0 as ::core::ffi::c_int {
-            return 0 as ::core::ffi::c_int;
-        }
-    }
-    if s.addr.sa_family as ::core::ffi::c_int == AF_INET6 {
-        if s.in6.sin6_port as ::core::ffi::c_int != 0 as ::core::ffi::c_int {
-            return 0 as ::core::ffi::c_int;
-        }
-    }
-    if bind(
-        fd,
-        __CONST_SOCKADDR_ARG {
-            __sockaddr__: &raw mut s.addr,
-        },
-        slen,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn new_socket(
-    mut handle: *mut uv_tcp_t,
-    mut domain: ::core::ffi::c_int,
-    mut flags: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut sockfd: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    sockfd = uv__socket(
-        domain,
-        SOCK_STREAM as ::core::ffi::c_int,
-        0 as ::core::ffi::c_int,
-    );
-    if sockfd < 0 as ::core::ffi::c_int {
-        return sockfd;
-    }
-    err = uv__stream_open(
-        handle as *mut uv_stream_t,
-        sockfd,
-        flags as ::core::ffi::c_int,
-    );
-    if err != 0 {
-        uv__close(sockfd);
-        return err;
-    }
-    if flags & UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        return maybe_bind_socket(sockfd);
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn maybe_new_socket(
-    mut handle: *mut uv_tcp_t,
-    mut domain: ::core::ffi::c_int,
-    mut flags: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut sockfd: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    if !(domain == AF_UNSPEC) {
-        sockfd = (*handle).io_watcher.fd;
-        if sockfd == -(1 as ::core::ffi::c_int) {
-            return new_socket(handle, domain, flags);
-        }
-        if !(flags & UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint == 0) {
-            if !((*handle).flags & UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0)
+        };
+        let mut err: ::core::ffi::c_int = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if (*handle).type_0 as ::core::ffi::c_uint
+                == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
             {
-                err = maybe_bind_socket(sockfd);
-                if err != 0 {
-                    return err;
+            } else {
+                __assert_fail(
+                    b"handle->type == UV_TCP\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/tcp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    280 as ::core::ffi::c_uint,
+                    __ASSERT_FUNCTION.as_ptr(),
+                );
+            }
+        };
+        if !(*handle).connect_req.is_null() {
+            return UV_EALREADY as ::core::ffi::c_int;
+        }
+        if !((*handle).delayed_error != 0 as ::core::ffi::c_int) {
+            err = maybe_new_socket(
+                handle,
+                (*addr).sa_family as ::core::ffi::c_int,
+                (UV_HANDLE_READABLE as ::core::ffi::c_int
+                    | UV_HANDLE_WRITABLE as ::core::ffi::c_int)
+                    as ::core::ffi::c_uint,
+            );
+            if err != 0 {
+                return err;
+            }
+            if uv__is_ipv6_link_local(addr) != 0 {
+                memcpy(
+                    &raw mut tmp6 as *mut ::core::ffi::c_void,
+                    addr as *const ::core::ffi::c_void,
+                    ::core::mem::size_of::<sockaddr_in6>() as size_t,
+                );
+                if tmp6.sin6_scope_id == 0 as uint32_t {
+                    tmp6.sin6_scope_id = uv__ipv6_link_local_scope_id() as uint32_t;
+                    addr = &raw mut tmp6 as *mut ::core::ffi::c_void as *const sockaddr;
+                }
+            }
+            loop {
+                *__errno_location() = 0 as ::core::ffi::c_int;
+                r = connect(
+                    (*handle).io_watcher.fd,
+                    __CONST_SOCKADDR_ARG { __sockaddr__: addr },
+                    addrlen as socklen_t,
+                );
+                if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                    break;
+                }
+            }
+            if r == -(1 as ::core::ffi::c_int) && *__errno_location() != 0 as ::core::ffi::c_int {
+                if !(*__errno_location() == EINPROGRESS) {
+                    if *__errno_location() == ECONNREFUSED {
+                        (*handle).delayed_error = -(111 as ::core::ffi::c_int);
+                    } else {
+                        return -*__errno_location();
+                    }
                 }
             }
         }
-    }
-    (*handle).flags |= flags;
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_tcp_init_ex(
-    mut loop_0: *mut uv_loop_t,
-    mut tcp: *mut uv_tcp_t,
-    mut flags: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut domain: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    domain = (flags & 0xff as ::core::ffi::c_uint) as ::core::ffi::c_int;
-    if domain != AF_INET && domain != AF_INET6 && domain != AF_UNSPEC {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if flags & !(0xff as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    uv__stream_init(loop_0, tcp as *mut uv_stream_t, UV_TCP);
-    if domain != AF_UNSPEC {
-        err = new_socket(tcp, domain, 0 as ::core::ffi::c_uint);
-        if err != 0 {
-            uv__queue_remove(&raw mut (*tcp).handle_queue);
-            if (*tcp).io_watcher.fd != -(1 as ::core::ffi::c_int) {
-                uv__close((*tcp).io_watcher.fd);
-            }
-            (*tcp).io_watcher.fd = -(1 as ::core::ffi::c_int);
-            return err;
-        }
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_tcp_init(
-    mut loop_0: *mut uv_loop_t,
-    mut tcp: *mut uv_tcp_t,
-) -> ::core::ffi::c_int {
-    return uv_tcp_init_ex(loop_0, tcp, AF_UNSPEC as ::core::ffi::c_uint);
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__tcp_bind(
-    mut tcp: *mut uv_tcp_t,
-    mut addr: *const sockaddr,
-    mut addrlen: ::core::ffi::c_uint,
-    mut flags: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut on: ::core::ffi::c_int = 0;
-    if flags & UV_TCP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint != 0
-        && (*addr).sa_family as ::core::ffi::c_int != AF_INET6
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    err = maybe_new_socket(
-        tcp,
-        (*addr).sa_family as ::core::ffi::c_int,
-        0 as ::core::ffi::c_uint,
-    );
-    if err != 0 {
-        return err;
-    }
-    on = 1 as ::core::ffi::c_int;
-    if setsockopt(
-        (*tcp).io_watcher.fd,
-        SOL_SOCKET,
-        SO_REUSEADDR,
-        &raw mut on as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
-        on = (flags & UV_TCP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
-        if setsockopt(
-            (*tcp).io_watcher.fd,
-            IPPROTO_IPV6 as ::core::ffi::c_int,
-            IPV6_V6ONLY,
-            &raw mut on as *const ::core::ffi::c_void,
-            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-        ) == -(1 as ::core::ffi::c_int)
-        {
-            return -*__errno_location();
-        }
-    }
-    *__errno_location() = 0 as ::core::ffi::c_int;
-    err = bind(
-        (*tcp).io_watcher.fd,
-        __CONST_SOCKADDR_ARG { __sockaddr__: addr },
-        addrlen as socklen_t,
-    );
-    if err == -(1 as ::core::ffi::c_int) && *__errno_location() != EADDRINUSE {
-        if *__errno_location() == EAFNOSUPPORT {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-        return -*__errno_location();
-    }
-    (*tcp).delayed_error = if err == -(1 as ::core::ffi::c_int) {
-        -*__errno_location()
-    } else {
-        0 as ::core::ffi::c_int
-    };
-    (*tcp).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
-    if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
-        (*tcp).flags |= UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint;
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__is_ipv6_link_local(mut addr: *const sockaddr) -> ::core::ffi::c_int {
-    let mut a6: *const sockaddr_in6 = ::core::ptr::null::<sockaddr_in6>();
-    let mut b: [uint8_t; 2] = [0; 2];
-    if (*addr).sa_family as ::core::ffi::c_int != AF_INET6 {
-        return 0 as ::core::ffi::c_int;
-    }
-    a6 = addr as *const sockaddr_in6;
-    memcpy(
-        &raw mut b as *mut uint8_t as *mut ::core::ffi::c_void,
-        &raw const (*a6).sin6_addr as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<[uint8_t; 2]>() as size_t,
-    );
-    return (b[0 as ::core::ffi::c_int as usize] as ::core::ffi::c_int == 0xfe as ::core::ffi::c_int
-        && b[1 as ::core::ffi::c_int as usize] as ::core::ffi::c_int == 0x80 as ::core::ffi::c_int)
-        as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__ipv6_link_local_scope_id() -> ::core::ffi::c_int {
-    let mut a6: *mut sockaddr_in6 = ::core::ptr::null_mut::<sockaddr_in6>();
-    let mut rv: ::core::ffi::c_int = 0;
-    let mut ifa: *mut ifaddrs = ::core::ptr::null_mut::<ifaddrs>();
-    let mut p: *mut ifaddrs = ::core::ptr::null_mut::<ifaddrs>();
-    if getifaddrs(&raw mut ifa) != 0 {
-        return 0 as ::core::ffi::c_int;
-    }
-    p = ifa;
-    while !p.is_null() {
-        if !(*p).ifa_addr.is_null() {
-            if uv__is_ipv6_link_local((*p).ifa_addr) != 0 {
-                break;
-            }
-        }
-        p = (*p).ifa_next;
-    }
-    rv = 0 as ::core::ffi::c_int;
-    if !p.is_null() {
-        a6 = (*p).ifa_addr as *mut sockaddr_in6;
-        rv = (*a6).sin6_scope_id as ::core::ffi::c_int;
-    }
-    freeifaddrs(ifa);
-    return rv;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__tcp_connect(
-    mut req: *mut uv_connect_t,
-    mut handle: *mut uv_tcp_t,
-    mut addr: *const sockaddr,
-    mut addrlen: ::core::ffi::c_uint,
-    mut cb: uv_connect_cb,
-) -> ::core::ffi::c_int {
-    let mut tmp6: sockaddr_in6 = sockaddr_in6 {
-        sin6_family: 0,
-        sin6_port: 0,
-        sin6_flowinfo: 0,
-        sin6_addr: in6_addr {
-            __in6_u: C2RustUnnamed {
-                __u6_addr8: [0; 16],
-            },
-        },
-        sin6_scope_id: 0,
-    };
-    let mut err: ::core::ffi::c_int = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if (*handle).type_0 as ::core::ffi::c_uint
-            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-        {
-        } else {
-            __assert_fail(
-                b"handle->type == UV_TCP\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/tcp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                280 as ::core::ffi::c_uint,
-                __ASSERT_FUNCTION.as_ptr(),
-            );
-        }
-    };
-    if !(*handle).connect_req.is_null() {
-        return UV_EALREADY as ::core::ffi::c_int;
-    }
-    if !((*handle).delayed_error != 0 as ::core::ffi::c_int) {
-        err = maybe_new_socket(
-            handle,
-            (*addr).sa_family as ::core::ffi::c_int,
-            (UV_HANDLE_READABLE as ::core::ffi::c_int | UV_HANDLE_WRITABLE as ::core::ffi::c_int)
-                as ::core::ffi::c_uint,
+        (*req).type_0 = UV_CONNECT;
+        (*(*handle).loop_0).active_reqs.count =
+            (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
+        (*req).cb = cb;
+        (*req).handle = handle as *mut uv_stream_t;
+        uv__queue_init(&raw mut (*req).queue);
+        (*handle).connect_req = req;
+        uv__io_start(
+            (*handle).loop_0,
+            &raw mut (*handle).io_watcher,
+            POLLOUT as ::core::ffi::c_uint,
         );
+        if (*handle).delayed_error != 0 {
+            uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_open(mut handle: *mut uv_tcp_t, mut sock: uv_os_sock_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if uv__fd_exists((*handle).loop_0, sock as ::core::ffi::c_int) != 0 {
+            return UV_EEXIST as ::core::ffi::c_int;
+        }
+        err = uv__nonblock_ioctl(sock as ::core::ffi::c_int, 1 as ::core::ffi::c_int);
         if err != 0 {
             return err;
         }
-        if uv__is_ipv6_link_local(addr) != 0 {
-            memcpy(
-                &raw mut tmp6 as *mut ::core::ffi::c_void,
-                addr as *const ::core::ffi::c_void,
-                ::core::mem::size_of::<sockaddr_in6>() as size_t,
-            );
-            if tmp6.sin6_scope_id == 0 as uint32_t {
-                tmp6.sin6_scope_id = uv__ipv6_link_local_scope_id() as uint32_t;
-                addr = &raw mut tmp6 as *mut ::core::ffi::c_void as *const sockaddr;
-            }
-        }
-        loop {
-            *__errno_location() = 0 as ::core::ffi::c_int;
-            r = connect(
-                (*handle).io_watcher.fd,
-                __CONST_SOCKADDR_ARG { __sockaddr__: addr },
-                addrlen as socklen_t,
-            );
-            if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-                break;
-            }
-        }
-        if r == -(1 as ::core::ffi::c_int) && *__errno_location() != 0 as ::core::ffi::c_int {
-            if !(*__errno_location() == EINPROGRESS) {
-                if *__errno_location() == ECONNREFUSED {
-                    (*handle).delayed_error = -(111 as ::core::ffi::c_int);
-                } else {
-                    return -*__errno_location();
-                }
-            }
-        }
+        return uv__stream_open(
+            handle as *mut uv_stream_t,
+            sock as ::core::ffi::c_int,
+            UV_HANDLE_READABLE as ::core::ffi::c_int | UV_HANDLE_WRITABLE as ::core::ffi::c_int,
+        );
     }
-    (*req).type_0 = UV_CONNECT;
-    (*(*handle).loop_0).active_reqs.count = (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
-    (*req).cb = cb;
-    (*req).handle = handle as *mut uv_stream_t;
-    uv__queue_init(&raw mut (*req).queue);
-    (*handle).connect_req = req;
-    uv__io_start(
-        (*handle).loop_0,
-        &raw mut (*handle).io_watcher,
-        POLLOUT as ::core::ffi::c_uint,
-    );
-    if (*handle).delayed_error != 0 {
-        uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_tcp_open(
-    mut handle: *mut uv_tcp_t,
-    mut sock: uv_os_sock_t,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if uv__fd_exists((*handle).loop_0, sock as ::core::ffi::c_int) != 0 {
-        return UV_EEXIST as ::core::ffi::c_int;
-    }
-    err = uv__nonblock_ioctl(sock as ::core::ffi::c_int, 1 as ::core::ffi::c_int);
-    if err != 0 {
-        return err;
-    }
-    return uv__stream_open(
-        handle as *mut uv_stream_t,
-        sock as ::core::ffi::c_int,
-        UV_HANDLE_READABLE as ::core::ffi::c_int | UV_HANDLE_WRITABLE as ::core::ffi::c_int,
-    );
-}
-pub(crate) unsafe fn uv_tcp_getsockname(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_getsockname(
     mut handle: *const uv_tcp_t,
     mut name: *mut sockaddr,
     mut namelen: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    if (*handle).delayed_error != 0 {
-        return (*handle).delayed_error;
+    unsafe {
+        if (*handle).delayed_error != 0 {
+            return (*handle).delayed_error;
+        }
+        return uv__getsockpeername(
+            handle as *const uv_handle_t,
+            ::core::mem::transmute::<
+                Option<
+                    unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+                >,
+                uv__peersockfunc,
+            >(Some(
+                getsockname
+                    as unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+            )),
+            name,
+            namelen,
+        );
     }
-    return uv__getsockpeername(
-        handle as *const uv_handle_t,
-        ::core::mem::transmute::<
-            Option<
-                unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-            >,
-            uv__peersockfunc,
-        >(Some(
-            getsockname
-                as unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-        )),
-        name,
-        namelen,
-    );
 }
-pub(crate) unsafe fn uv_tcp_getpeername(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_getpeername(
     mut handle: *const uv_tcp_t,
     mut name: *mut sockaddr,
     mut namelen: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    if (*handle).delayed_error != 0 {
-        return (*handle).delayed_error;
+    unsafe {
+        if (*handle).delayed_error != 0 {
+            return (*handle).delayed_error;
+        }
+        return uv__getsockpeername(
+            handle as *const uv_handle_t,
+            ::core::mem::transmute::<
+                Option<
+                    unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+                >,
+                uv__peersockfunc,
+            >(Some(
+                getpeername
+                    as unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+            )),
+            name,
+            namelen,
+        );
     }
-    return uv__getsockpeername(
-        handle as *const uv_handle_t,
-        ::core::mem::transmute::<
-            Option<
-                unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-            >,
-            uv__peersockfunc,
-        >(Some(
-            getpeername
-                as unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-        )),
-        name,
-        namelen,
-    );
 }
-pub(crate) unsafe fn uv_tcp_close_reset(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_close_reset(
     mut handle: *mut uv_tcp_t,
     mut close_cb: uv_close_cb,
 ) -> ::core::ffi::c_int {
-    let mut fd: ::core::ffi::c_int = 0;
-    let mut l: linger = linger {
-        l_onoff: 1 as ::core::ffi::c_int,
-        l_linger: 0 as ::core::ffi::c_int,
-    };
-    if !(*handle).shutdown_req.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    fd = (*handle).io_watcher.fd;
-    if 0 as ::core::ffi::c_int
-        != setsockopt(
-            fd,
-            SOL_SOCKET,
-            SO_LINGER,
-            &raw mut l as *const ::core::ffi::c_void,
-            ::core::mem::size_of::<linger>() as socklen_t,
-        )
-    {
-        if *__errno_location() == EINVAL {
-            *__errno_location() = 0 as ::core::ffi::c_int;
-        } else {
-            return -*__errno_location();
+    unsafe {
+        let mut fd: ::core::ffi::c_int = 0;
+        let mut l: linger = linger {
+            l_onoff: 1 as ::core::ffi::c_int,
+            l_linger: 0 as ::core::ffi::c_int,
+        };
+        if !(*handle).shutdown_req.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
         }
+        fd = (*handle).io_watcher.fd;
+        if 0 as ::core::ffi::c_int
+            != setsockopt(
+                fd,
+                SOL_SOCKET,
+                SO_LINGER,
+                &raw mut l as *const ::core::ffi::c_void,
+                ::core::mem::size_of::<linger>() as socklen_t,
+            )
+        {
+            if *__errno_location() == EINVAL {
+                *__errno_location() = 0 as ::core::ffi::c_int;
+            } else {
+                return -*__errno_location();
+            }
+        }
+        uv_close(handle as *mut uv_handle_t, close_cb);
+        return 0 as ::core::ffi::c_int;
     }
-    uv_close(handle as *mut uv_handle_t, close_cb);
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__tcp_listen(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__tcp_listen(
     mut tcp: *mut uv_tcp_t,
     mut backlog: ::core::ffi::c_int,
     mut cb: uv_connection_cb,
 ) -> ::core::ffi::c_int {
-    let mut flags: ::core::ffi::c_uint = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    if (*tcp).delayed_error != 0 {
-        return (*tcp).delayed_error;
-    }
-    flags = 0 as ::core::ffi::c_uint;
-    err = maybe_new_socket(tcp, AF_INET, flags);
-    if err != 0 {
-        return err;
-    }
-    if listen((*tcp).io_watcher.fd, backlog) != 0 {
-        return -*__errno_location();
-    }
-    (*tcp).connection_cb = cb;
-    (*tcp).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
-    (*tcp).io_watcher.cb = Some(
-        uv__server_io
-            as unsafe extern "C" fn(*mut uv_loop_t, *mut uv__io_t, ::core::ffi::c_uint) -> (),
-    ) as uv__io_cb;
-    uv__io_start(
-        (*tcp).loop_0,
-        &raw mut (*tcp).io_watcher,
-        POLLIN as ::core::ffi::c_uint,
-    );
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__tcp_nodelay(
-    mut fd: ::core::ffi::c_int,
-    mut on: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    if setsockopt(
-        fd,
-        IPPROTO_TCP as ::core::ffi::c_int,
-        TCP_NODELAY,
-        &raw mut on as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__tcp_keepalive(
-    mut fd: ::core::ffi::c_int,
-    mut on: ::core::ffi::c_int,
-    mut delay: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut idle: ::core::ffi::c_int = 0;
-    let mut intvl: ::core::ffi::c_int = 0;
-    let mut cnt: ::core::ffi::c_int = 0;
-    &raw mut idle;
-    &raw mut intvl;
-    &raw mut cnt;
-    if setsockopt(
-        fd,
-        SOL_SOCKET,
-        SO_KEEPALIVE,
-        &raw mut on as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    if on == 0 {
+    unsafe {
+        let mut flags: ::core::ffi::c_uint = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        if (*tcp).delayed_error != 0 {
+            return (*tcp).delayed_error;
+        }
+        flags = 0 as ::core::ffi::c_uint;
+        err = maybe_new_socket(tcp, AF_INET, flags);
+        if err != 0 {
+            return err;
+        }
+        if listen((*tcp).io_watcher.fd, backlog) != 0 {
+            return -*__errno_location();
+        }
+        (*tcp).connection_cb = cb;
+        (*tcp).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
+        (*tcp).io_watcher.cb = Some(
+            uv__server_io
+                as unsafe extern "C" fn(*mut uv_loop_t, *mut uv__io_t, ::core::ffi::c_uint) -> (),
+        ) as uv__io_cb;
+        uv__io_start(
+            (*tcp).loop_0,
+            &raw mut (*tcp).io_watcher,
+            POLLIN as ::core::ffi::c_uint,
+        );
         return 0 as ::core::ffi::c_int;
     }
-    if delay == 0 as ::core::ffi::c_uint {
-        return -(1 as ::core::ffi::c_int);
-    }
-    if setsockopt(
-        fd,
-        IPPROTO_TCP as ::core::ffi::c_int,
-        TCP_KEEPIDLE,
-        &raw mut delay as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_uint>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    intvl = 1 as ::core::ffi::c_int;
-    if setsockopt(
-        fd,
-        IPPROTO_TCP as ::core::ffi::c_int,
-        TCP_KEEPINTVL,
-        &raw mut intvl as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    cnt = 10 as ::core::ffi::c_int;
-    if setsockopt(
-        fd,
-        IPPROTO_TCP as ::core::ffi::c_int,
-        TCP_KEEPCNT,
-        &raw mut cnt as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_tcp_nodelay(
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__tcp_nodelay(
+    mut fd: ::core::ffi::c_int,
+    mut on: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        if setsockopt(
+            fd,
+            IPPROTO_TCP as ::core::ffi::c_int,
+            TCP_NODELAY,
+            &raw mut on as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__tcp_keepalive(
+    mut fd: ::core::ffi::c_int,
+    mut on: ::core::ffi::c_int,
+    mut delay: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut idle: ::core::ffi::c_int = 0;
+        let mut intvl: ::core::ffi::c_int = 0;
+        let mut cnt: ::core::ffi::c_int = 0;
+        &raw mut idle;
+        &raw mut intvl;
+        &raw mut cnt;
+        if setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_KEEPALIVE,
+            &raw mut on as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        if on == 0 {
+            return 0 as ::core::ffi::c_int;
+        }
+        if delay == 0 as ::core::ffi::c_uint {
+            return -(1 as ::core::ffi::c_int);
+        }
+        if setsockopt(
+            fd,
+            IPPROTO_TCP as ::core::ffi::c_int,
+            TCP_KEEPIDLE,
+            &raw mut delay as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_uint>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        intvl = 1 as ::core::ffi::c_int;
+        if setsockopt(
+            fd,
+            IPPROTO_TCP as ::core::ffi::c_int,
+            TCP_KEEPINTVL,
+            &raw mut intvl as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        cnt = 10 as ::core::ffi::c_int;
+        if setsockopt(
+            fd,
+            IPPROTO_TCP as ::core::ffi::c_int,
+            TCP_KEEPCNT,
+            &raw mut cnt as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_nodelay(
     mut handle: *mut uv_tcp_t,
     mut on: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
-        err = uv__tcp_nodelay((*handle).io_watcher.fd, on);
-        if err != 0 {
-            return err;
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+            err = uv__tcp_nodelay((*handle).io_watcher.fd, on);
+            if err != 0 {
+                return err;
+            }
         }
+        if on != 0 {
+            (*handle).flags |= UV_HANDLE_TCP_NODELAY as ::core::ffi::c_int as ::core::ffi::c_uint;
+        } else {
+            (*handle).flags &=
+                !(UV_HANDLE_TCP_NODELAY as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if on != 0 {
-        (*handle).flags |= UV_HANDLE_TCP_NODELAY as ::core::ffi::c_int as ::core::ffi::c_uint;
-    } else {
-        (*handle).flags &= !(UV_HANDLE_TCP_NODELAY as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_tcp_keepalive(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_keepalive(
     mut handle: *mut uv_tcp_t,
     mut on: ::core::ffi::c_int,
     mut delay: ::core::ffi::c_uint,
 ) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
-        err = uv__tcp_keepalive((*handle).io_watcher.fd, on, delay);
-        if err != 0 {
-            return err;
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+            err = uv__tcp_keepalive((*handle).io_watcher.fd, on, delay);
+            if err != 0 {
+                return err;
+            }
         }
+        if on != 0 {
+            (*handle).flags |= UV_HANDLE_TCP_KEEPALIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+        } else {
+            (*handle).flags &=
+                !(UV_HANDLE_TCP_KEEPALIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if on != 0 {
-        (*handle).flags |= UV_HANDLE_TCP_KEEPALIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-    } else {
-        (*handle).flags &= !(UV_HANDLE_TCP_KEEPALIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_tcp_simultaneous_accepts(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_simultaneous_accepts(
     mut handle: *mut uv_tcp_t,
     mut enable: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    return 0 as ::core::ffi::c_int;
+    unsafe {
+        return 0 as ::core::ffi::c_int;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__tcp_close(mut handle: *mut uv_tcp_t) {
-    uv__stream_close(handle as *mut uv_stream_t);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__tcp_close(mut handle: *mut uv_tcp_t) {
+    unsafe {
+        uv__stream_close(handle as *mut uv_stream_t);
+    }
 }
-pub(crate) unsafe fn uv_socketpair(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_socketpair(
     mut type_0: ::core::ffi::c_int,
     mut protocol: ::core::ffi::c_int,
     mut fds: *mut uv_os_sock_t,
     mut flags0: ::core::ffi::c_int,
     mut flags1: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut current_block: u64;
-    let mut temp: [uv_os_sock_t; 2] = [0; 2];
-    let mut err: ::core::ffi::c_int = 0;
-    let mut flags: ::core::ffi::c_int = 0;
-    flags = type_0 | SOCK_CLOEXEC as ::core::ffi::c_int;
-    if flags0 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
-        && flags1 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
-    {
-        flags |= SOCK_NONBLOCK as ::core::ffi::c_int;
-    }
-    if socketpair(
-        AF_UNIX,
-        flags,
-        protocol,
-        &raw mut temp as *mut ::core::ffi::c_int,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    if flags & UV_FS_O_NONBLOCK != 0 {
-        *fds.offset(0 as ::core::ffi::c_int as isize) = temp[0 as ::core::ffi::c_int as usize];
-        *fds.offset(1 as ::core::ffi::c_int as isize) = temp[1 as ::core::ffi::c_int as usize];
-        return 0 as ::core::ffi::c_int;
-    }
-    if flags0 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
-        err = uv__nonblock_ioctl(
-            temp[0 as ::core::ffi::c_int as usize],
-            1 as ::core::ffi::c_int,
-        );
-        if err != 0 {
-            current_block = 3897503978071717076;
+    unsafe {
+        let mut current_block: u64;
+        let mut temp: [uv_os_sock_t; 2] = [0; 2];
+        let mut err: ::core::ffi::c_int = 0;
+        let mut flags: ::core::ffi::c_int = 0;
+        flags = type_0 | SOCK_CLOEXEC as ::core::ffi::c_int;
+        if flags0 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
+            && flags1 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
+        {
+            flags |= SOCK_NONBLOCK as ::core::ffi::c_int;
+        }
+        if socketpair(
+            AF_UNIX,
+            flags,
+            protocol,
+            &raw mut temp as *mut ::core::ffi::c_int,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        if flags & UV_FS_O_NONBLOCK != 0 {
+            *fds.offset(0 as ::core::ffi::c_int as isize) = temp[0 as ::core::ffi::c_int as usize];
+            *fds.offset(1 as ::core::ffi::c_int as isize) = temp[1 as ::core::ffi::c_int as usize];
+            return 0 as ::core::ffi::c_int;
+        }
+        if flags0 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
+            err = uv__nonblock_ioctl(
+                temp[0 as ::core::ffi::c_int as usize],
+                1 as ::core::ffi::c_int,
+            );
+            if err != 0 {
+                current_block = 3897503978071717076;
+            } else {
+                current_block = 1394248824506584008;
+            }
         } else {
             current_block = 1394248824506584008;
         }
-    } else {
-        current_block = 1394248824506584008;
-    }
-    match current_block {
-        1394248824506584008 => {
-            if flags1 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
-                err = uv__nonblock_ioctl(
-                    temp[1 as ::core::ffi::c_int as usize],
-                    1 as ::core::ffi::c_int,
-                );
-                if err != 0 {
-                    current_block = 3897503978071717076;
+        match current_block {
+            1394248824506584008 => {
+                if flags1 & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
+                    err = uv__nonblock_ioctl(
+                        temp[1 as ::core::ffi::c_int as usize],
+                        1 as ::core::ffi::c_int,
+                    );
+                    if err != 0 {
+                        current_block = 3897503978071717076;
+                    } else {
+                        current_block = 7746791466490516765;
+                    }
                 } else {
                     current_block = 7746791466490516765;
                 }
-            } else {
-                current_block = 7746791466490516765;
-            }
-            match current_block {
-                3897503978071717076 => {}
-                _ => {
-                    *fds.offset(0 as ::core::ffi::c_int as isize) =
-                        temp[0 as ::core::ffi::c_int as usize];
-                    *fds.offset(1 as ::core::ffi::c_int as isize) =
-                        temp[1 as ::core::ffi::c_int as usize];
-                    return 0 as ::core::ffi::c_int;
+                match current_block {
+                    3897503978071717076 => {}
+                    _ => {
+                        *fds.offset(0 as ::core::ffi::c_int as isize) =
+                            temp[0 as ::core::ffi::c_int as usize];
+                        *fds.offset(1 as ::core::ffi::c_int as isize) =
+                            temp[1 as ::core::ffi::c_int as usize];
+                        return 0 as ::core::ffi::c_int;
+                    }
                 }
             }
+            _ => {}
         }
-        _ => {}
+        uv__close(temp[0 as ::core::ffi::c_int as usize]);
+        uv__close(temp[1 as ::core::ffi::c_int as usize]);
+        return err;
     }
-    uv__close(temp[0 as ::core::ffi::c_int as usize]);
-    uv__close(temp[1 as ::core::ffi::c_int as usize]);
-    return err;
 }
 
-pub(crate) unsafe fn bind_tcp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn bind_tcp(
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     addr: *const crate::abi::linux_x86_64::sockaddr,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::upstream_support::uv_common::uv_tcp_bind(handle.cast(), addr.cast(), flags) }
+    unsafe {
+        unsafe {
+            crate::upstream_support::uv_common::uv_tcp_bind(handle.cast(), addr.cast(), flags)
+        }
+    }
 }
 
-pub(crate) unsafe fn close_reset(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn close_reset(
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     close_cb: crate::abi::linux_x86_64::uv_close_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_tcp_close_reset(
-            handle.cast(),
-            std::mem::transmute::<_, uv_close_cb>(close_cb),
-        )
+        unsafe {
+            uv_tcp_close_reset(
+                handle.cast(),
+                std::mem::transmute::<_, uv_close_cb>(close_cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn connect_tcp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn connect_tcp(
     req: *mut crate::abi::linux_x86_64::uv_connect_t,
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     addr: *const crate::abi::linux_x86_64::sockaddr,
     cb: crate::abi::linux_x86_64::uv_connect_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        crate::upstream_support::uv_common::uv_tcp_connect(
-            req.cast(),
-            handle.cast(),
-            addr.cast(),
-            std::mem::transmute::<_, crate::upstream_support::uv_common::uv_connect_cb>(cb),
-        )
+        unsafe {
+            crate::upstream_support::uv_common::uv_tcp_connect(
+                req.cast(),
+                handle.cast(),
+                addr.cast(),
+                std::mem::transmute::<_, crate::upstream_support::uv_common::uv_connect_cb>(cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn getpeername_tcp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn getpeername_tcp(
     handle: *const crate::abi::linux_x86_64::uv_tcp_t,
     name: *mut crate::abi::linux_x86_64::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_getpeername(handle.cast(), name.cast(), namelen) }
+    unsafe { unsafe { uv_tcp_getpeername(handle.cast(), name.cast(), namelen) } }
 }
 
-pub(crate) unsafe fn getsockname_tcp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn getsockname_tcp(
     handle: *const crate::abi::linux_x86_64::uv_tcp_t,
     name: *mut crate::abi::linux_x86_64::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_getsockname(handle.cast(), name.cast(), namelen) }
+    unsafe { unsafe { uv_tcp_getsockname(handle.cast(), name.cast(), namelen) } }
 }
 
-pub(crate) unsafe fn init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_init(loop_.cast(), handle.cast()) }
+    unsafe { unsafe { uv_tcp_init(loop_.cast(), handle.cast()) } }
 }
 
-pub(crate) unsafe fn init_ex(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init_ex(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_init_ex(loop_.cast(), handle.cast(), flags) }
+    unsafe { unsafe { uv_tcp_init_ex(loop_.cast(), handle.cast(), flags) } }
 }
 
-pub(crate) unsafe fn keepalive(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn keepalive(
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     enable: ::std::os::raw::c_int,
     delay: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_keepalive(handle.cast(), enable, delay) }
+    unsafe { unsafe { uv_tcp_keepalive(handle.cast(), enable, delay) } }
 }
 
-pub(crate) unsafe fn nodelay(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn nodelay(
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     enable: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_nodelay(handle.cast(), enable) }
+    unsafe { unsafe { uv_tcp_nodelay(handle.cast(), enable) } }
 }
 
-pub(crate) unsafe fn open(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn open(
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     sock: crate::abi::linux_x86_64::uv_os_sock_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_open(handle.cast(), sock) }
+    unsafe { unsafe { uv_tcp_open(handle.cast(), sock) } }
 }
 
-pub(crate) unsafe fn simultaneous_accepts(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn simultaneous_accepts(
     handle: *mut crate::abi::linux_x86_64::uv_tcp_t,
     enable: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_tcp_simultaneous_accepts(handle.cast(), enable) }
+    unsafe { unsafe { uv_tcp_simultaneous_accepts(handle.cast(), enable) } }
 }

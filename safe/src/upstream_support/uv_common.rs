@@ -1485,51 +1485,69 @@ pub const UV__DT_CHAR: ::core::ffi::c_int = DT_CHR_0;
 pub const UV__DT_BLOCK: ::core::ffi::c_int = DT_BLK_0;
 pub const NULL: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
-    return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
+    unsafe {
+        return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
-    return (*q).next;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
+    unsafe {
+        return (*q).next;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_split(
-    mut h: *mut uv__queue,
-    mut q: *mut uv__queue,
-    mut n: *mut uv__queue,
-) {
-    (*n).prev = (*h).prev;
-    (*(*n).prev).next = n;
-    (*n).next = q;
-    (*h).prev = (*q).prev;
-    (*(*h).prev).next = h;
-    (*q).prev = n;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_split(mut h: *mut uv__queue, mut q: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        (*n).prev = (*h).prev;
+        (*(*n).prev).next = n;
+        (*n).next = q;
+        (*h).prev = (*q).prev;
+        (*(*h).prev).next = h;
+        (*q).prev = n;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
-    if uv__queue_empty(h) != 0 {
-        uv__queue_init(n);
-    } else {
-        uv__queue_split(h, (*h).next, n);
-    };
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        if uv__queue_empty(h) != 0 {
+            uv__queue_init(n);
+        } else {
+            uv__queue_split(h, (*h).next, n);
+        };
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
-    (*(*q).prev).next = (*q).next;
-    (*(*q).next).prev = (*q).prev;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
+    unsafe {
+        (*(*q).prev).next = (*q).next;
+        (*(*q).next).prev = (*q).prev;
+    }
 }
+// SAFETY(syscall_ffi): the process-global allocator table stores raw libc function pointers for the C ABI.
 static mut uv__allocator: uv__allocator_t = unsafe {
     uv__allocator_t {
         local_malloc: Some(malloc as unsafe extern "C" fn(size_t) -> *mut ::core::ffi::c_void),
@@ -1547,2076 +1565,2192 @@ static mut uv__allocator: uv__allocator_t = unsafe {
     }
 };
 #[no_mangle]
-pub unsafe extern "C" fn uv__strdup(mut s: *const ::core::ffi::c_char) -> *mut ::core::ffi::c_char {
-    let mut len: size_t = strlen(s).wrapping_add(1 as size_t);
-    let mut m: *mut ::core::ffi::c_char = uv__malloc(len) as *mut ::core::ffi::c_char;
-    if m.is_null() {
-        return ::core::ptr::null_mut::<::core::ffi::c_char>();
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__strdup(mut s: *const ::core::ffi::c_char) -> *mut ::core::ffi::c_char {
+    unsafe {
+        let mut len: size_t = strlen(s).wrapping_add(1 as size_t);
+        let mut m: *mut ::core::ffi::c_char = uv__malloc(len) as *mut ::core::ffi::c_char;
+        if m.is_null() {
+            return ::core::ptr::null_mut::<::core::ffi::c_char>();
+        }
+        return memcpy(
+            m as *mut ::core::ffi::c_void,
+            s as *const ::core::ffi::c_void,
+            len,
+        ) as *mut ::core::ffi::c_char;
     }
-    return memcpy(
-        m as *mut ::core::ffi::c_void,
-        s as *const ::core::ffi::c_void,
-        len,
-    ) as *mut ::core::ffi::c_char;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__strndup(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__strndup(
     mut s: *const ::core::ffi::c_char,
     mut n: size_t,
 ) -> *mut ::core::ffi::c_char {
-    let mut m: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut len: size_t = strlen(s);
-    if n < len {
-        len = n;
-    }
-    m = uv__malloc(len.wrapping_add(1 as size_t)) as *mut ::core::ffi::c_char;
-    if m.is_null() {
-        return ::core::ptr::null_mut::<::core::ffi::c_char>();
-    }
-    *m.offset(len as isize) = '\0' as i32 as ::core::ffi::c_char;
-    return memcpy(
-        m as *mut ::core::ffi::c_void,
-        s as *const ::core::ffi::c_void,
-        len,
-    ) as *mut ::core::ffi::c_char;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__malloc(mut size: size_t) -> *mut ::core::ffi::c_void {
-    if size > 0 as size_t {
-        return uv__allocator
-            .local_malloc
-            .expect("non-null function pointer")(size);
-    }
-    return NULL;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__free(mut ptr: *mut ::core::ffi::c_void) {
-    let mut saved_errno: ::core::ffi::c_int = 0;
-    saved_errno = *__errno_location();
-    uv__allocator.local_free.expect("non-null function pointer")(ptr);
-    *__errno_location() = saved_errno;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__calloc(
-    mut count: size_t,
-    mut size: size_t,
-) -> *mut ::core::ffi::c_void {
-    return uv__allocator
-        .local_calloc
-        .expect("non-null function pointer")(count, size);
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__realloc(
-    mut ptr: *mut ::core::ffi::c_void,
-    mut size: size_t,
-) -> *mut ::core::ffi::c_void {
-    if size > 0 as size_t {
-        return uv__allocator
-            .local_realloc
-            .expect("non-null function pointer")(ptr, size);
-    }
-    uv__free(ptr);
-    return NULL;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__reallocf(
-    mut ptr: *mut ::core::ffi::c_void,
-    mut size: size_t,
-) -> *mut ::core::ffi::c_void {
-    let mut newptr: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
-    newptr = uv__realloc(ptr, size);
-    if newptr.is_null() {
-        if size > 0 as size_t {
-            uv__free(ptr);
+    unsafe {
+        let mut m: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut len: size_t = strlen(s);
+        if n < len {
+            len = n;
         }
+        m = uv__malloc(len.wrapping_add(1 as size_t)) as *mut ::core::ffi::c_char;
+        if m.is_null() {
+            return ::core::ptr::null_mut::<::core::ffi::c_char>();
+        }
+        *m.offset(len as isize) = '\0' as i32 as ::core::ffi::c_char;
+        return memcpy(
+            m as *mut ::core::ffi::c_void,
+            s as *const ::core::ffi::c_void,
+            len,
+        ) as *mut ::core::ffi::c_char;
     }
-    return newptr;
 }
-pub(crate) unsafe fn uv_replace_allocator(
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__malloc(mut size: size_t) -> *mut ::core::ffi::c_void {
+    unsafe {
+        if size > 0 as size_t {
+            return uv__allocator
+                .local_malloc
+                .expect("non-null function pointer")(size);
+        }
+        return NULL;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__free(mut ptr: *mut ::core::ffi::c_void) {
+    unsafe {
+        let mut saved_errno: ::core::ffi::c_int = 0;
+        saved_errno = *__errno_location();
+        uv__allocator.local_free.expect("non-null function pointer")(ptr);
+        *__errno_location() = saved_errno;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__calloc(mut count: size_t, mut size: size_t) -> *mut ::core::ffi::c_void {
+    unsafe {
+        return uv__allocator
+            .local_calloc
+            .expect("non-null function pointer")(count, size);
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__realloc(
+    mut ptr: *mut ::core::ffi::c_void,
+    mut size: size_t,
+) -> *mut ::core::ffi::c_void {
+    unsafe {
+        if size > 0 as size_t {
+            return uv__allocator
+                .local_realloc
+                .expect("non-null function pointer")(ptr, size);
+        }
+        uv__free(ptr);
+        return NULL;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__reallocf(
+    mut ptr: *mut ::core::ffi::c_void,
+    mut size: size_t,
+) -> *mut ::core::ffi::c_void {
+    unsafe {
+        let mut newptr: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
+        newptr = uv__realloc(ptr, size);
+        if newptr.is_null() {
+            if size > 0 as size_t {
+                uv__free(ptr);
+            }
+        }
+        return newptr;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_replace_allocator(
     mut malloc_func: uv_malloc_func,
     mut realloc_func: uv_realloc_func,
     mut calloc_func: uv_calloc_func,
     mut free_func: uv_free_func,
 ) -> ::core::ffi::c_int {
-    if malloc_func.is_none()
-        || realloc_func.is_none()
-        || calloc_func.is_none()
-        || free_func.is_none()
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        if malloc_func.is_none()
+            || realloc_func.is_none()
+            || calloc_func.is_none()
+            || free_func.is_none()
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        uv__allocator.local_malloc = malloc_func;
+        uv__allocator.local_realloc = realloc_func;
+        uv__allocator.local_calloc = calloc_func;
+        uv__allocator.local_free = free_func;
+        return 0 as ::core::ffi::c_int;
     }
-    uv__allocator.local_malloc = malloc_func;
-    uv__allocator.local_realloc = realloc_func;
-    uv__allocator.local_calloc = calloc_func;
-    uv__allocator.local_free = free_func;
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_os_free_passwd(mut pwd: *mut uv_passwd_t) {
-    if pwd.is_null() {
-        return;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_free_passwd(mut pwd: *mut uv_passwd_t) {
+    unsafe {
+        if pwd.is_null() {
+            return;
+        }
+        uv__free((*pwd).username as *mut ::core::ffi::c_void);
+        (*pwd).username = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        (*pwd).shell = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        (*pwd).homedir = ::core::ptr::null_mut::<::core::ffi::c_char>();
     }
-    uv__free((*pwd).username as *mut ::core::ffi::c_void);
-    (*pwd).username = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    (*pwd).shell = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    (*pwd).homedir = ::core::ptr::null_mut::<::core::ffi::c_char>();
 }
-pub(crate) unsafe fn uv_os_free_group(mut grp: *mut uv_group_t) {
-    if grp.is_null() {
-        return;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_free_group(mut grp: *mut uv_group_t) {
+    unsafe {
+        if grp.is_null() {
+            return;
+        }
+        uv__free((*grp).members as *mut ::core::ffi::c_void);
+        (*grp).members = ::core::ptr::null_mut::<*mut ::core::ffi::c_char>();
+        (*grp).groupname = ::core::ptr::null_mut::<::core::ffi::c_char>();
     }
-    uv__free((*grp).members as *mut ::core::ffi::c_void);
-    (*grp).members = ::core::ptr::null_mut::<*mut ::core::ffi::c_char>();
-    (*grp).groupname = ::core::ptr::null_mut::<::core::ffi::c_char>();
 }
-pub(crate) unsafe fn uv_handle_size(mut type_0: uv_handle_type) -> size_t {
-    match type_0 as ::core::ffi::c_uint {
-        1 => return ::core::mem::size_of::<uv_async_t>() as size_t,
-        2 => return ::core::mem::size_of::<uv_check_t>() as size_t,
-        3 => return ::core::mem::size_of::<uv_fs_event_t>() as size_t,
-        4 => return ::core::mem::size_of::<uv_fs_poll_t>() as size_t,
-        5 => return ::core::mem::size_of::<uv_handle_t>() as size_t,
-        6 => return ::core::mem::size_of::<uv_idle_t>() as size_t,
-        7 => return ::core::mem::size_of::<uv_pipe_t>() as size_t,
-        8 => return ::core::mem::size_of::<uv_poll_t>() as size_t,
-        9 => return ::core::mem::size_of::<uv_prepare_t>() as size_t,
-        10 => return ::core::mem::size_of::<uv_process_t>() as size_t,
-        11 => return ::core::mem::size_of::<uv_stream_t>() as size_t,
-        12 => return ::core::mem::size_of::<uv_tcp_t>() as size_t,
-        13 => return ::core::mem::size_of::<uv_timer_t>() as size_t,
-        14 => return ::core::mem::size_of::<uv_tty_t>() as size_t,
-        15 => return ::core::mem::size_of::<uv_udp_t>() as size_t,
-        16 => return ::core::mem::size_of::<uv_signal_t>() as size_t,
-        _ => return -(1 as ::core::ffi::c_int) as size_t,
-    };
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_handle_size(mut type_0: uv_handle_type) -> size_t {
+    unsafe {
+        match type_0 as ::core::ffi::c_uint {
+            1 => return ::core::mem::size_of::<uv_async_t>() as size_t,
+            2 => return ::core::mem::size_of::<uv_check_t>() as size_t,
+            3 => return ::core::mem::size_of::<uv_fs_event_t>() as size_t,
+            4 => return ::core::mem::size_of::<uv_fs_poll_t>() as size_t,
+            5 => return ::core::mem::size_of::<uv_handle_t>() as size_t,
+            6 => return ::core::mem::size_of::<uv_idle_t>() as size_t,
+            7 => return ::core::mem::size_of::<uv_pipe_t>() as size_t,
+            8 => return ::core::mem::size_of::<uv_poll_t>() as size_t,
+            9 => return ::core::mem::size_of::<uv_prepare_t>() as size_t,
+            10 => return ::core::mem::size_of::<uv_process_t>() as size_t,
+            11 => return ::core::mem::size_of::<uv_stream_t>() as size_t,
+            12 => return ::core::mem::size_of::<uv_tcp_t>() as size_t,
+            13 => return ::core::mem::size_of::<uv_timer_t>() as size_t,
+            14 => return ::core::mem::size_of::<uv_tty_t>() as size_t,
+            15 => return ::core::mem::size_of::<uv_udp_t>() as size_t,
+            16 => return ::core::mem::size_of::<uv_signal_t>() as size_t,
+            _ => return -(1 as ::core::ffi::c_int) as size_t,
+        };
+    }
 }
-pub(crate) unsafe fn uv_req_size(mut type_0: uv_req_type) -> size_t {
-    match type_0 as ::core::ffi::c_uint {
-        1 => return ::core::mem::size_of::<uv_req_t>() as size_t,
-        2 => return ::core::mem::size_of::<uv_connect_t>() as size_t,
-        3 => return ::core::mem::size_of::<uv_write_t>() as size_t,
-        4 => return ::core::mem::size_of::<uv_shutdown_t>() as size_t,
-        5 => return ::core::mem::size_of::<uv_udp_send_t>() as size_t,
-        6 => return ::core::mem::size_of::<uv_fs_t>() as size_t,
-        7 => return ::core::mem::size_of::<uv_work_t>() as size_t,
-        8 => return ::core::mem::size_of::<uv_getaddrinfo_t>() as size_t,
-        9 => return ::core::mem::size_of::<uv_getnameinfo_t>() as size_t,
-        10 => return ::core::mem::size_of::<uv_random_t>() as size_t,
-        _ => return -(1 as ::core::ffi::c_int) as size_t,
-    };
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_req_size(mut type_0: uv_req_type) -> size_t {
+    unsafe {
+        match type_0 as ::core::ffi::c_uint {
+            1 => return ::core::mem::size_of::<uv_req_t>() as size_t,
+            2 => return ::core::mem::size_of::<uv_connect_t>() as size_t,
+            3 => return ::core::mem::size_of::<uv_write_t>() as size_t,
+            4 => return ::core::mem::size_of::<uv_shutdown_t>() as size_t,
+            5 => return ::core::mem::size_of::<uv_udp_send_t>() as size_t,
+            6 => return ::core::mem::size_of::<uv_fs_t>() as size_t,
+            7 => return ::core::mem::size_of::<uv_work_t>() as size_t,
+            8 => return ::core::mem::size_of::<uv_getaddrinfo_t>() as size_t,
+            9 => return ::core::mem::size_of::<uv_getnameinfo_t>() as size_t,
+            10 => return ::core::mem::size_of::<uv_random_t>() as size_t,
+            _ => return -(1 as ::core::ffi::c_int) as size_t,
+        };
+    }
 }
-pub(crate) unsafe fn uv_loop_size() -> size_t {
-    return ::core::mem::size_of::<uv_loop_t>() as size_t;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_size() -> size_t {
+    unsafe {
+        return ::core::mem::size_of::<uv_loop_t>() as size_t;
+    }
 }
-pub(crate) unsafe fn uv_buf_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_buf_init(
     mut base: *mut ::core::ffi::c_char,
     mut len: ::core::ffi::c_uint,
 ) -> uv_buf_t {
-    let mut buf: uv_buf_t = uv_buf_t {
-        base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        len: 0,
-    };
-    buf.base = base;
-    buf.len = len as size_t;
-    return buf;
-}
-unsafe extern "C" fn uv__unknown_err_code(
-    mut err: ::core::ffi::c_int,
-) -> *const ::core::ffi::c_char {
-    let mut buf: [::core::ffi::c_char; 32] = [0; 32];
-    let mut copy: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    snprintf(
-        &raw mut buf as *mut ::core::ffi::c_char,
-        ::core::mem::size_of::<[::core::ffi::c_char; 32]>() as size_t,
-        b"Unknown system error %d\0" as *const u8 as *const ::core::ffi::c_char,
-        err,
-    );
-    copy = uv__strdup(&raw mut buf as *mut ::core::ffi::c_char);
-    return if !copy.is_null() {
-        copy as *const ::core::ffi::c_char
-    } else {
-        b"Unknown system error\0" as *const u8 as *const ::core::ffi::c_char
-    };
-}
-pub(crate) unsafe fn uv_err_name_r(
-    mut err: ::core::ffi::c_int,
-    mut buf: *mut ::core::ffi::c_char,
-    mut buflen: size_t,
-) -> *mut ::core::ffi::c_char {
-    match err {
-        -7 => {
-            uv__strscpy(
-                buf,
-                b"E2BIG\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -13 => {
-            uv__strscpy(
-                buf,
-                b"EACCES\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -98 => {
-            uv__strscpy(
-                buf,
-                b"EADDRINUSE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -99 => {
-            uv__strscpy(
-                buf,
-                b"EADDRNOTAVAIL\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -97 => {
-            uv__strscpy(
-                buf,
-                b"EAFNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -11 => {
-            uv__strscpy(
-                buf,
-                b"EAGAIN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3000 => {
-            uv__strscpy(
-                buf,
-                b"EAI_ADDRFAMILY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3001 => {
-            uv__strscpy(
-                buf,
-                b"EAI_AGAIN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3002 => {
-            uv__strscpy(
-                buf,
-                b"EAI_BADFLAGS\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3013 => {
-            uv__strscpy(
-                buf,
-                b"EAI_BADHINTS\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3003 => {
-            uv__strscpy(
-                buf,
-                b"EAI_CANCELED\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3004 => {
-            uv__strscpy(
-                buf,
-                b"EAI_FAIL\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3005 => {
-            uv__strscpy(
-                buf,
-                b"EAI_FAMILY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3006 => {
-            uv__strscpy(
-                buf,
-                b"EAI_MEMORY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3007 => {
-            uv__strscpy(
-                buf,
-                b"EAI_NODATA\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3008 => {
-            uv__strscpy(
-                buf,
-                b"EAI_NONAME\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3009 => {
-            uv__strscpy(
-                buf,
-                b"EAI_OVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3014 => {
-            uv__strscpy(
-                buf,
-                b"EAI_PROTOCOL\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3010 => {
-            uv__strscpy(
-                buf,
-                b"EAI_SERVICE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3011 => {
-            uv__strscpy(
-                buf,
-                b"EAI_SOCKTYPE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -114 => {
-            uv__strscpy(
-                buf,
-                b"EALREADY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -9 => {
-            uv__strscpy(
-                buf,
-                b"EBADF\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -16 => {
-            uv__strscpy(
-                buf,
-                b"EBUSY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -125 => {
-            uv__strscpy(
-                buf,
-                b"ECANCELED\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -4080 => {
-            uv__strscpy(
-                buf,
-                b"ECHARSET\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -103 => {
-            uv__strscpy(
-                buf,
-                b"ECONNABORTED\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -111 => {
-            uv__strscpy(
-                buf,
-                b"ECONNREFUSED\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -104 => {
-            uv__strscpy(
-                buf,
-                b"ECONNRESET\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -89 => {
-            uv__strscpy(
-                buf,
-                b"EDESTADDRREQ\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -17 => {
-            uv__strscpy(
-                buf,
-                b"EEXIST\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -14 => {
-            uv__strscpy(
-                buf,
-                b"EFAULT\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -27 => {
-            uv__strscpy(
-                buf,
-                b"EFBIG\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -113 => {
-            uv__strscpy(
-                buf,
-                b"EHOSTUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -4 => {
-            uv__strscpy(
-                buf,
-                b"EINTR\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -22 => {
-            uv__strscpy(
-                buf,
-                b"EINVAL\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -5 => {
-            uv__strscpy(
-                buf,
-                b"EIO\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -106 => {
-            uv__strscpy(
-                buf,
-                b"EISCONN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -21 => {
-            uv__strscpy(
-                buf,
-                b"EISDIR\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -40 => {
-            uv__strscpy(
-                buf,
-                b"ELOOP\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -24 => {
-            uv__strscpy(
-                buf,
-                b"EMFILE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -90 => {
-            uv__strscpy(
-                buf,
-                b"EMSGSIZE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -36 => {
-            uv__strscpy(
-                buf,
-                b"ENAMETOOLONG\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -100 => {
-            uv__strscpy(
-                buf,
-                b"ENETDOWN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -101 => {
-            uv__strscpy(
-                buf,
-                b"ENETUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -23 => {
-            uv__strscpy(
-                buf,
-                b"ENFILE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -105 => {
-            uv__strscpy(
-                buf,
-                b"ENOBUFS\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -19 => {
-            uv__strscpy(
-                buf,
-                b"ENODEV\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -2 => {
-            uv__strscpy(
-                buf,
-                b"ENOENT\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -12 => {
-            uv__strscpy(
-                buf,
-                b"ENOMEM\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -64 => {
-            uv__strscpy(
-                buf,
-                b"ENONET\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -92 => {
-            uv__strscpy(
-                buf,
-                b"ENOPROTOOPT\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -28 => {
-            uv__strscpy(
-                buf,
-                b"ENOSPC\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -38 => {
-            uv__strscpy(
-                buf,
-                b"ENOSYS\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -107 => {
-            uv__strscpy(
-                buf,
-                b"ENOTCONN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -20 => {
-            uv__strscpy(
-                buf,
-                b"ENOTDIR\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -39 => {
-            uv__strscpy(
-                buf,
-                b"ENOTEMPTY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -88 => {
-            uv__strscpy(
-                buf,
-                b"ENOTSOCK\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -95 => {
-            uv__strscpy(
-                buf,
-                b"ENOTSUP\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -75 => {
-            uv__strscpy(
-                buf,
-                b"EOVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -1 => {
-            uv__strscpy(
-                buf,
-                b"EPERM\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -32 => {
-            uv__strscpy(
-                buf,
-                b"EPIPE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -71 => {
-            uv__strscpy(
-                buf,
-                b"EPROTO\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -93 => {
-            uv__strscpy(
-                buf,
-                b"EPROTONOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -91 => {
-            uv__strscpy(
-                buf,
-                b"EPROTOTYPE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -34 => {
-            uv__strscpy(
-                buf,
-                b"ERANGE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -30 => {
-            uv__strscpy(
-                buf,
-                b"EROFS\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -108 => {
-            uv__strscpy(
-                buf,
-                b"ESHUTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -29 => {
-            uv__strscpy(
-                buf,
-                b"ESPIPE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -3 => {
-            uv__strscpy(
-                buf,
-                b"ESRCH\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -110 => {
-            uv__strscpy(
-                buf,
-                b"ETIMEDOUT\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -26 => {
-            uv__strscpy(
-                buf,
-                b"ETXTBSY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -18 => {
-            uv__strscpy(
-                buf,
-                b"EXDEV\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -4094 => {
-            uv__strscpy(
-                buf,
-                b"UNKNOWN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -4095 => {
-            uv__strscpy(
-                buf,
-                b"EOF\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -6 => {
-            uv__strscpy(
-                buf,
-                b"ENXIO\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -31 => {
-            uv__strscpy(
-                buf,
-                b"EMLINK\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -112 => {
-            uv__strscpy(
-                buf,
-                b"EHOSTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -121 => {
-            uv__strscpy(
-                buf,
-                b"EREMOTEIO\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -25 => {
-            uv__strscpy(
-                buf,
-                b"ENOTTY\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -4028 => {
-            uv__strscpy(
-                buf,
-                b"EFTYPE\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -84 => {
-            uv__strscpy(
-                buf,
-                b"EILSEQ\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -94 => {
-            uv__strscpy(
-                buf,
-                b"ESOCKTNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -61 => {
-            uv__strscpy(
-                buf,
-                b"ENODATA\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        -49 => {
-            uv__strscpy(
-                buf,
-                b"EUNATCH\0" as *const u8 as *const ::core::ffi::c_char,
-                buflen,
-            );
-        }
-        _ => {
-            snprintf(
-                buf,
-                buflen,
-                b"Unknown system error %d\0" as *const u8 as *const ::core::ffi::c_char,
-                err,
-            );
-        }
+    unsafe {
+        let mut buf: uv_buf_t = uv_buf_t {
+            base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            len: 0,
+        };
+        buf.base = base;
+        buf.len = len as size_t;
+        return buf;
     }
-    return buf;
 }
-pub(crate) unsafe fn uv_err_name(mut err: ::core::ffi::c_int) -> *const ::core::ffi::c_char {
-    match err {
-        -7 => return b"E2BIG\0" as *const u8 as *const ::core::ffi::c_char,
-        -13 => return b"EACCES\0" as *const u8 as *const ::core::ffi::c_char,
-        -98 => return b"EADDRINUSE\0" as *const u8 as *const ::core::ffi::c_char,
-        -99 => return b"EADDRNOTAVAIL\0" as *const u8 as *const ::core::ffi::c_char,
-        -97 => return b"EAFNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
-        -11 => return b"EAGAIN\0" as *const u8 as *const ::core::ffi::c_char,
-        -3000 => return b"EAI_ADDRFAMILY\0" as *const u8 as *const ::core::ffi::c_char,
-        -3001 => return b"EAI_AGAIN\0" as *const u8 as *const ::core::ffi::c_char,
-        -3002 => return b"EAI_BADFLAGS\0" as *const u8 as *const ::core::ffi::c_char,
-        -3013 => return b"EAI_BADHINTS\0" as *const u8 as *const ::core::ffi::c_char,
-        -3003 => return b"EAI_CANCELED\0" as *const u8 as *const ::core::ffi::c_char,
-        -3004 => return b"EAI_FAIL\0" as *const u8 as *const ::core::ffi::c_char,
-        -3005 => return b"EAI_FAMILY\0" as *const u8 as *const ::core::ffi::c_char,
-        -3006 => return b"EAI_MEMORY\0" as *const u8 as *const ::core::ffi::c_char,
-        -3007 => return b"EAI_NODATA\0" as *const u8 as *const ::core::ffi::c_char,
-        -3008 => return b"EAI_NONAME\0" as *const u8 as *const ::core::ffi::c_char,
-        -3009 => return b"EAI_OVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
-        -3014 => return b"EAI_PROTOCOL\0" as *const u8 as *const ::core::ffi::c_char,
-        -3010 => return b"EAI_SERVICE\0" as *const u8 as *const ::core::ffi::c_char,
-        -3011 => return b"EAI_SOCKTYPE\0" as *const u8 as *const ::core::ffi::c_char,
-        -114 => return b"EALREADY\0" as *const u8 as *const ::core::ffi::c_char,
-        -9 => return b"EBADF\0" as *const u8 as *const ::core::ffi::c_char,
-        -16 => return b"EBUSY\0" as *const u8 as *const ::core::ffi::c_char,
-        -125 => return b"ECANCELED\0" as *const u8 as *const ::core::ffi::c_char,
-        -4080 => return b"ECHARSET\0" as *const u8 as *const ::core::ffi::c_char,
-        -103 => return b"ECONNABORTED\0" as *const u8 as *const ::core::ffi::c_char,
-        -111 => return b"ECONNREFUSED\0" as *const u8 as *const ::core::ffi::c_char,
-        -104 => return b"ECONNRESET\0" as *const u8 as *const ::core::ffi::c_char,
-        -89 => return b"EDESTADDRREQ\0" as *const u8 as *const ::core::ffi::c_char,
-        -17 => return b"EEXIST\0" as *const u8 as *const ::core::ffi::c_char,
-        -14 => return b"EFAULT\0" as *const u8 as *const ::core::ffi::c_char,
-        -27 => return b"EFBIG\0" as *const u8 as *const ::core::ffi::c_char,
-        -113 => return b"EHOSTUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
-        -4 => return b"EINTR\0" as *const u8 as *const ::core::ffi::c_char,
-        -22 => return b"EINVAL\0" as *const u8 as *const ::core::ffi::c_char,
-        -5 => return b"EIO\0" as *const u8 as *const ::core::ffi::c_char,
-        -106 => return b"EISCONN\0" as *const u8 as *const ::core::ffi::c_char,
-        -21 => return b"EISDIR\0" as *const u8 as *const ::core::ffi::c_char,
-        -40 => return b"ELOOP\0" as *const u8 as *const ::core::ffi::c_char,
-        -24 => return b"EMFILE\0" as *const u8 as *const ::core::ffi::c_char,
-        -90 => return b"EMSGSIZE\0" as *const u8 as *const ::core::ffi::c_char,
-        -36 => return b"ENAMETOOLONG\0" as *const u8 as *const ::core::ffi::c_char,
-        -100 => return b"ENETDOWN\0" as *const u8 as *const ::core::ffi::c_char,
-        -101 => return b"ENETUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
-        -23 => return b"ENFILE\0" as *const u8 as *const ::core::ffi::c_char,
-        -105 => return b"ENOBUFS\0" as *const u8 as *const ::core::ffi::c_char,
-        -19 => return b"ENODEV\0" as *const u8 as *const ::core::ffi::c_char,
-        -2 => return b"ENOENT\0" as *const u8 as *const ::core::ffi::c_char,
-        -12 => return b"ENOMEM\0" as *const u8 as *const ::core::ffi::c_char,
-        -64 => return b"ENONET\0" as *const u8 as *const ::core::ffi::c_char,
-        -92 => return b"ENOPROTOOPT\0" as *const u8 as *const ::core::ffi::c_char,
-        -28 => return b"ENOSPC\0" as *const u8 as *const ::core::ffi::c_char,
-        -38 => return b"ENOSYS\0" as *const u8 as *const ::core::ffi::c_char,
-        -107 => return b"ENOTCONN\0" as *const u8 as *const ::core::ffi::c_char,
-        -20 => return b"ENOTDIR\0" as *const u8 as *const ::core::ffi::c_char,
-        -39 => return b"ENOTEMPTY\0" as *const u8 as *const ::core::ffi::c_char,
-        -88 => return b"ENOTSOCK\0" as *const u8 as *const ::core::ffi::c_char,
-        -95 => return b"ENOTSUP\0" as *const u8 as *const ::core::ffi::c_char,
-        -75 => return b"EOVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
-        -1 => return b"EPERM\0" as *const u8 as *const ::core::ffi::c_char,
-        -32 => return b"EPIPE\0" as *const u8 as *const ::core::ffi::c_char,
-        -71 => return b"EPROTO\0" as *const u8 as *const ::core::ffi::c_char,
-        -93 => return b"EPROTONOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
-        -91 => return b"EPROTOTYPE\0" as *const u8 as *const ::core::ffi::c_char,
-        -34 => return b"ERANGE\0" as *const u8 as *const ::core::ffi::c_char,
-        -30 => return b"EROFS\0" as *const u8 as *const ::core::ffi::c_char,
-        -108 => return b"ESHUTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
-        -29 => return b"ESPIPE\0" as *const u8 as *const ::core::ffi::c_char,
-        -3 => return b"ESRCH\0" as *const u8 as *const ::core::ffi::c_char,
-        -110 => return b"ETIMEDOUT\0" as *const u8 as *const ::core::ffi::c_char,
-        -26 => return b"ETXTBSY\0" as *const u8 as *const ::core::ffi::c_char,
-        -18 => return b"EXDEV\0" as *const u8 as *const ::core::ffi::c_char,
-        -4094 => return b"UNKNOWN\0" as *const u8 as *const ::core::ffi::c_char,
-        -4095 => return b"EOF\0" as *const u8 as *const ::core::ffi::c_char,
-        -6 => return b"ENXIO\0" as *const u8 as *const ::core::ffi::c_char,
-        -31 => return b"EMLINK\0" as *const u8 as *const ::core::ffi::c_char,
-        -112 => return b"EHOSTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
-        -121 => return b"EREMOTEIO\0" as *const u8 as *const ::core::ffi::c_char,
-        -25 => return b"ENOTTY\0" as *const u8 as *const ::core::ffi::c_char,
-        -4028 => return b"EFTYPE\0" as *const u8 as *const ::core::ffi::c_char,
-        -84 => return b"EILSEQ\0" as *const u8 as *const ::core::ffi::c_char,
-        -94 => return b"ESOCKTNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
-        -61 => return b"ENODATA\0" as *const u8 as *const ::core::ffi::c_char,
-        -49 => return b"EUNATCH\0" as *const u8 as *const ::core::ffi::c_char,
-        _ => {}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__unknown_err_code(mut err: ::core::ffi::c_int) -> *const ::core::ffi::c_char {
+    unsafe {
+        let mut buf: [::core::ffi::c_char; 32] = [0; 32];
+        let mut copy: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        snprintf(
+            &raw mut buf as *mut ::core::ffi::c_char,
+            ::core::mem::size_of::<[::core::ffi::c_char; 32]>() as size_t,
+            b"Unknown system error %d\0" as *const u8 as *const ::core::ffi::c_char,
+            err,
+        );
+        copy = uv__strdup(&raw mut buf as *mut ::core::ffi::c_char);
+        return if !copy.is_null() {
+            copy as *const ::core::ffi::c_char
+        } else {
+            b"Unknown system error\0" as *const u8 as *const ::core::ffi::c_char
+        };
     }
-    return uv__unknown_err_code(err);
 }
-pub(crate) unsafe fn uv_strerror_r(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_err_name_r(
     mut err: ::core::ffi::c_int,
     mut buf: *mut ::core::ffi::c_char,
     mut buflen: size_t,
 ) -> *mut ::core::ffi::c_char {
-    match err {
-        -7 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"argument list too long\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -13 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"permission denied\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -98 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"address already in use\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -99 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"address not available\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -97 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"address family not supported\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -11 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"resource temporarily unavailable\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3000 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"address family not supported\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3001 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"temporary failure\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3002 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"bad ai_flags value\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3013 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"invalid value for hints\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3003 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"request canceled\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3004 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"permanent failure\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3005 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"ai_family not supported\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3006 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"out of memory\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3007 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no address\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3008 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"unknown node or service\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3009 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"argument buffer overflow\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3014 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"resolved protocol is unknown\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3010 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"service not available for socket type\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-        -3011 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -114 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"connection already in progress\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -9 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"bad file descriptor\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -16 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"resource busy or locked\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -125 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"operation canceled\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -4080 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"invalid Unicode character\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -103 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"software caused connection abort\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -111 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"connection refused\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -104 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"connection reset by peer\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -89 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"destination address required\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -17 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"file already exists\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -14 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"bad address in system call argument\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -27 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"file too large\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -113 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"host is unreachable\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -4 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"interrupted system call\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -22 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"invalid argument\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -5 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"i/o error\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -106 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"socket is already connected\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -21 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"illegal operation on a directory\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -40 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"too many symbolic links encountered\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -24 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"too many open files\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -90 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"message too long\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -36 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"name too long\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -100 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"network is down\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -101 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"network is unreachable\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -23 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"file table overflow\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -105 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no buffer space available\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -19 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no such device\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -2 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no such file or directory\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -12 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"not enough memory\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -64 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"machine is not on the network\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -92 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"protocol not available\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -28 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no space left on device\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -38 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"function not implemented\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -107 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"socket is not connected\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -20 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"not a directory\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -39 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"directory not empty\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -88 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"socket operation on non-socket\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -95 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"operation not supported on socket\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -75 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"value too large for defined data type\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-        -1 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"operation not permitted\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -32 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"broken pipe\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -71 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"protocol error\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -93 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"protocol not supported\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -91 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"protocol wrong type for socket\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -34 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"result too large\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -30 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"read-only file system\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -108 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"cannot send after transport endpoint shutdown\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-        -29 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"invalid seek\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -3 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no such process\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -110 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"connection timed out\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -26 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"text file is busy\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -18 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"cross-device link not permitted\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -4094 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"unknown error\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -4095 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"end of file\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -6 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no such device or address\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -31 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"too many links\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -112 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"host is down\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -121 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"remote I/O error\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -25 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"inappropriate ioctl for device\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -4028 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"inappropriate file type or format\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -84 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"illegal byte sequence\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -94 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -61 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"no data available\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        -49 => {
-            snprintf(
-                buf,
-                buflen,
-                b"%s\0" as *const u8 as *const ::core::ffi::c_char,
-                b"protocol driver not attached\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-        _ => {
-            snprintf(
-                buf,
-                buflen,
-                b"Unknown system error %d\0" as *const u8 as *const ::core::ffi::c_char,
-                err,
-            );
-        }
+    unsafe {
+        match err {
+            -7 => {
+                uv__strscpy(
+                    buf,
+                    b"E2BIG\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -13 => {
+                uv__strscpy(
+                    buf,
+                    b"EACCES\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -98 => {
+                uv__strscpy(
+                    buf,
+                    b"EADDRINUSE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -99 => {
+                uv__strscpy(
+                    buf,
+                    b"EADDRNOTAVAIL\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -97 => {
+                uv__strscpy(
+                    buf,
+                    b"EAFNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -11 => {
+                uv__strscpy(
+                    buf,
+                    b"EAGAIN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3000 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_ADDRFAMILY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3001 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_AGAIN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3002 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_BADFLAGS\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3013 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_BADHINTS\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3003 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_CANCELED\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3004 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_FAIL\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3005 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_FAMILY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3006 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_MEMORY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3007 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_NODATA\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3008 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_NONAME\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3009 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_OVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3014 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_PROTOCOL\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3010 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_SERVICE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3011 => {
+                uv__strscpy(
+                    buf,
+                    b"EAI_SOCKTYPE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -114 => {
+                uv__strscpy(
+                    buf,
+                    b"EALREADY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -9 => {
+                uv__strscpy(
+                    buf,
+                    b"EBADF\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -16 => {
+                uv__strscpy(
+                    buf,
+                    b"EBUSY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -125 => {
+                uv__strscpy(
+                    buf,
+                    b"ECANCELED\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -4080 => {
+                uv__strscpy(
+                    buf,
+                    b"ECHARSET\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -103 => {
+                uv__strscpy(
+                    buf,
+                    b"ECONNABORTED\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -111 => {
+                uv__strscpy(
+                    buf,
+                    b"ECONNREFUSED\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -104 => {
+                uv__strscpy(
+                    buf,
+                    b"ECONNRESET\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -89 => {
+                uv__strscpy(
+                    buf,
+                    b"EDESTADDRREQ\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -17 => {
+                uv__strscpy(
+                    buf,
+                    b"EEXIST\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -14 => {
+                uv__strscpy(
+                    buf,
+                    b"EFAULT\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -27 => {
+                uv__strscpy(
+                    buf,
+                    b"EFBIG\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -113 => {
+                uv__strscpy(
+                    buf,
+                    b"EHOSTUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -4 => {
+                uv__strscpy(
+                    buf,
+                    b"EINTR\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -22 => {
+                uv__strscpy(
+                    buf,
+                    b"EINVAL\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -5 => {
+                uv__strscpy(
+                    buf,
+                    b"EIO\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -106 => {
+                uv__strscpy(
+                    buf,
+                    b"EISCONN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -21 => {
+                uv__strscpy(
+                    buf,
+                    b"EISDIR\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -40 => {
+                uv__strscpy(
+                    buf,
+                    b"ELOOP\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -24 => {
+                uv__strscpy(
+                    buf,
+                    b"EMFILE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -90 => {
+                uv__strscpy(
+                    buf,
+                    b"EMSGSIZE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -36 => {
+                uv__strscpy(
+                    buf,
+                    b"ENAMETOOLONG\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -100 => {
+                uv__strscpy(
+                    buf,
+                    b"ENETDOWN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -101 => {
+                uv__strscpy(
+                    buf,
+                    b"ENETUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -23 => {
+                uv__strscpy(
+                    buf,
+                    b"ENFILE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -105 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOBUFS\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -19 => {
+                uv__strscpy(
+                    buf,
+                    b"ENODEV\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -2 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOENT\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -12 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOMEM\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -64 => {
+                uv__strscpy(
+                    buf,
+                    b"ENONET\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -92 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOPROTOOPT\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -28 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOSPC\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -38 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOSYS\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -107 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOTCONN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -20 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOTDIR\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -39 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOTEMPTY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -88 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOTSOCK\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -95 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOTSUP\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -75 => {
+                uv__strscpy(
+                    buf,
+                    b"EOVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -1 => {
+                uv__strscpy(
+                    buf,
+                    b"EPERM\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -32 => {
+                uv__strscpy(
+                    buf,
+                    b"EPIPE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -71 => {
+                uv__strscpy(
+                    buf,
+                    b"EPROTO\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -93 => {
+                uv__strscpy(
+                    buf,
+                    b"EPROTONOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -91 => {
+                uv__strscpy(
+                    buf,
+                    b"EPROTOTYPE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -34 => {
+                uv__strscpy(
+                    buf,
+                    b"ERANGE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -30 => {
+                uv__strscpy(
+                    buf,
+                    b"EROFS\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -108 => {
+                uv__strscpy(
+                    buf,
+                    b"ESHUTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -29 => {
+                uv__strscpy(
+                    buf,
+                    b"ESPIPE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -3 => {
+                uv__strscpy(
+                    buf,
+                    b"ESRCH\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -110 => {
+                uv__strscpy(
+                    buf,
+                    b"ETIMEDOUT\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -26 => {
+                uv__strscpy(
+                    buf,
+                    b"ETXTBSY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -18 => {
+                uv__strscpy(
+                    buf,
+                    b"EXDEV\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -4094 => {
+                uv__strscpy(
+                    buf,
+                    b"UNKNOWN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -4095 => {
+                uv__strscpy(
+                    buf,
+                    b"EOF\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -6 => {
+                uv__strscpy(
+                    buf,
+                    b"ENXIO\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -31 => {
+                uv__strscpy(
+                    buf,
+                    b"EMLINK\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -112 => {
+                uv__strscpy(
+                    buf,
+                    b"EHOSTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -121 => {
+                uv__strscpy(
+                    buf,
+                    b"EREMOTEIO\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -25 => {
+                uv__strscpy(
+                    buf,
+                    b"ENOTTY\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -4028 => {
+                uv__strscpy(
+                    buf,
+                    b"EFTYPE\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -84 => {
+                uv__strscpy(
+                    buf,
+                    b"EILSEQ\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -94 => {
+                uv__strscpy(
+                    buf,
+                    b"ESOCKTNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -61 => {
+                uv__strscpy(
+                    buf,
+                    b"ENODATA\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            -49 => {
+                uv__strscpy(
+                    buf,
+                    b"EUNATCH\0" as *const u8 as *const ::core::ffi::c_char,
+                    buflen,
+                );
+            }
+            _ => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"Unknown system error %d\0" as *const u8 as *const ::core::ffi::c_char,
+                    err,
+                );
+            }
+        }
+        return buf;
     }
-    return buf;
 }
-pub(crate) unsafe fn uv_strerror(mut err: ::core::ffi::c_int) -> *const ::core::ffi::c_char {
-    match err {
-        -7 => {
-            return b"argument list too long\0" as *const u8 as *const ::core::ffi::c_char;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_err_name(mut err: ::core::ffi::c_int) -> *const ::core::ffi::c_char {
+    unsafe {
+        match err {
+            -7 => return b"E2BIG\0" as *const u8 as *const ::core::ffi::c_char,
+            -13 => return b"EACCES\0" as *const u8 as *const ::core::ffi::c_char,
+            -98 => return b"EADDRINUSE\0" as *const u8 as *const ::core::ffi::c_char,
+            -99 => return b"EADDRNOTAVAIL\0" as *const u8 as *const ::core::ffi::c_char,
+            -97 => return b"EAFNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
+            -11 => return b"EAGAIN\0" as *const u8 as *const ::core::ffi::c_char,
+            -3000 => return b"EAI_ADDRFAMILY\0" as *const u8 as *const ::core::ffi::c_char,
+            -3001 => return b"EAI_AGAIN\0" as *const u8 as *const ::core::ffi::c_char,
+            -3002 => return b"EAI_BADFLAGS\0" as *const u8 as *const ::core::ffi::c_char,
+            -3013 => return b"EAI_BADHINTS\0" as *const u8 as *const ::core::ffi::c_char,
+            -3003 => return b"EAI_CANCELED\0" as *const u8 as *const ::core::ffi::c_char,
+            -3004 => return b"EAI_FAIL\0" as *const u8 as *const ::core::ffi::c_char,
+            -3005 => return b"EAI_FAMILY\0" as *const u8 as *const ::core::ffi::c_char,
+            -3006 => return b"EAI_MEMORY\0" as *const u8 as *const ::core::ffi::c_char,
+            -3007 => return b"EAI_NODATA\0" as *const u8 as *const ::core::ffi::c_char,
+            -3008 => return b"EAI_NONAME\0" as *const u8 as *const ::core::ffi::c_char,
+            -3009 => return b"EAI_OVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
+            -3014 => return b"EAI_PROTOCOL\0" as *const u8 as *const ::core::ffi::c_char,
+            -3010 => return b"EAI_SERVICE\0" as *const u8 as *const ::core::ffi::c_char,
+            -3011 => return b"EAI_SOCKTYPE\0" as *const u8 as *const ::core::ffi::c_char,
+            -114 => return b"EALREADY\0" as *const u8 as *const ::core::ffi::c_char,
+            -9 => return b"EBADF\0" as *const u8 as *const ::core::ffi::c_char,
+            -16 => return b"EBUSY\0" as *const u8 as *const ::core::ffi::c_char,
+            -125 => return b"ECANCELED\0" as *const u8 as *const ::core::ffi::c_char,
+            -4080 => return b"ECHARSET\0" as *const u8 as *const ::core::ffi::c_char,
+            -103 => return b"ECONNABORTED\0" as *const u8 as *const ::core::ffi::c_char,
+            -111 => return b"ECONNREFUSED\0" as *const u8 as *const ::core::ffi::c_char,
+            -104 => return b"ECONNRESET\0" as *const u8 as *const ::core::ffi::c_char,
+            -89 => return b"EDESTADDRREQ\0" as *const u8 as *const ::core::ffi::c_char,
+            -17 => return b"EEXIST\0" as *const u8 as *const ::core::ffi::c_char,
+            -14 => return b"EFAULT\0" as *const u8 as *const ::core::ffi::c_char,
+            -27 => return b"EFBIG\0" as *const u8 as *const ::core::ffi::c_char,
+            -113 => return b"EHOSTUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
+            -4 => return b"EINTR\0" as *const u8 as *const ::core::ffi::c_char,
+            -22 => return b"EINVAL\0" as *const u8 as *const ::core::ffi::c_char,
+            -5 => return b"EIO\0" as *const u8 as *const ::core::ffi::c_char,
+            -106 => return b"EISCONN\0" as *const u8 as *const ::core::ffi::c_char,
+            -21 => return b"EISDIR\0" as *const u8 as *const ::core::ffi::c_char,
+            -40 => return b"ELOOP\0" as *const u8 as *const ::core::ffi::c_char,
+            -24 => return b"EMFILE\0" as *const u8 as *const ::core::ffi::c_char,
+            -90 => return b"EMSGSIZE\0" as *const u8 as *const ::core::ffi::c_char,
+            -36 => return b"ENAMETOOLONG\0" as *const u8 as *const ::core::ffi::c_char,
+            -100 => return b"ENETDOWN\0" as *const u8 as *const ::core::ffi::c_char,
+            -101 => return b"ENETUNREACH\0" as *const u8 as *const ::core::ffi::c_char,
+            -23 => return b"ENFILE\0" as *const u8 as *const ::core::ffi::c_char,
+            -105 => return b"ENOBUFS\0" as *const u8 as *const ::core::ffi::c_char,
+            -19 => return b"ENODEV\0" as *const u8 as *const ::core::ffi::c_char,
+            -2 => return b"ENOENT\0" as *const u8 as *const ::core::ffi::c_char,
+            -12 => return b"ENOMEM\0" as *const u8 as *const ::core::ffi::c_char,
+            -64 => return b"ENONET\0" as *const u8 as *const ::core::ffi::c_char,
+            -92 => return b"ENOPROTOOPT\0" as *const u8 as *const ::core::ffi::c_char,
+            -28 => return b"ENOSPC\0" as *const u8 as *const ::core::ffi::c_char,
+            -38 => return b"ENOSYS\0" as *const u8 as *const ::core::ffi::c_char,
+            -107 => return b"ENOTCONN\0" as *const u8 as *const ::core::ffi::c_char,
+            -20 => return b"ENOTDIR\0" as *const u8 as *const ::core::ffi::c_char,
+            -39 => return b"ENOTEMPTY\0" as *const u8 as *const ::core::ffi::c_char,
+            -88 => return b"ENOTSOCK\0" as *const u8 as *const ::core::ffi::c_char,
+            -95 => return b"ENOTSUP\0" as *const u8 as *const ::core::ffi::c_char,
+            -75 => return b"EOVERFLOW\0" as *const u8 as *const ::core::ffi::c_char,
+            -1 => return b"EPERM\0" as *const u8 as *const ::core::ffi::c_char,
+            -32 => return b"EPIPE\0" as *const u8 as *const ::core::ffi::c_char,
+            -71 => return b"EPROTO\0" as *const u8 as *const ::core::ffi::c_char,
+            -93 => return b"EPROTONOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
+            -91 => return b"EPROTOTYPE\0" as *const u8 as *const ::core::ffi::c_char,
+            -34 => return b"ERANGE\0" as *const u8 as *const ::core::ffi::c_char,
+            -30 => return b"EROFS\0" as *const u8 as *const ::core::ffi::c_char,
+            -108 => return b"ESHUTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
+            -29 => return b"ESPIPE\0" as *const u8 as *const ::core::ffi::c_char,
+            -3 => return b"ESRCH\0" as *const u8 as *const ::core::ffi::c_char,
+            -110 => return b"ETIMEDOUT\0" as *const u8 as *const ::core::ffi::c_char,
+            -26 => return b"ETXTBSY\0" as *const u8 as *const ::core::ffi::c_char,
+            -18 => return b"EXDEV\0" as *const u8 as *const ::core::ffi::c_char,
+            -4094 => return b"UNKNOWN\0" as *const u8 as *const ::core::ffi::c_char,
+            -4095 => return b"EOF\0" as *const u8 as *const ::core::ffi::c_char,
+            -6 => return b"ENXIO\0" as *const u8 as *const ::core::ffi::c_char,
+            -31 => return b"EMLINK\0" as *const u8 as *const ::core::ffi::c_char,
+            -112 => return b"EHOSTDOWN\0" as *const u8 as *const ::core::ffi::c_char,
+            -121 => return b"EREMOTEIO\0" as *const u8 as *const ::core::ffi::c_char,
+            -25 => return b"ENOTTY\0" as *const u8 as *const ::core::ffi::c_char,
+            -4028 => return b"EFTYPE\0" as *const u8 as *const ::core::ffi::c_char,
+            -84 => return b"EILSEQ\0" as *const u8 as *const ::core::ffi::c_char,
+            -94 => return b"ESOCKTNOSUPPORT\0" as *const u8 as *const ::core::ffi::c_char,
+            -61 => return b"ENODATA\0" as *const u8 as *const ::core::ffi::c_char,
+            -49 => return b"EUNATCH\0" as *const u8 as *const ::core::ffi::c_char,
+            _ => {}
         }
-        -13 => return b"permission denied\0" as *const u8 as *const ::core::ffi::c_char,
-        -98 => {
-            return b"address already in use\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -99 => {
-            return b"address not available\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -97 => {
-            return b"address family not supported\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -11 => {
-            return b"resource temporarily unavailable\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -3000 => {
-            return b"address family not supported\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -3001 => return b"temporary failure\0" as *const u8 as *const ::core::ffi::c_char,
-        -3002 => {
-            return b"bad ai_flags value\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -3013 => {
-            return b"invalid value for hints\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -3003 => return b"request canceled\0" as *const u8 as *const ::core::ffi::c_char,
-        -3004 => return b"permanent failure\0" as *const u8 as *const ::core::ffi::c_char,
-        -3005 => {
-            return b"ai_family not supported\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -3006 => return b"out of memory\0" as *const u8 as *const ::core::ffi::c_char,
-        -3007 => return b"no address\0" as *const u8 as *const ::core::ffi::c_char,
-        -3008 => {
-            return b"unknown node or service\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -3009 => {
-            return b"argument buffer overflow\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -3014 => {
-            return b"resolved protocol is unknown\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -3010 => {
-            return b"service not available for socket type\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -3011 => {
-            return b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -114 => {
-            return b"connection already in progress\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -9 => return b"bad file descriptor\0" as *const u8 as *const ::core::ffi::c_char,
-        -16 => {
-            return b"resource busy or locked\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -125 => return b"operation canceled\0" as *const u8 as *const ::core::ffi::c_char,
-        -4080 => {
-            return b"invalid Unicode character\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -103 => {
-            return b"software caused connection abort\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -111 => return b"connection refused\0" as *const u8 as *const ::core::ffi::c_char,
-        -104 => {
-            return b"connection reset by peer\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -89 => {
-            return b"destination address required\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -17 => return b"file already exists\0" as *const u8 as *const ::core::ffi::c_char,
-        -14 => {
-            return b"bad address in system call argument\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -27 => return b"file too large\0" as *const u8 as *const ::core::ffi::c_char,
-        -113 => {
-            return b"host is unreachable\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -4 => {
-            return b"interrupted system call\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -22 => return b"invalid argument\0" as *const u8 as *const ::core::ffi::c_char,
-        -5 => return b"i/o error\0" as *const u8 as *const ::core::ffi::c_char,
-        -106 => {
-            return b"socket is already connected\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -21 => {
-            return b"illegal operation on a directory\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -40 => {
-            return b"too many symbolic links encountered\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -24 => return b"too many open files\0" as *const u8 as *const ::core::ffi::c_char,
-        -90 => return b"message too long\0" as *const u8 as *const ::core::ffi::c_char,
-        -36 => return b"name too long\0" as *const u8 as *const ::core::ffi::c_char,
-        -100 => return b"network is down\0" as *const u8 as *const ::core::ffi::c_char,
-        -101 => {
-            return b"network is unreachable\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -23 => return b"file table overflow\0" as *const u8 as *const ::core::ffi::c_char,
-        -105 => {
-            return b"no buffer space available\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -19 => return b"no such device\0" as *const u8 as *const ::core::ffi::c_char,
-        -2 => {
-            return b"no such file or directory\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -12 => return b"not enough memory\0" as *const u8 as *const ::core::ffi::c_char,
-        -64 => {
-            return b"machine is not on the network\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -92 => {
-            return b"protocol not available\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -28 => {
-            return b"no space left on device\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -38 => {
-            return b"function not implemented\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -107 => {
-            return b"socket is not connected\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -20 => return b"not a directory\0" as *const u8 as *const ::core::ffi::c_char,
-        -39 => return b"directory not empty\0" as *const u8 as *const ::core::ffi::c_char,
-        -88 => {
-            return b"socket operation on non-socket\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -95 => {
-            return b"operation not supported on socket\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -75 => {
-            return b"value too large for defined data type\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -1 => {
-            return b"operation not permitted\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -32 => return b"broken pipe\0" as *const u8 as *const ::core::ffi::c_char,
-        -71 => return b"protocol error\0" as *const u8 as *const ::core::ffi::c_char,
-        -93 => {
-            return b"protocol not supported\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -91 => {
-            return b"protocol wrong type for socket\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -34 => return b"result too large\0" as *const u8 as *const ::core::ffi::c_char,
-        -30 => {
-            return b"read-only file system\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -108 => {
-            return b"cannot send after transport endpoint shutdown\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -29 => return b"invalid seek\0" as *const u8 as *const ::core::ffi::c_char,
-        -3 => return b"no such process\0" as *const u8 as *const ::core::ffi::c_char,
-        -110 => {
-            return b"connection timed out\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -26 => return b"text file is busy\0" as *const u8 as *const ::core::ffi::c_char,
-        -18 => {
-            return b"cross-device link not permitted\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -4094 => return b"unknown error\0" as *const u8 as *const ::core::ffi::c_char,
-        -4095 => return b"end of file\0" as *const u8 as *const ::core::ffi::c_char,
-        -6 => {
-            return b"no such device or address\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -31 => return b"too many links\0" as *const u8 as *const ::core::ffi::c_char,
-        -112 => return b"host is down\0" as *const u8 as *const ::core::ffi::c_char,
-        -121 => return b"remote I/O error\0" as *const u8 as *const ::core::ffi::c_char,
-        -25 => {
-            return b"inappropriate ioctl for device\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -4028 => {
-            return b"inappropriate file type or format\0" as *const u8
-                as *const ::core::ffi::c_char;
-        }
-        -84 => {
-            return b"illegal byte sequence\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -94 => {
-            return b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        -61 => return b"no data available\0" as *const u8 as *const ::core::ffi::c_char,
-        -49 => {
-            return b"protocol driver not attached\0" as *const u8 as *const ::core::ffi::c_char;
-        }
-        _ => {}
+        return uv__unknown_err_code(err);
     }
-    return uv__unknown_err_code(err);
 }
-pub(crate) unsafe fn uv_ip4_addr(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_strerror_r(
+    mut err: ::core::ffi::c_int,
+    mut buf: *mut ::core::ffi::c_char,
+    mut buflen: size_t,
+) -> *mut ::core::ffi::c_char {
+    unsafe {
+        match err {
+            -7 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"argument list too long\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -13 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"permission denied\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -98 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"address already in use\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -99 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"address not available\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -97 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"address family not supported\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -11 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"resource temporarily unavailable\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -3000 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"address family not supported\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3001 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"temporary failure\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3002 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"bad ai_flags value\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3013 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"invalid value for hints\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3003 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"request canceled\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3004 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"permanent failure\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3005 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"ai_family not supported\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3006 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"out of memory\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3007 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no address\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3008 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"unknown node or service\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3009 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"argument buffer overflow\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3014 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"resolved protocol is unknown\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3010 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"service not available for socket type\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -3011 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -114 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"connection already in progress\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -9 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"bad file descriptor\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -16 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"resource busy or locked\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -125 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"operation canceled\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -4080 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"invalid Unicode character\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -103 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"software caused connection abort\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -111 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"connection refused\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -104 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"connection reset by peer\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -89 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"destination address required\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -17 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"file already exists\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -14 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"bad address in system call argument\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -27 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"file too large\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -113 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"host is unreachable\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -4 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"interrupted system call\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -22 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"invalid argument\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -5 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"i/o error\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -106 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"socket is already connected\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -21 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"illegal operation on a directory\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -40 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"too many symbolic links encountered\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -24 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"too many open files\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -90 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"message too long\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -36 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"name too long\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -100 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"network is down\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -101 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"network is unreachable\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -23 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"file table overflow\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -105 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no buffer space available\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -19 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no such device\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -2 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no such file or directory\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -12 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"not enough memory\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -64 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"machine is not on the network\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -92 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"protocol not available\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -28 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no space left on device\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -38 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"function not implemented\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -107 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"socket is not connected\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -20 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"not a directory\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -39 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"directory not empty\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -88 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"socket operation on non-socket\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -95 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"operation not supported on socket\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -75 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"value too large for defined data type\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -1 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"operation not permitted\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -32 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"broken pipe\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -71 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"protocol error\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -93 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"protocol not supported\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -91 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"protocol wrong type for socket\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -34 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"result too large\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -30 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"read-only file system\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -108 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"cannot send after transport endpoint shutdown\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -29 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"invalid seek\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -3 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no such process\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -110 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"connection timed out\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -26 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"text file is busy\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -18 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"cross-device link not permitted\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -4094 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"unknown error\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -4095 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"end of file\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -6 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no such device or address\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -31 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"too many links\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -112 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"host is down\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -121 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"remote I/O error\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -25 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"inappropriate ioctl for device\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -4028 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"inappropriate file type or format\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+            -84 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"illegal byte sequence\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -94 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -61 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"no data available\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            -49 => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"%s\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"protocol driver not attached\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+            _ => {
+                snprintf(
+                    buf,
+                    buflen,
+                    b"Unknown system error %d\0" as *const u8 as *const ::core::ffi::c_char,
+                    err,
+                );
+            }
+        }
+        return buf;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_strerror(mut err: ::core::ffi::c_int) -> *const ::core::ffi::c_char {
+    unsafe {
+        match err {
+            -7 => {
+                return b"argument list too long\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -13 => return b"permission denied\0" as *const u8 as *const ::core::ffi::c_char,
+            -98 => {
+                return b"address already in use\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -99 => {
+                return b"address not available\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -97 => {
+                return b"address family not supported\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -11 => {
+                return b"resource temporarily unavailable\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -3000 => {
+                return b"address family not supported\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -3001 => return b"temporary failure\0" as *const u8 as *const ::core::ffi::c_char,
+            -3002 => {
+                return b"bad ai_flags value\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -3013 => {
+                return b"invalid value for hints\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -3003 => return b"request canceled\0" as *const u8 as *const ::core::ffi::c_char,
+            -3004 => return b"permanent failure\0" as *const u8 as *const ::core::ffi::c_char,
+            -3005 => {
+                return b"ai_family not supported\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -3006 => return b"out of memory\0" as *const u8 as *const ::core::ffi::c_char,
+            -3007 => return b"no address\0" as *const u8 as *const ::core::ffi::c_char,
+            -3008 => {
+                return b"unknown node or service\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -3009 => {
+                return b"argument buffer overflow\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -3014 => {
+                return b"resolved protocol is unknown\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -3010 => {
+                return b"service not available for socket type\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -3011 => {
+                return b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -114 => {
+                return b"connection already in progress\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -9 => return b"bad file descriptor\0" as *const u8 as *const ::core::ffi::c_char,
+            -16 => {
+                return b"resource busy or locked\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -125 => return b"operation canceled\0" as *const u8 as *const ::core::ffi::c_char,
+            -4080 => {
+                return b"invalid Unicode character\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -103 => {
+                return b"software caused connection abort\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -111 => return b"connection refused\0" as *const u8 as *const ::core::ffi::c_char,
+            -104 => {
+                return b"connection reset by peer\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -89 => {
+                return b"destination address required\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -17 => return b"file already exists\0" as *const u8 as *const ::core::ffi::c_char,
+            -14 => {
+                return b"bad address in system call argument\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -27 => return b"file too large\0" as *const u8 as *const ::core::ffi::c_char,
+            -113 => {
+                return b"host is unreachable\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -4 => {
+                return b"interrupted system call\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -22 => return b"invalid argument\0" as *const u8 as *const ::core::ffi::c_char,
+            -5 => return b"i/o error\0" as *const u8 as *const ::core::ffi::c_char,
+            -106 => {
+                return b"socket is already connected\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -21 => {
+                return b"illegal operation on a directory\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -40 => {
+                return b"too many symbolic links encountered\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -24 => return b"too many open files\0" as *const u8 as *const ::core::ffi::c_char,
+            -90 => return b"message too long\0" as *const u8 as *const ::core::ffi::c_char,
+            -36 => return b"name too long\0" as *const u8 as *const ::core::ffi::c_char,
+            -100 => return b"network is down\0" as *const u8 as *const ::core::ffi::c_char,
+            -101 => {
+                return b"network is unreachable\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -23 => return b"file table overflow\0" as *const u8 as *const ::core::ffi::c_char,
+            -105 => {
+                return b"no buffer space available\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -19 => return b"no such device\0" as *const u8 as *const ::core::ffi::c_char,
+            -2 => {
+                return b"no such file or directory\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -12 => return b"not enough memory\0" as *const u8 as *const ::core::ffi::c_char,
+            -64 => {
+                return b"machine is not on the network\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -92 => {
+                return b"protocol not available\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -28 => {
+                return b"no space left on device\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -38 => {
+                return b"function not implemented\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -107 => {
+                return b"socket is not connected\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -20 => return b"not a directory\0" as *const u8 as *const ::core::ffi::c_char,
+            -39 => return b"directory not empty\0" as *const u8 as *const ::core::ffi::c_char,
+            -88 => {
+                return b"socket operation on non-socket\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -95 => {
+                return b"operation not supported on socket\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -75 => {
+                return b"value too large for defined data type\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -1 => {
+                return b"operation not permitted\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -32 => return b"broken pipe\0" as *const u8 as *const ::core::ffi::c_char,
+            -71 => return b"protocol error\0" as *const u8 as *const ::core::ffi::c_char,
+            -93 => {
+                return b"protocol not supported\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -91 => {
+                return b"protocol wrong type for socket\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -34 => return b"result too large\0" as *const u8 as *const ::core::ffi::c_char,
+            -30 => {
+                return b"read-only file system\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -108 => {
+                return b"cannot send after transport endpoint shutdown\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -29 => return b"invalid seek\0" as *const u8 as *const ::core::ffi::c_char,
+            -3 => return b"no such process\0" as *const u8 as *const ::core::ffi::c_char,
+            -110 => {
+                return b"connection timed out\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -26 => return b"text file is busy\0" as *const u8 as *const ::core::ffi::c_char,
+            -18 => {
+                return b"cross-device link not permitted\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -4094 => return b"unknown error\0" as *const u8 as *const ::core::ffi::c_char,
+            -4095 => return b"end of file\0" as *const u8 as *const ::core::ffi::c_char,
+            -6 => {
+                return b"no such device or address\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -31 => return b"too many links\0" as *const u8 as *const ::core::ffi::c_char,
+            -112 => return b"host is down\0" as *const u8 as *const ::core::ffi::c_char,
+            -121 => return b"remote I/O error\0" as *const u8 as *const ::core::ffi::c_char,
+            -25 => {
+                return b"inappropriate ioctl for device\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -4028 => {
+                return b"inappropriate file type or format\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            -84 => {
+                return b"illegal byte sequence\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -94 => {
+                return b"socket type not supported\0" as *const u8 as *const ::core::ffi::c_char;
+            }
+            -61 => return b"no data available\0" as *const u8 as *const ::core::ffi::c_char,
+            -49 => {
+                return b"protocol driver not attached\0" as *const u8
+                    as *const ::core::ffi::c_char;
+            }
+            _ => {}
+        }
+        return uv__unknown_err_code(err);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_ip4_addr(
     mut ip: *const ::core::ffi::c_char,
     mut port: ::core::ffi::c_int,
     mut addr: *mut sockaddr_in,
 ) -> ::core::ffi::c_int {
-    memset(
-        addr as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<sockaddr_in>() as size_t,
-    );
-    (*addr).sin_family = AF_INET as sa_family_t;
-    (*addr).sin_port = htons(port as uint16_t) as in_port_t;
-    return uv_inet_pton(
-        AF_INET,
-        ip,
-        &raw mut (*addr).sin_addr.s_addr as *mut ::core::ffi::c_void,
-    );
+    unsafe {
+        memset(
+            addr as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<sockaddr_in>() as size_t,
+        );
+        (*addr).sin_family = AF_INET as sa_family_t;
+        (*addr).sin_port = htons(port as uint16_t) as in_port_t;
+        return uv_inet_pton(
+            AF_INET,
+            ip,
+            &raw mut (*addr).sin_addr.s_addr as *mut ::core::ffi::c_void,
+        );
+    }
 }
-pub(crate) unsafe fn uv_ip6_addr(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_ip6_addr(
     mut ip: *const ::core::ffi::c_char,
     mut port: ::core::ffi::c_int,
     mut addr: *mut sockaddr_in6,
 ) -> ::core::ffi::c_int {
-    let mut address_part: [::core::ffi::c_char; 40] = [0; 40];
-    let mut address_part_size: size_t = 0;
-    let mut zone_index: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
-    memset(
-        addr as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<sockaddr_in6>() as size_t,
-    );
-    (*addr).sin6_family = AF_INET6 as sa_family_t;
-    (*addr).sin6_port = htons(port as uint16_t) as in_port_t;
-    zone_index = strchr(ip, '%' as i32);
-    if !zone_index.is_null() {
-        address_part_size = zone_index.offset_from(ip) as ::core::ffi::c_long as size_t;
-        if address_part_size >= ::core::mem::size_of::<[::core::ffi::c_char; 40]>() as usize {
-            address_part_size = (::core::mem::size_of::<[::core::ffi::c_char; 40]>() as usize)
-                .wrapping_sub(1 as usize) as size_t;
-        }
-        memcpy(
-            &raw mut address_part as *mut ::core::ffi::c_char as *mut ::core::ffi::c_void,
-            ip as *const ::core::ffi::c_void,
-            address_part_size,
+    unsafe {
+        let mut address_part: [::core::ffi::c_char; 40] = [0; 40];
+        let mut address_part_size: size_t = 0;
+        let mut zone_index: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
+        memset(
+            addr as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<sockaddr_in6>() as size_t,
         );
-        address_part[address_part_size as usize] = '\0' as i32 as ::core::ffi::c_char;
-        ip = &raw mut address_part as *mut ::core::ffi::c_char;
-        zone_index = zone_index.offset(1);
-        (*addr).sin6_scope_id = if_nametoindex(zone_index) as uint32_t;
+        (*addr).sin6_family = AF_INET6 as sa_family_t;
+        (*addr).sin6_port = htons(port as uint16_t) as in_port_t;
+        zone_index = strchr(ip, '%' as i32);
+        if !zone_index.is_null() {
+            address_part_size = zone_index.offset_from(ip) as ::core::ffi::c_long as size_t;
+            if address_part_size >= ::core::mem::size_of::<[::core::ffi::c_char; 40]>() as usize {
+                address_part_size = (::core::mem::size_of::<[::core::ffi::c_char; 40]>() as usize)
+                    .wrapping_sub(1 as usize) as size_t;
+            }
+            memcpy(
+                &raw mut address_part as *mut ::core::ffi::c_char as *mut ::core::ffi::c_void,
+                ip as *const ::core::ffi::c_void,
+                address_part_size,
+            );
+            address_part[address_part_size as usize] = '\0' as i32 as ::core::ffi::c_char;
+            ip = &raw mut address_part as *mut ::core::ffi::c_char;
+            zone_index = zone_index.offset(1);
+            (*addr).sin6_scope_id = if_nametoindex(zone_index) as uint32_t;
+        }
+        return uv_inet_pton(
+            AF_INET6,
+            ip,
+            &raw mut (*addr).sin6_addr as *mut ::core::ffi::c_void,
+        );
     }
-    return uv_inet_pton(
-        AF_INET6,
-        ip,
-        &raw mut (*addr).sin6_addr as *mut ::core::ffi::c_void,
-    );
 }
-pub(crate) unsafe fn uv_ip4_name(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_ip4_name(
     mut src: *const sockaddr_in,
     mut dst: *mut ::core::ffi::c_char,
     mut size: size_t,
 ) -> ::core::ffi::c_int {
-    return uv_inet_ntop(
-        AF_INET,
-        &raw const (*src).sin_addr as *const ::core::ffi::c_void,
-        dst,
-        size,
-    );
+    unsafe {
+        return uv_inet_ntop(
+            AF_INET,
+            &raw const (*src).sin_addr as *const ::core::ffi::c_void,
+            dst,
+            size,
+        );
+    }
 }
-pub(crate) unsafe fn uv_ip6_name(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_ip6_name(
     mut src: *const sockaddr_in6,
     mut dst: *mut ::core::ffi::c_char,
     mut size: size_t,
 ) -> ::core::ffi::c_int {
-    return uv_inet_ntop(
-        AF_INET6,
-        &raw const (*src).sin6_addr as *const ::core::ffi::c_void,
-        dst,
-        size,
-    );
+    unsafe {
+        return uv_inet_ntop(
+            AF_INET6,
+            &raw const (*src).sin6_addr as *const ::core::ffi::c_void,
+            dst,
+            size,
+        );
+    }
 }
-pub(crate) unsafe fn uv_ip_name(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_ip_name(
     mut src: *const sockaddr,
     mut dst: *mut ::core::ffi::c_char,
     mut size: size_t,
 ) -> ::core::ffi::c_int {
-    match (*src).sa_family as ::core::ffi::c_int {
-        AF_INET => {
-            return uv_inet_ntop(
-                AF_INET,
-                &raw mut (*(src as *mut sockaddr_in)).sin_addr as *const ::core::ffi::c_void,
-                dst,
-                size,
-            );
-        }
-        AF_INET6 => {
-            return uv_inet_ntop(
-                AF_INET6,
-                &raw mut (*(src as *mut sockaddr_in6)).sin6_addr as *const ::core::ffi::c_void,
-                dst,
-                size,
-            );
-        }
-        _ => return UV_EAFNOSUPPORT as ::core::ffi::c_int,
-    };
+    unsafe {
+        match (*src).sa_family as ::core::ffi::c_int {
+            AF_INET => {
+                return uv_inet_ntop(
+                    AF_INET,
+                    &raw mut (*(src as *mut sockaddr_in)).sin_addr as *const ::core::ffi::c_void,
+                    dst,
+                    size,
+                );
+            }
+            AF_INET6 => {
+                return uv_inet_ntop(
+                    AF_INET6,
+                    &raw mut (*(src as *mut sockaddr_in6)).sin6_addr as *const ::core::ffi::c_void,
+                    dst,
+                    size,
+                );
+            }
+            _ => return UV_EAFNOSUPPORT as ::core::ffi::c_int,
+        };
+    }
 }
-pub(crate) unsafe fn uv_tcp_bind(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_bind(
     mut handle: *mut uv_tcp_t,
     mut addr: *const sockaddr,
     mut flags: ::core::ffi::c_uint,
 ) -> ::core::ffi::c_int {
-    let mut addrlen: ::core::ffi::c_uint = 0;
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        let mut addrlen: ::core::ffi::c_uint = 0;
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*handle).flags
+            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
+            addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
+        } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
+            addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
+        } else {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        return uv__tcp_bind(handle, addr, addrlen, flags);
     }
-    if (*handle).flags
-        & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-            as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
-        addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
-    } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
-        addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
-    } else {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    return uv__tcp_bind(handle, addr, addrlen, flags);
 }
-pub(crate) unsafe fn uv_udp_init_ex(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_init_ex(
     mut loop_0: *mut uv_loop_t,
     mut handle: *mut uv_udp_t,
     mut flags: ::core::ffi::c_uint,
 ) -> ::core::ffi::c_int {
-    let mut extra_flags: ::core::ffi::c_uint = 0;
-    let mut domain: ::core::ffi::c_int = 0;
-    let mut rc: ::core::ffi::c_int = 0;
-    domain = (flags & 0xff as ::core::ffi::c_uint) as ::core::ffi::c_int;
-    if domain != AF_INET && domain != AF_INET6 && domain != AF_UNSPEC {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    extra_flags = flags & !(0xff as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    if extra_flags & !(UV_UDP_RECVMMSG as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    rc = uv__udp_init_ex(loop_0, handle, flags, domain);
-    if rc == 0 as ::core::ffi::c_int {
-        if extra_flags & UV_UDP_RECVMMSG as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-            (*handle).flags |= UV_HANDLE_UDP_RECVMMSG as ::core::ffi::c_int as ::core::ffi::c_uint;
+    unsafe {
+        let mut extra_flags: ::core::ffi::c_uint = 0;
+        let mut domain: ::core::ffi::c_int = 0;
+        let mut rc: ::core::ffi::c_int = 0;
+        domain = (flags & 0xff as ::core::ffi::c_uint) as ::core::ffi::c_int;
+        if domain != AF_INET && domain != AF_INET6 && domain != AF_UNSPEC {
+            return UV_EINVAL as ::core::ffi::c_int;
         }
+        extra_flags = flags & !(0xff as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        if extra_flags & !(UV_UDP_RECVMMSG as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        rc = uv__udp_init_ex(loop_0, handle, flags, domain);
+        if rc == 0 as ::core::ffi::c_int {
+            if extra_flags & UV_UDP_RECVMMSG as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+                (*handle).flags |=
+                    UV_HANDLE_UDP_RECVMMSG as ::core::ffi::c_int as ::core::ffi::c_uint;
+            }
+        }
+        return rc;
     }
-    return rc;
 }
-pub(crate) unsafe fn uv_udp_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_init(
     mut loop_0: *mut uv_loop_t,
     mut handle: *mut uv_udp_t,
 ) -> ::core::ffi::c_int {
-    return uv_udp_init_ex(loop_0, handle, AF_UNSPEC as ::core::ffi::c_uint);
+    unsafe {
+        return uv_udp_init_ex(loop_0, handle, AF_UNSPEC as ::core::ffi::c_uint);
+    }
 }
-pub(crate) unsafe fn uv_udp_bind(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_bind(
     mut handle: *mut uv_udp_t,
     mut addr: *const sockaddr,
     mut flags: ::core::ffi::c_uint,
 ) -> ::core::ffi::c_int {
-    let mut addrlen: ::core::ffi::c_uint = 0;
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        let mut addrlen: ::core::ffi::c_uint = 0;
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
+            addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
+        } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
+            addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
+        } else {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        return uv__udp_bind(handle, addr, addrlen, flags);
     }
-    if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
-        addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
-    } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
-        addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
-    } else {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    return uv__udp_bind(handle, addr, addrlen, flags);
 }
-pub(crate) unsafe fn uv_tcp_connect(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_tcp_connect(
     mut req: *mut uv_connect_t,
     mut handle: *mut uv_tcp_t,
     mut addr: *const sockaddr,
     mut cb: uv_connect_cb,
 ) -> ::core::ffi::c_int {
-    let mut addrlen: ::core::ffi::c_uint = 0;
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
-        addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
-    } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
-        addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
-    } else {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    return uv__tcp_connect(req, handle, addr, addrlen, cb);
-}
-pub(crate) unsafe fn uv_udp_connect(
-    mut handle: *mut uv_udp_t,
-    mut addr: *const sockaddr,
-) -> ::core::ffi::c_int {
-    let mut addrlen: ::core::ffi::c_uint = 0;
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if addr.is_null() {
-        if (*handle).flags & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
-            == 0
+    unsafe {
+        let mut addrlen: ::core::ffi::c_uint = 0;
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
         {
-            return UV_ENOTCONN as ::core::ffi::c_int;
+            return UV_EINVAL as ::core::ffi::c_int;
         }
-        return uv__udp_disconnect(handle);
-    }
-    if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
-        addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
-    } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
-        addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
-    } else {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if (*handle).flags & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        return UV_EISCONN as ::core::ffi::c_int;
-    }
-    return uv__udp_connect(handle, addr, addrlen);
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_is_connected(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
-    let mut addr: sockaddr_storage = sockaddr_storage {
-        ss_family: 0,
-        __ss_padding: [0; 118],
-        __ss_align: 0,
-    };
-    let mut addrlen: ::core::ffi::c_int = 0;
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return 0 as ::core::ffi::c_int;
-    }
-    addrlen = ::core::mem::size_of::<sockaddr_storage>() as ::core::ffi::c_int;
-    if uv_udp_getpeername(handle, &raw mut addr as *mut sockaddr, &raw mut addrlen)
-        != 0 as ::core::ffi::c_int
-    {
-        return 0 as ::core::ffi::c_int;
-    }
-    return (addrlen > 0 as ::core::ffi::c_int) as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_check_before_send(
-    mut handle: *mut uv_udp_t,
-    mut addr: *const sockaddr,
-) -> ::core::ffi::c_int {
-    let mut addrlen: ::core::ffi::c_uint = 0;
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if !addr.is_null()
-        && (*handle).flags & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0
-    {
-        return UV_EISCONN as ::core::ffi::c_int;
-    }
-    if addr.is_null()
-        && (*handle).flags & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
-            == 0
-    {
-        return UV_EDESTADDRREQ as ::core::ffi::c_int;
-    }
-    if !addr.is_null() {
         if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
             addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
         } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
             addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
-        } else if (*addr).sa_family as ::core::ffi::c_int == AF_UNIX {
-            addrlen = ::core::mem::size_of::<sockaddr_un>() as ::core::ffi::c_uint;
         } else {
             return UV_EINVAL as ::core::ffi::c_int;
         }
-    } else {
-        addrlen = 0 as ::core::ffi::c_uint;
+        return uv__tcp_connect(req, handle, addr, addrlen, cb);
     }
-    return addrlen as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_udp_send(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_connect(
+    mut handle: *mut uv_udp_t,
+    mut addr: *const sockaddr,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut addrlen: ::core::ffi::c_uint = 0;
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if addr.is_null() {
+            if (*handle).flags
+                & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
+                == 0
+            {
+                return UV_ENOTCONN as ::core::ffi::c_int;
+            }
+            return uv__udp_disconnect(handle);
+        }
+        if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
+            addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
+        } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
+            addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
+        } else {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*handle).flags & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0
+        {
+            return UV_EISCONN as ::core::ffi::c_int;
+        }
+        return uv__udp_connect(handle, addr, addrlen);
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_is_connected(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut addr: sockaddr_storage = sockaddr_storage {
+            ss_family: 0,
+            __ss_padding: [0; 118],
+            __ss_align: 0,
+        };
+        let mut addrlen: ::core::ffi::c_int = 0;
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return 0 as ::core::ffi::c_int;
+        }
+        addrlen = ::core::mem::size_of::<sockaddr_storage>() as ::core::ffi::c_int;
+        if uv_udp_getpeername(handle, &raw mut addr as *mut sockaddr, &raw mut addrlen)
+            != 0 as ::core::ffi::c_int
+        {
+            return 0 as ::core::ffi::c_int;
+        }
+        return (addrlen > 0 as ::core::ffi::c_int) as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_check_before_send(
+    mut handle: *mut uv_udp_t,
+    mut addr: *const sockaddr,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut addrlen: ::core::ffi::c_uint = 0;
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if !addr.is_null()
+            && (*handle).flags
+                & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0
+        {
+            return UV_EISCONN as ::core::ffi::c_int;
+        }
+        if addr.is_null()
+            && (*handle).flags
+                & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
+                == 0
+        {
+            return UV_EDESTADDRREQ as ::core::ffi::c_int;
+        }
+        if !addr.is_null() {
+            if (*addr).sa_family as ::core::ffi::c_int == AF_INET {
+                addrlen = ::core::mem::size_of::<sockaddr_in>() as ::core::ffi::c_uint;
+            } else if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
+                addrlen = ::core::mem::size_of::<sockaddr_in6>() as ::core::ffi::c_uint;
+            } else if (*addr).sa_family as ::core::ffi::c_int == AF_UNIX {
+                addrlen = ::core::mem::size_of::<sockaddr_un>() as ::core::ffi::c_uint;
+            } else {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+        } else {
+            addrlen = 0 as ::core::ffi::c_uint;
+        }
+        return addrlen as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_send(
     mut req: *mut uv_udp_send_t,
     mut handle: *mut uv_udp_t,
     mut bufs: *const uv_buf_t,
@@ -3624,435 +3758,506 @@ pub(crate) unsafe fn uv_udp_send(
     mut addr: *const sockaddr,
     mut send_cb: uv_udp_send_cb,
 ) -> ::core::ffi::c_int {
-    let mut addrlen: ::core::ffi::c_int = 0;
-    addrlen = uv__udp_check_before_send(handle, addr);
-    if addrlen < 0 as ::core::ffi::c_int {
-        return addrlen;
+    unsafe {
+        let mut addrlen: ::core::ffi::c_int = 0;
+        addrlen = uv__udp_check_before_send(handle, addr);
+        if addrlen < 0 as ::core::ffi::c_int {
+            return addrlen;
+        }
+        return uv__udp_send(
+            req,
+            handle,
+            bufs,
+            nbufs,
+            addr,
+            addrlen as ::core::ffi::c_uint,
+            send_cb,
+        );
     }
-    return uv__udp_send(
-        req,
-        handle,
-        bufs,
-        nbufs,
-        addr,
-        addrlen as ::core::ffi::c_uint,
-        send_cb,
-    );
 }
-pub(crate) unsafe fn uv_udp_try_send(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_try_send(
     mut handle: *mut uv_udp_t,
     mut bufs: *const uv_buf_t,
     mut nbufs: ::core::ffi::c_uint,
     mut addr: *const sockaddr,
 ) -> ::core::ffi::c_int {
-    let mut addrlen: ::core::ffi::c_int = 0;
-    addrlen = uv__udp_check_before_send(handle, addr);
-    if addrlen < 0 as ::core::ffi::c_int {
-        return addrlen;
+    unsafe {
+        let mut addrlen: ::core::ffi::c_int = 0;
+        addrlen = uv__udp_check_before_send(handle, addr);
+        if addrlen < 0 as ::core::ffi::c_int {
+            return addrlen;
+        }
+        return uv__udp_try_send(handle, bufs, nbufs, addr, addrlen as ::core::ffi::c_uint);
     }
-    return uv__udp_try_send(handle, bufs, nbufs, addr, addrlen as ::core::ffi::c_uint);
 }
-pub(crate) unsafe fn uv_udp_recv_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_recv_start(
     mut handle: *mut uv_udp_t,
     mut alloc_cb: uv_alloc_cb,
     mut recv_cb: uv_udp_recv_cb,
 ) -> ::core::ffi::c_int {
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-        || alloc_cb.is_none()
-        || recv_cb.is_none()
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    } else {
-        return uv__udp_recv_start(handle, alloc_cb, recv_cb);
-    };
+    unsafe {
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+            || alloc_cb.is_none()
+            || recv_cb.is_none()
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        } else {
+            return uv__udp_recv_start(handle, alloc_cb, recv_cb);
+        };
+    }
 }
-pub(crate) unsafe fn uv_udp_recv_stop(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
-    if (*handle).type_0 as ::core::ffi::c_uint
-        != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    } else {
-        return uv__udp_recv_stop(handle);
-    };
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_recv_stop(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
+    unsafe {
+        if (*handle).type_0 as ::core::ffi::c_uint
+            != UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        } else {
+            return uv__udp_recv_stop(handle);
+        };
+    }
 }
-pub(crate) unsafe fn uv_walk(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_walk(
     mut loop_0: *mut uv_loop_t,
     mut walk_cb: uv_walk_cb,
     mut arg: *mut ::core::ffi::c_void,
 ) {
-    let mut queue: uv__queue = uv__queue {
-        next: ::core::ptr::null::<uv__queue>() as *mut uv__queue,
-        prev: ::core::ptr::null::<uv__queue>() as *mut uv__queue,
-    };
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut h: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
-    uv__queue_move(&raw mut (*loop_0).handle_queue, &raw mut queue);
-    while uv__queue_empty(&raw mut queue) == 0 {
-        q = uv__queue_head(&raw mut queue);
-        h = (q as *mut ::core::ffi::c_char).offset(-(32 as ::core::ffi::c_ulong as isize))
-            as *mut uv_handle_t;
-        uv__queue_remove(q);
-        uv__queue_insert_tail(&raw mut (*loop_0).handle_queue, q);
-        if (*h).flags & UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-            continue;
+    unsafe {
+        let mut queue: uv__queue = uv__queue {
+            next: ::core::ptr::null::<uv__queue>() as *mut uv__queue,
+            prev: ::core::ptr::null::<uv__queue>() as *mut uv__queue,
+        };
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut h: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
+        uv__queue_move(&raw mut (*loop_0).handle_queue, &raw mut queue);
+        while uv__queue_empty(&raw mut queue) == 0 {
+            q = uv__queue_head(&raw mut queue);
+            h = (q as *mut ::core::ffi::c_char).offset(-(32 as ::core::ffi::c_ulong as isize))
+                as *mut uv_handle_t;
+            uv__queue_remove(q);
+            uv__queue_insert_tail(&raw mut (*loop_0).handle_queue, q);
+            if (*h).flags & UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+                continue;
+            }
+            walk_cb.expect("non-null function pointer")(h, arg);
         }
-        walk_cb.expect("non-null function pointer")(h, arg);
     }
 }
-unsafe extern "C" fn uv__print_handles(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__print_handles(
     mut loop_0: *mut uv_loop_t,
     mut only_active: ::core::ffi::c_int,
     mut stream: *mut FILE,
 ) {
-    let mut type_0: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut h: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
-    if loop_0.is_null() {
-        loop_0 = uv_default_loop();
-    }
-    if stream.is_null() {
-        stream = stderr;
-    }
-    q = (*loop_0).handle_queue.next;
-    while q != &raw mut (*loop_0).handle_queue {
-        h = (q as *mut ::core::ffi::c_char).offset(-(32 as ::core::ffi::c_ulong as isize))
-            as *mut uv_handle_t;
-        if !(only_active != 0
-            && !((*h).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0 as ::core::ffi::c_uint))
-        {
-            match (*h).type_0 as ::core::ffi::c_uint {
-                1 => {
-                    type_0 = b"async\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                2 => {
-                    type_0 = b"check\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                3 => {
-                    type_0 = b"fs_event\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                4 => {
-                    type_0 = b"fs_poll\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                5 => {
-                    type_0 = b"handle\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                6 => {
-                    type_0 = b"idle\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                7 => {
-                    type_0 = b"pipe\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                8 => {
-                    type_0 = b"poll\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                9 => {
-                    type_0 = b"prepare\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                10 => {
-                    type_0 = b"process\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                11 => {
-                    type_0 = b"stream\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                12 => {
-                    type_0 = b"tcp\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                13 => {
-                    type_0 = b"timer\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                14 => {
-                    type_0 = b"tty\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                15 => {
-                    type_0 = b"udp\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                16 => {
-                    type_0 = b"signal\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-                _ => {
-                    type_0 = b"<unknown>\0" as *const u8 as *const ::core::ffi::c_char;
-                }
-            }
-            fprintf(
-                stream,
-                b"[%c%c%c] %-8s %p\n\0" as *const u8 as *const ::core::ffi::c_char,
-                ::core::mem::transmute::<[u8; 3], [::core::ffi::c_char; 3]>(*b"R-\0")[((*h).flags
-                    & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-                    == 0)
-                    as ::core::ffi::c_int
-                    as usize] as ::core::ffi::c_int,
-                ::core::mem::transmute::<[u8; 3], [::core::ffi::c_char; 3]>(*b"A-\0")[((*h).flags
-                    & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-                    == 0)
-                    as ::core::ffi::c_int
-                    as usize] as ::core::ffi::c_int,
-                ::core::mem::transmute::<[u8; 3], [::core::ffi::c_char; 3]>(*b"I-\0")[((*h).flags
-                    & UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint
-                    == 0)
-                    as ::core::ffi::c_int
-                    as usize] as ::core::ffi::c_int,
-                type_0,
-                h as *mut ::core::ffi::c_void,
-            );
+    unsafe {
+        let mut type_0: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut h: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
+        if loop_0.is_null() {
+            loop_0 = uv_default_loop();
         }
-        q = (*q).next;
+        if stream.is_null() {
+            stream = stderr;
+        }
+        q = (*loop_0).handle_queue.next;
+        while q != &raw mut (*loop_0).handle_queue {
+            h = (q as *mut ::core::ffi::c_char).offset(-(32 as ::core::ffi::c_ulong as isize))
+                as *mut uv_handle_t;
+            if !(only_active != 0
+                && !((*h).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0 as ::core::ffi::c_uint))
+            {
+                match (*h).type_0 as ::core::ffi::c_uint {
+                    1 => {
+                        type_0 = b"async\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    2 => {
+                        type_0 = b"check\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    3 => {
+                        type_0 = b"fs_event\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    4 => {
+                        type_0 = b"fs_poll\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    5 => {
+                        type_0 = b"handle\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    6 => {
+                        type_0 = b"idle\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    7 => {
+                        type_0 = b"pipe\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    8 => {
+                        type_0 = b"poll\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    9 => {
+                        type_0 = b"prepare\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    10 => {
+                        type_0 = b"process\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    11 => {
+                        type_0 = b"stream\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    12 => {
+                        type_0 = b"tcp\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    13 => {
+                        type_0 = b"timer\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    14 => {
+                        type_0 = b"tty\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    15 => {
+                        type_0 = b"udp\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    16 => {
+                        type_0 = b"signal\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                    _ => {
+                        type_0 = b"<unknown>\0" as *const u8 as *const ::core::ffi::c_char;
+                    }
+                }
+                fprintf(
+                    stream,
+                    b"[%c%c%c] %-8s %p\n\0" as *const u8 as *const ::core::ffi::c_char,
+                    ::core::mem::transmute::<[u8; 3], [::core::ffi::c_char; 3]>(*b"R-\0")[((*h)
+                        .flags
+                        & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                        == 0)
+                        as ::core::ffi::c_int
+                        as usize] as ::core::ffi::c_int,
+                    ::core::mem::transmute::<[u8; 3], [::core::ffi::c_char; 3]>(*b"A-\0")[((*h)
+                        .flags
+                        & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                        == 0)
+                        as ::core::ffi::c_int
+                        as usize] as ::core::ffi::c_int,
+                    ::core::mem::transmute::<[u8; 3], [::core::ffi::c_char; 3]>(*b"I-\0")[((*h)
+                        .flags
+                        & UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint
+                        == 0)
+                        as ::core::ffi::c_int
+                        as usize] as ::core::ffi::c_int,
+                    type_0,
+                    h as *mut ::core::ffi::c_void,
+                );
+            }
+            q = (*q).next;
+        }
     }
 }
-pub(crate) unsafe fn uv_print_all_handles(mut loop_0: *mut uv_loop_t, mut stream: *mut FILE) {
-    uv__print_handles(loop_0, 0 as ::core::ffi::c_int, stream);
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_print_all_handles(mut loop_0: *mut uv_loop_t, mut stream: *mut FILE) {
+    unsafe {
+        uv__print_handles(loop_0, 0 as ::core::ffi::c_int, stream);
+    }
 }
-pub(crate) unsafe fn uv_print_active_handles(mut loop_0: *mut uv_loop_t, mut stream: *mut FILE) {
-    uv__print_handles(loop_0, 1 as ::core::ffi::c_int, stream);
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_print_active_handles(mut loop_0: *mut uv_loop_t, mut stream: *mut FILE) {
+    unsafe {
+        uv__print_handles(loop_0, 1 as ::core::ffi::c_int, stream);
+    }
 }
-pub(crate) unsafe fn uv_ref(mut handle: *mut uv_handle_t) {
-    if !((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if !((*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_ref(mut handle: *mut uv_handle_t) {
+    unsafe {
+        if !((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
             != 0 as ::core::ffi::c_uint)
         {
-            if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0 as ::core::ffi::c_uint
+            (*handle).flags |= UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if !((*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint)
             {
-                (*(*handle).loop_0).active_handles =
-                    (*(*handle).loop_0).active_handles.wrapping_add(1);
+                if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0 as ::core::ffi::c_uint
+                {
+                    (*(*handle).loop_0).active_handles =
+                        (*(*handle).loop_0).active_handles.wrapping_add(1);
+                }
             }
         }
     }
 }
-pub(crate) unsafe fn uv_unref(mut handle: *mut uv_handle_t) {
-    if !((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_REF as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if !((*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint)
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_unref(mut handle: *mut uv_handle_t) {
+    unsafe {
+        if !((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
         {
-            if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0 as ::core::ffi::c_uint
+            (*handle).flags &= !(UV_HANDLE_REF as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if !((*handle).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint)
             {
-                (*(*handle).loop_0).active_handles =
-                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+                if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0 as ::core::ffi::c_uint
+                {
+                    (*(*handle).loop_0).active_handles =
+                        (*(*handle).loop_0).active_handles.wrapping_sub(1);
+                }
             }
         }
     }
 }
-pub(crate) unsafe fn uv_has_ref(mut handle: *const uv_handle_t) -> ::core::ffi::c_int {
-    return ((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_has_ref(mut handle: *const uv_handle_t) -> ::core::ffi::c_int {
+    unsafe {
+        return ((*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint) as ::core::ffi::c_int;
+    }
 }
-pub(crate) unsafe fn uv_stop(mut loop_0: *mut uv_loop_t) {
-    (*loop_0).stop_flag = 1 as ::core::ffi::c_uint;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_stop(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        (*loop_0).stop_flag = 1 as ::core::ffi::c_uint;
+    }
 }
-pub(crate) unsafe fn uv_now(mut loop_0: *const uv_loop_t) -> uint64_t {
-    return (*loop_0).time;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_now(mut loop_0: *const uv_loop_t) -> uint64_t {
+    unsafe {
+        return (*loop_0).time;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__count_bufs(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__count_bufs(
     mut bufs: *const uv_buf_t,
     mut nbufs: ::core::ffi::c_uint,
 ) -> size_t {
-    let mut i: ::core::ffi::c_uint = 0;
-    let mut bytes: size_t = 0;
-    bytes = 0 as size_t;
-    i = 0 as ::core::ffi::c_uint;
-    while i < nbufs {
-        bytes = bytes.wrapping_add((*bufs.offset(i as isize)).len);
-        i = i.wrapping_add(1);
+    unsafe {
+        let mut i: ::core::ffi::c_uint = 0;
+        let mut bytes: size_t = 0;
+        bytes = 0 as size_t;
+        i = 0 as ::core::ffi::c_uint;
+        while i < nbufs {
+            bytes = bytes.wrapping_add((*bufs.offset(i as isize)).len);
+            i = i.wrapping_add(1);
+        }
+        return bytes;
     }
-    return bytes;
 }
-pub(crate) unsafe fn uv_recv_buffer_size(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_recv_buffer_size(
     mut handle: *mut uv_handle_t,
     mut value: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    return uv__socket_sockopt(handle, SO_RCVBUF, value);
+    unsafe {
+        return uv__socket_sockopt(handle, SO_RCVBUF, value);
+    }
 }
-pub(crate) unsafe fn uv_send_buffer_size(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_send_buffer_size(
     mut handle: *mut uv_handle_t,
     mut value: *mut ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    return uv__socket_sockopt(handle, SO_SNDBUF, value);
+    unsafe {
+        return uv__socket_sockopt(handle, SO_SNDBUF, value);
+    }
 }
-pub(crate) unsafe fn uv_fs_event_getpath(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_fs_event_getpath(
     mut handle: *mut uv_fs_event_t,
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut required_len: size_t = 0;
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        *size = 0 as size_t;
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        let mut required_len: size_t = 0;
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            *size = 0 as size_t;
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        required_len = strlen((*handle).path);
+        if required_len >= *size {
+            *size = required_len.wrapping_add(1 as size_t);
+            return UV_ENOBUFS as ::core::ffi::c_int;
+        }
+        memcpy(
+            buffer as *mut ::core::ffi::c_void,
+            (*handle).path as *const ::core::ffi::c_void,
+            required_len,
+        );
+        *size = required_len;
+        *buffer.offset(required_len as isize) = '\0' as i32 as ::core::ffi::c_char;
+        return 0 as ::core::ffi::c_int;
     }
-    required_len = strlen((*handle).path);
-    if required_len >= *size {
-        *size = required_len.wrapping_add(1 as size_t);
-        return UV_ENOBUFS as ::core::ffi::c_int;
-    }
-    memcpy(
-        buffer as *mut ::core::ffi::c_void,
-        (*handle).path as *const ::core::ffi::c_void,
-        required_len,
-    );
-    *size = required_len;
-    *buffer.offset(required_len as isize) = '\0' as i32 as ::core::ffi::c_char;
-    return 0 as ::core::ffi::c_int;
 }
-unsafe extern "C" fn uv__get_nbufs(mut req: *mut uv_fs_t) -> *mut ::core::ffi::c_uint {
-    return &raw mut (*req).nbufs;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__get_nbufs(mut req: *mut uv_fs_t) -> *mut ::core::ffi::c_uint {
+    unsafe {
+        return &raw mut (*req).nbufs;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__fs_scandir_cleanup(mut req: *mut uv_fs_t) {
-    let mut dents: *mut *mut uv__dirent_t = ::core::ptr::null_mut::<*mut uv__dirent_t>();
-    let mut nbufs: *mut ::core::ffi::c_uint = ::core::ptr::null_mut::<::core::ffi::c_uint>();
-    let mut i: ::core::ffi::c_uint = 0;
-    let mut n: ::core::ffi::c_uint = 0;
-    if (*req).result >= 0 as ssize_t {
-        dents = (*req).ptr as *mut *mut uv__dirent_t;
-        nbufs = uv__get_nbufs(req);
-        i = 0 as ::core::ffi::c_uint;
-        if *nbufs > 0 as ::core::ffi::c_uint {
-            i = (*nbufs).wrapping_sub(1 as ::core::ffi::c_uint);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__fs_scandir_cleanup(mut req: *mut uv_fs_t) {
+    unsafe {
+        let mut dents: *mut *mut uv__dirent_t = ::core::ptr::null_mut::<*mut uv__dirent_t>();
+        let mut nbufs: *mut ::core::ffi::c_uint = ::core::ptr::null_mut::<::core::ffi::c_uint>();
+        let mut i: ::core::ffi::c_uint = 0;
+        let mut n: ::core::ffi::c_uint = 0;
+        if (*req).result >= 0 as ssize_t {
+            dents = (*req).ptr as *mut *mut uv__dirent_t;
+            nbufs = uv__get_nbufs(req);
+            i = 0 as ::core::ffi::c_uint;
+            if *nbufs > 0 as ::core::ffi::c_uint {
+                i = (*nbufs).wrapping_sub(1 as ::core::ffi::c_uint);
+            }
+            n = (*req).result as ::core::ffi::c_uint;
+            while i < n {
+                free(*dents.offset(i as isize) as *mut ::core::ffi::c_void);
+                i = i.wrapping_add(1);
+            }
         }
-        n = (*req).result as ::core::ffi::c_uint;
-        while i < n {
-            free(*dents.offset(i as isize) as *mut ::core::ffi::c_void);
-            i = i.wrapping_add(1);
-        }
+        free((*req).ptr);
+        (*req).ptr = NULL;
     }
-    free((*req).ptr);
-    (*req).ptr = NULL;
 }
-pub(crate) unsafe fn uv_fs_scandir_next(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_fs_scandir_next(
     mut req: *mut uv_fs_t,
     mut ent: *mut uv_dirent_t,
 ) -> ::core::ffi::c_int {
-    let mut dents: *mut *mut uv__dirent_t = ::core::ptr::null_mut::<*mut uv__dirent_t>();
-    let mut dent: *mut uv__dirent_t = ::core::ptr::null_mut::<uv__dirent_t>();
-    let mut nbufs: *mut ::core::ffi::c_uint = ::core::ptr::null_mut::<::core::ffi::c_uint>();
-    if (*req).result < 0 as ssize_t {
-        return (*req).result as ::core::ffi::c_int;
-    }
-    if (*req).ptr.is_null() {
-        return UV_EOF as ::core::ffi::c_int;
-    }
-    nbufs = uv__get_nbufs(req);
-    '_c2rust_label: {
-        if !nbufs.is_null() {
-        } else {
-            __assert_fail(
-                b"nbufs\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/uv-common.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                725 as ::core::ffi::c_uint,
-                b"int uv_fs_scandir_next(uv_fs_t *, uv_dirent_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
+    unsafe {
+        let mut dents: *mut *mut uv__dirent_t = ::core::ptr::null_mut::<*mut uv__dirent_t>();
+        let mut dent: *mut uv__dirent_t = ::core::ptr::null_mut::<uv__dirent_t>();
+        let mut nbufs: *mut ::core::ffi::c_uint = ::core::ptr::null_mut::<::core::ffi::c_uint>();
+        if (*req).result < 0 as ssize_t {
+            return (*req).result as ::core::ffi::c_int;
+        }
+        if (*req).ptr.is_null() {
+            return UV_EOF as ::core::ffi::c_int;
+        }
+        nbufs = uv__get_nbufs(req);
+        '_c2rust_label: {
+            if !nbufs.is_null() {
+            } else {
+                __assert_fail(
+                    b"nbufs\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/uv-common.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    725 as ::core::ffi::c_uint,
+                    b"int uv_fs_scandir_next(uv_fs_t *, uv_dirent_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        dents = (*req).ptr as *mut *mut uv__dirent_t;
+        if *nbufs > 0 as ::core::ffi::c_uint {
+            free(
+                *dents.offset((*nbufs).wrapping_sub(1 as ::core::ffi::c_uint) as isize)
+                    as *mut ::core::ffi::c_void,
             );
         }
-    };
-    dents = (*req).ptr as *mut *mut uv__dirent_t;
-    if *nbufs > 0 as ::core::ffi::c_uint {
-        free(
-            *dents.offset((*nbufs).wrapping_sub(1 as ::core::ffi::c_uint) as isize)
-                as *mut ::core::ffi::c_void,
-        );
+        if *nbufs == (*req).result as ::core::ffi::c_uint {
+            free(dents as *mut ::core::ffi::c_void);
+            (*req).ptr = NULL;
+            return UV_EOF as ::core::ffi::c_int;
+        }
+        let fresh0 = *nbufs;
+        *nbufs = (*nbufs).wrapping_add(1);
+        dent = *dents.offset(fresh0 as isize);
+        (*ent).name = &raw mut (*dent).d_name as *mut ::core::ffi::c_char;
+        (*ent).type_0 = uv__fs_get_dirent_type(dent);
+        return 0 as ::core::ffi::c_int;
     }
-    if *nbufs == (*req).result as ::core::ffi::c_uint {
-        free(dents as *mut ::core::ffi::c_void);
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__fs_get_dirent_type(mut dent: *mut uv__dirent_t) -> uv_dirent_type_t {
+    unsafe {
+        let mut type_0: uv_dirent_type_t = UV_DIRENT_UNKNOWN;
+        match (*dent).d_type as ::core::ffi::c_int {
+            UV__DT_DIR => {
+                type_0 = UV_DIRENT_DIR;
+            }
+            UV__DT_FILE => {
+                type_0 = UV_DIRENT_FILE;
+            }
+            UV__DT_LINK => {
+                type_0 = UV_DIRENT_LINK;
+            }
+            UV__DT_FIFO => {
+                type_0 = UV_DIRENT_FIFO;
+            }
+            UV__DT_SOCKET => {
+                type_0 = UV_DIRENT_SOCKET;
+            }
+            UV__DT_CHAR => {
+                type_0 = UV_DIRENT_CHAR;
+            }
+            UV__DT_BLOCK => {
+                type_0 = UV_DIRENT_BLOCK;
+            }
+            _ => {
+                type_0 = UV_DIRENT_UNKNOWN;
+            }
+        }
+        return type_0;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__fs_readdir_cleanup(mut req: *mut uv_fs_t) {
+    unsafe {
+        let mut dir: *mut uv_dir_t = ::core::ptr::null_mut::<uv_dir_t>();
+        let mut dirents: *mut uv_dirent_t = ::core::ptr::null_mut::<uv_dirent_t>();
+        let mut i: ::core::ffi::c_int = 0;
+        if (*req).ptr.is_null() {
+            return;
+        }
+        dir = (*req).ptr as *mut uv_dir_t;
+        dirents = (*dir).dirents;
         (*req).ptr = NULL;
-        return UV_EOF as ::core::ffi::c_int;
-    }
-    let fresh0 = *nbufs;
-    *nbufs = (*nbufs).wrapping_add(1);
-    dent = *dents.offset(fresh0 as isize);
-    (*ent).name = &raw mut (*dent).d_name as *mut ::core::ffi::c_char;
-    (*ent).type_0 = uv__fs_get_dirent_type(dent);
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__fs_get_dirent_type(mut dent: *mut uv__dirent_t) -> uv_dirent_type_t {
-    let mut type_0: uv_dirent_type_t = UV_DIRENT_UNKNOWN;
-    match (*dent).d_type as ::core::ffi::c_int {
-        UV__DT_DIR => {
-            type_0 = UV_DIRENT_DIR;
+        if dirents.is_null() {
+            return;
         }
-        UV__DT_FILE => {
-            type_0 = UV_DIRENT_FILE;
+        i = 0 as ::core::ffi::c_int;
+        while (i as ssize_t) < (*req).result {
+            uv__free(
+                (*dirents.offset(i as isize)).name as *mut ::core::ffi::c_char
+                    as *mut ::core::ffi::c_void,
+            );
+            let ref mut fresh1 = (*dirents.offset(i as isize)).name;
+            *fresh1 = ::core::ptr::null::<::core::ffi::c_char>();
+            i += 1;
         }
-        UV__DT_LINK => {
-            type_0 = UV_DIRENT_LINK;
-        }
-        UV__DT_FIFO => {
-            type_0 = UV_DIRENT_FIFO;
-        }
-        UV__DT_SOCKET => {
-            type_0 = UV_DIRENT_SOCKET;
-        }
-        UV__DT_CHAR => {
-            type_0 = UV_DIRENT_CHAR;
-        }
-        UV__DT_BLOCK => {
-            type_0 = UV_DIRENT_BLOCK;
-        }
-        _ => {
-            type_0 = UV_DIRENT_UNKNOWN;
-        }
-    }
-    return type_0;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__fs_readdir_cleanup(mut req: *mut uv_fs_t) {
-    let mut dir: *mut uv_dir_t = ::core::ptr::null_mut::<uv_dir_t>();
-    let mut dirents: *mut uv_dirent_t = ::core::ptr::null_mut::<uv_dirent_t>();
-    let mut i: ::core::ffi::c_int = 0;
-    if (*req).ptr.is_null() {
-        return;
-    }
-    dir = (*req).ptr as *mut uv_dir_t;
-    dirents = (*dir).dirents;
-    (*req).ptr = NULL;
-    if dirents.is_null() {
-        return;
-    }
-    i = 0 as ::core::ffi::c_int;
-    while (i as ssize_t) < (*req).result {
-        uv__free(
-            (*dirents.offset(i as isize)).name as *mut ::core::ffi::c_char
-                as *mut ::core::ffi::c_void,
-        );
-        let ref mut fresh1 = (*dirents.offset(i as isize)).name;
-        *fresh1 = ::core::ptr::null::<::core::ffi::c_char>();
-        i += 1;
     }
 }
-pub(crate) unsafe fn uv_loop_configure(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_configure(
     mut loop_0: *mut uv_loop_t,
     mut option: uv_loop_option,
     mut arg: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut lfields: *mut uv__loop_internal_fields_t =
-        (*loop_0).internal_fields as *mut uv__loop_internal_fields_t;
-    if option as ::core::ffi::c_uint
-        == UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        (*lfields).flags |= UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint;
-        return 0 as ::core::ffi::c_int;
+    unsafe {
+        let mut lfields: *mut uv__loop_internal_fields_t =
+            (*loop_0).internal_fields as *mut uv__loop_internal_fields_t;
+        if option as ::core::ffi::c_uint
+            == UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            (*lfields).flags |= UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint;
+            return 0 as ::core::ffi::c_int;
+        }
+        if option as ::core::ffi::c_uint
+            != UV_LOOP_BLOCK_SIGNAL as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return UV_ENOSYS as ::core::ffi::c_int;
+        }
+        if arg != 27 as ::core::ffi::c_int {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        (*loop_0).flags |= 1 as ::core::ffi::c_ulong;
+        0
     }
-    if option as ::core::ffi::c_uint
-        != UV_LOOP_BLOCK_SIGNAL as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_ENOSYS as ::core::ffi::c_int;
-    }
-    if arg != 27 as ::core::ffi::c_int {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    (*loop_0).flags |= 1 as ::core::ffi::c_ulong;
-    0
 }
 static mut default_loop_struct: uv_loop_t = uv_loop_s {
     data: ::core::ptr::null::<::core::ffi::c_void>() as *mut ::core::ffi::c_void,
@@ -4235,196 +4440,231 @@ static mut default_loop_struct: uv_loop_t = uv_loop_s {
     inotify_fd: 0,
 };
 static mut default_loop_ptr: *mut uv_loop_t = ::core::ptr::null::<uv_loop_t>() as *mut uv_loop_t;
-pub(crate) unsafe fn uv_default_loop() -> *mut uv_loop_t {
-    if !default_loop_ptr.is_null() {
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_default_loop() -> *mut uv_loop_t {
+    unsafe {
+        if !default_loop_ptr.is_null() {
+            return default_loop_ptr;
+        }
+        if uv_loop_init(&raw mut default_loop_struct) != 0 {
+            return ::core::ptr::null_mut::<uv_loop_t>();
+        }
+        default_loop_ptr = &raw mut default_loop_struct;
         return default_loop_ptr;
     }
-    if uv_loop_init(&raw mut default_loop_struct) != 0 {
-        return ::core::ptr::null_mut::<uv_loop_t>();
-    }
-    default_loop_ptr = &raw mut default_loop_struct;
-    return default_loop_ptr;
 }
-pub(crate) unsafe fn uv_loop_new() -> *mut uv_loop_t {
-    let mut loop_0: *mut uv_loop_t = ::core::ptr::null_mut::<uv_loop_t>();
-    loop_0 = uv__malloc(::core::mem::size_of::<uv_loop_t>() as size_t) as *mut uv_loop_t;
-    if loop_0.is_null() {
-        return ::core::ptr::null_mut::<uv_loop_t>();
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_new() -> *mut uv_loop_t {
+    unsafe {
+        let mut loop_0: *mut uv_loop_t = ::core::ptr::null_mut::<uv_loop_t>();
+        loop_0 = uv__malloc(::core::mem::size_of::<uv_loop_t>() as size_t) as *mut uv_loop_t;
+        if loop_0.is_null() {
+            return ::core::ptr::null_mut::<uv_loop_t>();
+        }
+        if uv_loop_init(loop_0) != 0 {
+            uv__free(loop_0 as *mut ::core::ffi::c_void);
+            return ::core::ptr::null_mut::<uv_loop_t>();
+        }
+        return loop_0;
     }
-    if uv_loop_init(loop_0) != 0 {
-        uv__free(loop_0 as *mut ::core::ffi::c_void);
-        return ::core::ptr::null_mut::<uv_loop_t>();
-    }
-    return loop_0;
 }
-pub(crate) unsafe fn uv_loop_close(mut loop_0: *mut uv_loop_t) -> ::core::ffi::c_int {
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut h: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
-    let mut saved_data: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
-    if (*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
-        return UV_EBUSY as ::core::ffi::c_int;
-    }
-    q = (*loop_0).handle_queue.next;
-    while q != &raw mut (*loop_0).handle_queue {
-        h = (q as *mut ::core::ffi::c_char).offset(-(32 as ::core::ffi::c_ulong as isize))
-            as *mut uv_handle_t;
-        if (*h).flags & UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_close(mut loop_0: *mut uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut h: *mut uv_handle_t = ::core::ptr::null_mut::<uv_handle_t>();
+        let mut saved_data: *mut ::core::ffi::c_void =
+            ::core::ptr::null_mut::<::core::ffi::c_void>();
+        if (*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
             return UV_EBUSY as ::core::ffi::c_int;
         }
-        q = (*q).next;
-    }
-    uv__loop_close(loop_0);
-    saved_data = (*loop_0).data;
-    memset(
-        loop_0 as *mut ::core::ffi::c_void,
-        -(1 as ::core::ffi::c_int),
-        ::core::mem::size_of::<uv_loop_t>() as size_t,
-    );
-    (*loop_0).data = saved_data;
-    if loop_0 == default_loop_ptr {
-        default_loop_ptr = ::core::ptr::null_mut::<uv_loop_t>();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_loop_delete(mut loop_0: *mut uv_loop_t) {
-    let mut default_loop: *mut uv_loop_t = ::core::ptr::null_mut::<uv_loop_t>();
-    let mut err: ::core::ffi::c_int = 0;
-    default_loop = default_loop_ptr;
-    err = uv_loop_close(loop_0);
-    '_c2rust_label: {
-        if err == 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"err == 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/uv-common.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                889 as ::core::ffi::c_uint,
-                b"void uv_loop_delete(uv_loop_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
+        q = (*loop_0).handle_queue.next;
+        while q != &raw mut (*loop_0).handle_queue {
+            h = (q as *mut ::core::ffi::c_char).offset(-(32 as ::core::ffi::c_ulong as isize))
+                as *mut uv_handle_t;
+            if (*h).flags & UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+                return UV_EBUSY as ::core::ffi::c_int;
+            }
+            q = (*q).next;
         }
-    };
-    if loop_0 != default_loop {
-        uv__free(loop_0 as *mut ::core::ffi::c_void);
+        uv__loop_close(loop_0);
+        saved_data = (*loop_0).data;
+        memset(
+            loop_0 as *mut ::core::ffi::c_void,
+            -(1 as ::core::ffi::c_int),
+            ::core::mem::size_of::<uv_loop_t>() as size_t,
+        );
+        (*loop_0).data = saved_data;
+        if loop_0 == default_loop_ptr {
+            default_loop_ptr = ::core::ptr::null_mut::<uv_loop_t>();
+        }
+        return 0 as ::core::ffi::c_int;
     }
 }
-pub(crate) unsafe fn uv_read_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_delete(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut default_loop: *mut uv_loop_t = ::core::ptr::null_mut::<uv_loop_t>();
+        let mut err: ::core::ffi::c_int = 0;
+        default_loop = default_loop_ptr;
+        err = uv_loop_close(loop_0);
+        '_c2rust_label: {
+            if err == 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"err == 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/uv-common.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    889 as ::core::ffi::c_uint,
+                    b"void uv_loop_delete(uv_loop_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if loop_0 != default_loop {
+            uv__free(loop_0 as *mut ::core::ffi::c_void);
+        }
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_read_start(
     mut stream: *mut uv_stream_t,
     mut alloc_cb: uv_alloc_cb,
     mut read_cb: uv_read_cb,
 ) -> ::core::ffi::c_int {
-    if stream.is_null() || alloc_cb.is_none() || read_cb.is_none() {
-        return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        if stream.is_null() || alloc_cb.is_none() || read_cb.is_none() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            return UV_EALREADY as ::core::ffi::c_int;
+        }
+        if (*stream).flags & UV_HANDLE_READABLE as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+            return UV_ENOTCONN as ::core::ffi::c_int;
+        }
+        return uv__read_start(stream, alloc_cb, read_cb);
     }
-    if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        return UV_EALREADY as ::core::ffi::c_int;
-    }
-    if (*stream).flags & UV_HANDLE_READABLE as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
-        return UV_ENOTCONN as ::core::ffi::c_int;
-    }
-    return uv__read_start(stream, alloc_cb, read_cb);
 }
-pub(crate) unsafe fn uv_os_free_environ(
-    mut envitems: *mut uv_env_item_t,
-    mut count: ::core::ffi::c_int,
-) {
-    let mut i: ::core::ffi::c_int = 0;
-    i = 0 as ::core::ffi::c_int;
-    while i < count {
-        uv__free((*envitems.offset(i as isize)).name as *mut ::core::ffi::c_void);
-        i += 1;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_os_free_environ(mut envitems: *mut uv_env_item_t, mut count: ::core::ffi::c_int) {
+    unsafe {
+        let mut i: ::core::ffi::c_int = 0;
+        i = 0 as ::core::ffi::c_int;
+        while i < count {
+            uv__free((*envitems.offset(i as isize)).name as *mut ::core::ffi::c_void);
+            i += 1;
+        }
+        uv__free(envitems as *mut ::core::ffi::c_void);
     }
-    uv__free(envitems as *mut ::core::ffi::c_void);
 }
-pub(crate) unsafe fn uv_free_cpu_info(
-    mut cpu_infos: *mut uv_cpu_info_t,
-    mut count: ::core::ffi::c_int,
-) {
-    &raw mut count;
-    uv__free(cpu_infos as *mut ::core::ffi::c_void);
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_free_cpu_info(mut cpu_infos: *mut uv_cpu_info_t, mut count: ::core::ffi::c_int) {
+    unsafe {
+        &raw mut count;
+        uv__free(cpu_infos as *mut ::core::ffi::c_void);
+    }
 }
-pub(crate) unsafe fn uv_library_shutdown() {
-    static mut was_shutdown: ::core::ffi::c_int = 0;
-    if crate::upstream_support::atomics::atomic_xchg_relaxed_i32(
-        &raw mut was_shutdown as *mut ::core::ffi::c_int,
-        1 as ::core::ffi::c_int,
-    ) != 0
-    {
-        return;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_library_shutdown() {
+    unsafe {
+        static mut was_shutdown: ::core::ffi::c_int = 0;
+        if crate::upstream_support::atomics::atomic_xchg_relaxed_i32(
+            &raw mut was_shutdown as *mut ::core::ffi::c_int,
+            1 as ::core::ffi::c_int,
+        ) != 0
+        {
+            return;
+        }
+        uv__process_title_cleanup();
+        uv__signal_cleanup();
+        uv__threadpool_cleanup();
     }
-    uv__process_title_cleanup();
-    uv__signal_cleanup();
-    uv__threadpool_cleanup();
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__metrics_update_idle_time(mut loop_0: *mut uv_loop_t) {
-    let mut loop_metrics: *mut uv__loop_metrics_t = ::core::ptr::null_mut::<uv__loop_metrics_t>();
-    let mut entry_time: uint64_t = 0;
-    let mut exit_time: uint64_t = 0;
-    if (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).flags
-        & UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0
-    {
-        return;
-    }
-    loop_metrics =
-        &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).loop_metrics;
-    if (*loop_metrics).provider_entry_time == 0 as uint64_t {
-        return;
-    }
-    exit_time = uv_hrtime();
-    uv_mutex_lock(&raw mut (*loop_metrics).lock);
-    entry_time = (*loop_metrics).provider_entry_time;
-    (*loop_metrics).provider_entry_time = 0 as uint64_t;
-    (*loop_metrics).provider_idle_time = (*loop_metrics)
-        .provider_idle_time
-        .wrapping_add(exit_time.wrapping_sub(entry_time));
-    uv_mutex_unlock(&raw mut (*loop_metrics).lock);
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__metrics_set_provider_entry_time(mut loop_0: *mut uv_loop_t) {
-    let mut loop_metrics: *mut uv__loop_metrics_t = ::core::ptr::null_mut::<uv__loop_metrics_t>();
-    let mut now: uint64_t = 0;
-    if (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).flags
-        & UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0
-    {
-        return;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__metrics_update_idle_time(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut loop_metrics: *mut uv__loop_metrics_t =
+            ::core::ptr::null_mut::<uv__loop_metrics_t>();
+        let mut entry_time: uint64_t = 0;
+        let mut exit_time: uint64_t = 0;
+        if (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).flags
+            & UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0
+        {
+            return;
+        }
+        loop_metrics =
+            &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).loop_metrics;
+        if (*loop_metrics).provider_entry_time == 0 as uint64_t {
+            return;
+        }
+        exit_time = uv_hrtime();
+        uv_mutex_lock(&raw mut (*loop_metrics).lock);
+        entry_time = (*loop_metrics).provider_entry_time;
+        (*loop_metrics).provider_entry_time = 0 as uint64_t;
+        (*loop_metrics).provider_idle_time = (*loop_metrics)
+            .provider_idle_time
+            .wrapping_add(exit_time.wrapping_sub(entry_time));
+        uv_mutex_unlock(&raw mut (*loop_metrics).lock);
     }
-    now = uv_hrtime();
-    loop_metrics =
-        &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).loop_metrics;
-    uv_mutex_lock(&raw mut (*loop_metrics).lock);
-    (*loop_metrics).provider_entry_time = now;
-    uv_mutex_unlock(&raw mut (*loop_metrics).lock);
 }
-pub(crate) unsafe fn uv_metrics_info(
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__metrics_set_provider_entry_time(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut loop_metrics: *mut uv__loop_metrics_t =
+            ::core::ptr::null_mut::<uv__loop_metrics_t>();
+        let mut now: uint64_t = 0;
+        if (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).flags
+            & UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0
+        {
+            return;
+        }
+        now = uv_hrtime();
+        loop_metrics =
+            &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).loop_metrics;
+        uv_mutex_lock(&raw mut (*loop_metrics).lock);
+        (*loop_metrics).provider_entry_time = now;
+        uv_mutex_unlock(&raw mut (*loop_metrics).lock);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_metrics_info(
     mut loop_0: *mut uv_loop_t,
     mut metrics: *mut uv_metrics_t,
 ) -> ::core::ffi::c_int {
-    memcpy(
-        metrics as *mut ::core::ffi::c_void,
-        &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t))
-            .loop_metrics
-            .metrics as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<uv_metrics_t>() as size_t,
-    );
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_metrics_idle_time(mut loop_0: *mut uv_loop_t) -> uint64_t {
-    let mut loop_metrics: *mut uv__loop_metrics_t = ::core::ptr::null_mut::<uv__loop_metrics_t>();
-    let mut entry_time: uint64_t = 0;
-    let mut idle_time: uint64_t = 0;
-    loop_metrics =
-        &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).loop_metrics;
-    uv_mutex_lock(&raw mut (*loop_metrics).lock);
-    idle_time = (*loop_metrics).provider_idle_time;
-    entry_time = (*loop_metrics).provider_entry_time;
-    uv_mutex_unlock(&raw mut (*loop_metrics).lock);
-    if entry_time > 0 as uint64_t {
-        idle_time = idle_time.wrapping_add(uv_hrtime().wrapping_sub(entry_time));
+    unsafe {
+        memcpy(
+            metrics as *mut ::core::ffi::c_void,
+            &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t))
+                .loop_metrics
+                .metrics as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<uv_metrics_t>() as size_t,
+        );
+        return 0 as ::core::ffi::c_int;
     }
-    return idle_time;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_metrics_idle_time(mut loop_0: *mut uv_loop_t) -> uint64_t {
+    unsafe {
+        let mut loop_metrics: *mut uv__loop_metrics_t =
+            ::core::ptr::null_mut::<uv__loop_metrics_t>();
+        let mut entry_time: uint64_t = 0;
+        let mut idle_time: uint64_t = 0;
+        loop_metrics =
+            &raw mut (*((*loop_0).internal_fields as *mut uv__loop_internal_fields_t)).loop_metrics;
+        uv_mutex_lock(&raw mut (*loop_metrics).lock);
+        idle_time = (*loop_metrics).provider_idle_time;
+        entry_time = (*loop_metrics).provider_entry_time;
+        uv_mutex_unlock(&raw mut (*loop_metrics).lock);
+        if entry_time > 0 as uint64_t {
+            idle_time = idle_time.wrapping_add(uv_hrtime().wrapping_sub(entry_time));
+        }
+        return idle_time;
+    }
 }

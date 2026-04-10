@@ -395,287 +395,301 @@ pub const UV_HANDLE_INTERNAL: C2RustUnnamed_8 = 16;
 pub const INT_MAX: ::core::ffi::c_int = __INT_MAX__;
 pub const NULL: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
-    return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
+    unsafe {
+        return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
-    return (*q).next;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
+    unsafe {
+        return (*q).next;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
-    (*(*q).prev).next = (*q).next;
-    (*(*q).next).prev = (*q).prev;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
+    unsafe {
+        (*(*q).prev).next = (*q).next;
+        (*(*q).next).prev = (*q).prev;
+    }
 }
-unsafe extern "C" fn heap_min(mut heap: *const heap) -> *mut heap_node {
-    return (*heap).min;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn heap_min(mut heap: *const heap) -> *mut heap_node {
+    unsafe {
+        return (*heap).min;
+    }
 }
-unsafe extern "C" fn heap_node_swap(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn heap_node_swap(
     mut heap: *mut heap,
     mut parent: *mut heap_node,
     mut child: *mut heap_node,
 ) {
-    let mut sibling: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
-    let mut t: heap_node = heap_node {
-        left: ::core::ptr::null_mut::<heap_node>(),
-        right: ::core::ptr::null_mut::<heap_node>(),
-        parent: ::core::ptr::null_mut::<heap_node>(),
-    };
-    t = *parent;
-    *parent = *child;
-    *child = t;
-    (*parent).parent = child;
-    if (*child).left == child {
-        (*child).left = parent;
-        sibling = (*child).right;
-    } else {
-        (*child).right = parent;
-        sibling = (*child).left;
+    unsafe {
+        let mut sibling: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
+        let mut t: heap_node = heap_node {
+            left: ::core::ptr::null_mut::<heap_node>(),
+            right: ::core::ptr::null_mut::<heap_node>(),
+            parent: ::core::ptr::null_mut::<heap_node>(),
+        };
+        t = *parent;
+        *parent = *child;
+        *child = t;
+        (*parent).parent = child;
+        if (*child).left == child {
+            (*child).left = parent;
+            sibling = (*child).right;
+        } else {
+            (*child).right = parent;
+            sibling = (*child).left;
+        }
+        if !sibling.is_null() {
+            (*sibling).parent = child;
+        }
+        if !(*parent).left.is_null() {
+            (*(*parent).left).parent = parent;
+        }
+        if !(*parent).right.is_null() {
+            (*(*parent).right).parent = parent;
+        }
+        if (*child).parent.is_null() {
+            (*heap).min = child;
+        } else if (*(*child).parent).left == parent {
+            (*(*child).parent).left = child;
+        } else {
+            (*(*child).parent).right = child;
+        };
     }
-    if !sibling.is_null() {
-        (*sibling).parent = child;
-    }
-    if !(*parent).left.is_null() {
-        (*(*parent).left).parent = parent;
-    }
-    if !(*parent).right.is_null() {
-        (*(*parent).right).parent = parent;
-    }
-    if (*child).parent.is_null() {
-        (*heap).min = child;
-    } else if (*(*child).parent).left == parent {
-        (*(*child).parent).left = child;
-    } else {
-        (*(*child).parent).right = child;
-    };
 }
-unsafe extern "C" fn heap_insert(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn heap_insert(
     mut heap: *mut heap,
     mut newnode: *mut heap_node,
     mut less_than: heap_compare_fn,
 ) {
-    let mut parent: *mut *mut heap_node = ::core::ptr::null_mut::<*mut heap_node>();
-    let mut child: *mut *mut heap_node = ::core::ptr::null_mut::<*mut heap_node>();
-    let mut path: ::core::ffi::c_uint = 0;
-    let mut n: ::core::ffi::c_uint = 0;
-    let mut k: ::core::ffi::c_uint = 0;
-    (*newnode).left = ::core::ptr::null_mut::<heap_node>();
-    (*newnode).right = ::core::ptr::null_mut::<heap_node>();
-    (*newnode).parent = ::core::ptr::null_mut::<heap_node>();
-    path = 0 as ::core::ffi::c_uint;
-    k = 0 as ::core::ffi::c_uint;
-    n = (1 as ::core::ffi::c_uint).wrapping_add((*heap).nelts);
-    while n >= 2 as ::core::ffi::c_uint {
-        path = path << 1 as ::core::ffi::c_int | n & 1 as ::core::ffi::c_uint;
-        k = k.wrapping_add(1 as ::core::ffi::c_uint);
-        n = n.wrapping_div(2 as ::core::ffi::c_uint);
-    }
-    child = &raw mut (*heap).min;
-    parent = child;
-    while k > 0 as ::core::ffi::c_uint {
-        parent = child;
-        if path & 1 as ::core::ffi::c_uint != 0 {
-            child = &raw mut (**child).right;
-        } else {
-            child = &raw mut (**child).left;
+    unsafe {
+        let mut parent: *mut *mut heap_node = ::core::ptr::null_mut::<*mut heap_node>();
+        let mut child: *mut *mut heap_node = ::core::ptr::null_mut::<*mut heap_node>();
+        let mut path: ::core::ffi::c_uint = 0;
+        let mut n: ::core::ffi::c_uint = 0;
+        let mut k: ::core::ffi::c_uint = 0;
+        (*newnode).left = ::core::ptr::null_mut::<heap_node>();
+        (*newnode).right = ::core::ptr::null_mut::<heap_node>();
+        (*newnode).parent = ::core::ptr::null_mut::<heap_node>();
+        path = 0 as ::core::ffi::c_uint;
+        k = 0 as ::core::ffi::c_uint;
+        n = (1 as ::core::ffi::c_uint).wrapping_add((*heap).nelts);
+        while n >= 2 as ::core::ffi::c_uint {
+            path = path << 1 as ::core::ffi::c_int | n & 1 as ::core::ffi::c_uint;
+            k = k.wrapping_add(1 as ::core::ffi::c_uint);
+            n = n.wrapping_div(2 as ::core::ffi::c_uint);
         }
-        path >>= 1 as ::core::ffi::c_int;
-        k = k.wrapping_sub(1 as ::core::ffi::c_uint);
-    }
-    (*newnode).parent = *parent;
-    *child = newnode;
-    (*heap).nelts = (*heap).nelts.wrapping_add(1 as ::core::ffi::c_uint);
-    while !(*newnode).parent.is_null()
-        && less_than.expect("non-null function pointer")(newnode, (*newnode).parent) != 0
-    {
-        heap_node_swap(heap, (*newnode).parent, newnode);
+        child = &raw mut (*heap).min;
+        parent = child;
+        while k > 0 as ::core::ffi::c_uint {
+            parent = child;
+            if path & 1 as ::core::ffi::c_uint != 0 {
+                child = &raw mut (**child).right;
+            } else {
+                child = &raw mut (**child).left;
+            }
+            path >>= 1 as ::core::ffi::c_int;
+            k = k.wrapping_sub(1 as ::core::ffi::c_uint);
+        }
+        (*newnode).parent = *parent;
+        *child = newnode;
+        (*heap).nelts = (*heap).nelts.wrapping_add(1 as ::core::ffi::c_uint);
+        while !(*newnode).parent.is_null()
+            && less_than.expect("non-null function pointer")(newnode, (*newnode).parent) != 0
+        {
+            heap_node_swap(heap, (*newnode).parent, newnode);
+        }
     }
 }
-unsafe extern "C" fn heap_remove(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn heap_remove(
     mut heap: *mut heap,
     mut node: *mut heap_node,
     mut less_than: heap_compare_fn,
 ) {
-    let mut smallest: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
-    let mut max: *mut *mut heap_node = ::core::ptr::null_mut::<*mut heap_node>();
-    let mut child: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
-    let mut path: ::core::ffi::c_uint = 0;
-    let mut k: ::core::ffi::c_uint = 0;
-    let mut n: ::core::ffi::c_uint = 0;
-    if (*heap).nelts == 0 as ::core::ffi::c_uint {
-        return;
-    }
-    path = 0 as ::core::ffi::c_uint;
-    k = 0 as ::core::ffi::c_uint;
-    n = (*heap).nelts;
-    while n >= 2 as ::core::ffi::c_uint {
-        path = path << 1 as ::core::ffi::c_int | n & 1 as ::core::ffi::c_uint;
-        k = k.wrapping_add(1 as ::core::ffi::c_uint);
-        n = n.wrapping_div(2 as ::core::ffi::c_uint);
-    }
-    max = &raw mut (*heap).min;
-    while k > 0 as ::core::ffi::c_uint {
-        if path & 1 as ::core::ffi::c_uint != 0 {
-            max = &raw mut (**max).right;
+    unsafe {
+        let mut smallest: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
+        let mut max: *mut *mut heap_node = ::core::ptr::null_mut::<*mut heap_node>();
+        let mut child: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
+        let mut path: ::core::ffi::c_uint = 0;
+        let mut k: ::core::ffi::c_uint = 0;
+        let mut n: ::core::ffi::c_uint = 0;
+        if (*heap).nelts == 0 as ::core::ffi::c_uint {
+            return;
+        }
+        path = 0 as ::core::ffi::c_uint;
+        k = 0 as ::core::ffi::c_uint;
+        n = (*heap).nelts;
+        while n >= 2 as ::core::ffi::c_uint {
+            path = path << 1 as ::core::ffi::c_int | n & 1 as ::core::ffi::c_uint;
+            k = k.wrapping_add(1 as ::core::ffi::c_uint);
+            n = n.wrapping_div(2 as ::core::ffi::c_uint);
+        }
+        max = &raw mut (*heap).min;
+        while k > 0 as ::core::ffi::c_uint {
+            if path & 1 as ::core::ffi::c_uint != 0 {
+                max = &raw mut (**max).right;
+            } else {
+                max = &raw mut (**max).left;
+            }
+            path >>= 1 as ::core::ffi::c_int;
+            k = k.wrapping_sub(1 as ::core::ffi::c_uint);
+        }
+        (*heap).nelts = (*heap).nelts.wrapping_sub(1 as ::core::ffi::c_uint);
+        child = *max;
+        *max = ::core::ptr::null_mut::<heap_node>();
+        if child == node {
+            if child == (*heap).min {
+                (*heap).min = ::core::ptr::null_mut::<heap_node>();
+            }
+            return;
+        }
+        (*child).left = (*node).left;
+        (*child).right = (*node).right;
+        (*child).parent = (*node).parent;
+        if !(*child).left.is_null() {
+            (*(*child).left).parent = child;
+        }
+        if !(*child).right.is_null() {
+            (*(*child).right).parent = child;
+        }
+        if (*node).parent.is_null() {
+            (*heap).min = child;
+        } else if (*(*node).parent).left == node {
+            (*(*node).parent).left = child;
         } else {
-            max = &raw mut (**max).left;
+            (*(*node).parent).right = child;
         }
-        path >>= 1 as ::core::ffi::c_int;
-        k = k.wrapping_sub(1 as ::core::ffi::c_uint);
-    }
-    (*heap).nelts = (*heap).nelts.wrapping_sub(1 as ::core::ffi::c_uint);
-    child = *max;
-    *max = ::core::ptr::null_mut::<heap_node>();
-    if child == node {
-        if child == (*heap).min {
-            (*heap).min = ::core::ptr::null_mut::<heap_node>();
+        loop {
+            smallest = child;
+            if !(*child).left.is_null()
+                && less_than.expect("non-null function pointer")((*child).left, smallest) != 0
+            {
+                smallest = (*child).left;
+            }
+            if !(*child).right.is_null()
+                && less_than.expect("non-null function pointer")((*child).right, smallest) != 0
+            {
+                smallest = (*child).right;
+            }
+            if smallest == child {
+                break;
+            }
+            heap_node_swap(heap, child, smallest);
         }
-        return;
-    }
-    (*child).left = (*node).left;
-    (*child).right = (*node).right;
-    (*child).parent = (*node).parent;
-    if !(*child).left.is_null() {
-        (*(*child).left).parent = child;
-    }
-    if !(*child).right.is_null() {
-        (*(*child).right).parent = child;
-    }
-    if (*node).parent.is_null() {
-        (*heap).min = child;
-    } else if (*(*node).parent).left == node {
-        (*(*node).parent).left = child;
-    } else {
-        (*(*node).parent).right = child;
-    }
-    loop {
-        smallest = child;
-        if !(*child).left.is_null()
-            && less_than.expect("non-null function pointer")((*child).left, smallest) != 0
+        while !(*child).parent.is_null()
+            && less_than.expect("non-null function pointer")(child, (*child).parent) != 0
         {
-            smallest = (*child).left;
+            heap_node_swap(heap, (*child).parent, child);
         }
-        if !(*child).right.is_null()
-            && less_than.expect("non-null function pointer")((*child).right, smallest) != 0
-        {
-            smallest = (*child).right;
-        }
-        if smallest == child {
-            break;
-        }
-        heap_node_swap(heap, child, smallest);
-    }
-    while !(*child).parent.is_null()
-        && less_than.expect("non-null function pointer")(child, (*child).parent) != 0
-    {
-        heap_node_swap(heap, (*child).parent, child);
     }
 }
-unsafe extern "C" fn timer_heap(mut loop_0: *const uv_loop_t) -> *mut heap {
-    return &raw const (*loop_0).timer_heap as *mut heap;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn timer_heap(mut loop_0: *const uv_loop_t) -> *mut heap {
+    unsafe {
+        return &raw const (*loop_0).timer_heap as *mut heap;
+    }
 }
-unsafe extern "C" fn timer_less_than(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn timer_less_than(
     mut ha: *const heap_node,
     mut hb: *const heap_node,
 ) -> ::core::ffi::c_int {
-    let mut a: *const uv_timer_t = ::core::ptr::null::<uv_timer_t>();
-    let mut b: *const uv_timer_t = ::core::ptr::null::<uv_timer_t>();
-    a = (ha as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
-        as *mut uv_timer_t;
-    b = (hb as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
-        as *mut uv_timer_t;
-    if (*a).timeout < (*b).timeout {
-        return 1 as ::core::ffi::c_int;
+    unsafe {
+        let mut a: *const uv_timer_t = ::core::ptr::null::<uv_timer_t>();
+        let mut b: *const uv_timer_t = ::core::ptr::null::<uv_timer_t>();
+        a = (ha as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
+            as *mut uv_timer_t;
+        b = (hb as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
+            as *mut uv_timer_t;
+        if (*a).timeout < (*b).timeout {
+            return 1 as ::core::ffi::c_int;
+        }
+        if (*b).timeout < (*a).timeout {
+            return 0 as ::core::ffi::c_int;
+        }
+        return ((*a).start_id < (*b).start_id) as ::core::ffi::c_int;
     }
-    if (*b).timeout < (*a).timeout {
-        return 0 as ::core::ffi::c_int;
-    }
-    return ((*a).start_id < (*b).start_id) as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_timer_init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_timer_init(
     mut loop_0: *mut uv_loop_t,
     mut handle: *mut uv_timer_t,
 ) -> ::core::ffi::c_int {
-    let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
-    *fresh0 = loop_0;
-    (*(handle as *mut uv_handle_t)).type_0 = UV_TIMER;
-    (*(handle as *mut uv_handle_t)).flags =
-        UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    uv__queue_insert_tail(
-        &raw mut (*loop_0).handle_queue,
-        &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
-    );
-    let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
-    *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
-    (*handle).timer_cb = None;
-    (*handle).timeout = 0 as uint64_t;
-    (*handle).repeat = 0 as uint64_t;
-    uv__queue_init(&raw mut (*handle).node.queue);
-    return 0 as ::core::ffi::c_int;
+    unsafe {
+        let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
+        *fresh0 = loop_0;
+        (*(handle as *mut uv_handle_t)).type_0 = UV_TIMER;
+        (*(handle as *mut uv_handle_t)).flags =
+            UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        uv__queue_insert_tail(
+            &raw mut (*loop_0).handle_queue,
+            &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
+        );
+        let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
+        *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
+        (*handle).timer_cb = None;
+        (*handle).timeout = 0 as uint64_t;
+        (*handle).repeat = 0 as uint64_t;
+        uv__queue_init(&raw mut (*handle).node.queue);
+        return 0 as ::core::ffi::c_int;
+    }
 }
-pub(crate) unsafe fn uv_timer_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_timer_start(
     mut handle: *mut uv_timer_t,
     mut cb: uv_timer_cb,
     mut timeout: uint64_t,
     mut repeat: uint64_t,
 ) -> ::core::ffi::c_int {
-    let mut clamped_timeout: uint64_t = 0;
-    if (*handle).flags
-        & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-            as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-        || cb.is_none()
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    uv_timer_stop(handle);
-    clamped_timeout = (*(*handle).loop_0).time.wrapping_add(timeout);
-    if clamped_timeout < timeout {
-        clamped_timeout = -(1 as ::core::ffi::c_int) as uint64_t;
-    }
-    (*handle).timer_cb = cb;
-    (*handle).timeout = clamped_timeout;
-    (*handle).repeat = repeat;
-    let fresh2 = (*(*handle).loop_0).timer_counter;
-    (*(*handle).loop_0).timer_counter = (*(*handle).loop_0).timer_counter.wrapping_add(1);
-    (*handle).start_id = fresh2;
-    heap_insert(
-        timer_heap((*handle).loop_0),
-        &raw mut (*handle).node.heap as *mut heap_node,
-        Some(
-            timer_less_than
-                as unsafe extern "C" fn(*const heap_node, *const heap_node) -> ::core::ffi::c_int,
-        ),
-    );
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+    unsafe {
+        let mut clamped_timeout: uint64_t = 0;
+        if (*handle).flags
+            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                as ::core::ffi::c_uint
             != 0 as ::core::ffi::c_uint
+            || cb.is_none()
         {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_add(1);
+            return UV_EINVAL as ::core::ffi::c_int;
         }
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_timer_stop(mut handle: *mut uv_timer_t) -> ::core::ffi::c_int {
-    if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-    {
-        heap_remove(
+        uv_timer_stop(handle);
+        clamped_timeout = (*(*handle).loop_0).time.wrapping_add(timeout);
+        if clamped_timeout < timeout {
+            clamped_timeout = -(1 as ::core::ffi::c_int) as uint64_t;
+        }
+        (*handle).timer_cb = cb;
+        (*handle).timeout = clamped_timeout;
+        (*handle).repeat = repeat;
+        let fresh2 = (*(*handle).loop_0).timer_counter;
+        (*(*handle).loop_0).timer_counter = (*(*handle).loop_0).timer_counter.wrapping_add(1);
+        (*handle).start_id = fresh2;
+        heap_insert(
             timer_heap((*handle).loop_0),
             &raw mut (*handle).node.heap as *mut heap_node,
             Some(
@@ -687,104 +701,159 @@ pub(crate) unsafe fn uv_timer_stop(mut handle: *mut uv_timer_t) -> ::core::ffi::
             ),
         );
         if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-            == 0 as ::core::ffi::c_uint)
+            != 0 as ::core::ffi::c_uint)
         {
-            (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
             if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
                 != 0 as ::core::ffi::c_uint
             {
                 (*(*handle).loop_0).active_handles =
-                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+                    (*(*handle).loop_0).active_handles.wrapping_add(1);
             }
         }
-    } else {
-        uv__queue_remove(&raw mut (*handle).node.queue);
-    }
-    uv__queue_init(&raw mut (*handle).node.queue);
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_timer_again(mut handle: *mut uv_timer_t) -> ::core::ffi::c_int {
-    if (*handle).timer_cb.is_none() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if (*handle).repeat != 0 {
-        uv_timer_stop(handle);
-        uv_timer_start(
-            handle,
-            (*handle).timer_cb,
-            (*handle).repeat,
-            (*handle).repeat,
-        );
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_timer_set_repeat(mut handle: *mut uv_timer_t, mut repeat: uint64_t) {
-    (*handle).repeat = repeat;
-}
-pub(crate) unsafe fn uv_timer_get_repeat(mut handle: *const uv_timer_t) -> uint64_t {
-    return (*handle).repeat;
-}
-pub(crate) unsafe fn uv_timer_get_due_in(mut handle: *const uv_timer_t) -> uint64_t {
-    if (*(*handle).loop_0).time >= (*handle).timeout {
-        return 0 as uint64_t;
-    }
-    return (*handle).timeout.wrapping_sub((*(*handle).loop_0).time);
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__next_timeout(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
-    let mut heap_node: *const heap_node = ::core::ptr::null::<heap_node>();
-    let mut handle: *const uv_timer_t = ::core::ptr::null::<uv_timer_t>();
-    let mut diff: uint64_t = 0;
-    heap_node = heap_min(timer_heap(loop_0));
-    if heap_node.is_null() {
-        return -(1 as ::core::ffi::c_int);
-    }
-    handle = (heap_node as *mut ::core::ffi::c_char).offset(-(104 as ::core::ffi::c_ulong as isize))
-        as *mut uv_timer_t;
-    if (*handle).timeout <= (*loop_0).time {
         return 0 as ::core::ffi::c_int;
     }
-    diff = (*handle).timeout.wrapping_sub((*loop_0).time);
-    if diff > INT_MAX as uint64_t {
-        diff = INT_MAX as uint64_t;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_timer_stop(mut handle: *mut uv_timer_t) -> ::core::ffi::c_int {
+    unsafe {
+        if (*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint
+        {
+            heap_remove(
+                timer_heap((*handle).loop_0),
+                &raw mut (*handle).node.heap as *mut heap_node,
+                Some(
+                    timer_less_than
+                        as unsafe extern "C" fn(
+                            *const heap_node,
+                            *const heap_node,
+                        ) -> ::core::ffi::c_int,
+                ),
+            );
+            if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                == 0 as ::core::ffi::c_uint)
+            {
+                (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+                if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0 as ::core::ffi::c_uint
+                {
+                    (*(*handle).loop_0).active_handles =
+                        (*(*handle).loop_0).active_handles.wrapping_sub(1);
+                }
+            }
+        } else {
+            uv__queue_remove(&raw mut (*handle).node.queue);
+        }
+        uv__queue_init(&raw mut (*handle).node.queue);
+        return 0 as ::core::ffi::c_int;
     }
-    return diff as ::core::ffi::c_int;
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_timer_again(mut handle: *mut uv_timer_t) -> ::core::ffi::c_int {
+    unsafe {
+        if (*handle).timer_cb.is_none() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*handle).repeat != 0 {
+            uv_timer_stop(handle);
+            uv_timer_start(
+                handle,
+                (*handle).timer_cb,
+                (*handle).repeat,
+                (*handle).repeat,
+            );
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_timer_set_repeat(mut handle: *mut uv_timer_t, mut repeat: uint64_t) {
+    unsafe {
+        (*handle).repeat = repeat;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_timer_get_repeat(mut handle: *const uv_timer_t) -> uint64_t {
+    unsafe {
+        return (*handle).repeat;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_timer_get_due_in(mut handle: *const uv_timer_t) -> uint64_t {
+    unsafe {
+        if (*(*handle).loop_0).time >= (*handle).timeout {
+            return 0 as uint64_t;
+        }
+        return (*handle).timeout.wrapping_sub((*(*handle).loop_0).time);
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__run_timers(mut loop_0: *mut uv_loop_t) {
-    let mut heap_node: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
-    let mut handle: *mut uv_timer_t = ::core::ptr::null_mut::<uv_timer_t>();
-    let mut queue_node: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut ready_queue: uv__queue = uv__queue {
-        next: ::core::ptr::null_mut::<uv__queue>(),
-        prev: ::core::ptr::null_mut::<uv__queue>(),
-    };
-    uv__queue_init(&raw mut ready_queue);
-    loop {
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__next_timeout(mut loop_0: *const uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut heap_node: *const heap_node = ::core::ptr::null::<heap_node>();
+        let mut handle: *const uv_timer_t = ::core::ptr::null::<uv_timer_t>();
+        let mut diff: uint64_t = 0;
         heap_node = heap_min(timer_heap(loop_0));
         if heap_node.is_null() {
-            break;
+            return -(1 as ::core::ffi::c_int);
         }
         handle = (heap_node as *mut ::core::ffi::c_char)
             .offset(-(104 as ::core::ffi::c_ulong as isize)) as *mut uv_timer_t;
-        if (*handle).timeout > (*loop_0).time {
-            break;
+        if (*handle).timeout <= (*loop_0).time {
+            return 0 as ::core::ffi::c_int;
         }
-        uv_timer_stop(handle);
-        uv__queue_insert_tail(&raw mut ready_queue, &raw mut (*handle).node.queue);
-    }
-    while uv__queue_empty(&raw mut ready_queue) == 0 {
-        queue_node = uv__queue_head(&raw mut ready_queue);
-        uv__queue_remove(queue_node);
-        uv__queue_init(queue_node);
-        handle = (queue_node as *mut ::core::ffi::c_char)
-            .offset(-(104 as ::core::ffi::c_ulong as isize)) as *mut uv_timer_t;
-        uv_timer_again(handle);
-        (*handle).timer_cb.expect("non-null function pointer")(handle);
+        diff = (*handle).timeout.wrapping_sub((*loop_0).time);
+        if diff > INT_MAX as uint64_t {
+            diff = INT_MAX as uint64_t;
+        }
+        return diff as ::core::ffi::c_int;
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__timer_close(mut handle: *mut uv_timer_t) {
-    uv_timer_stop(handle);
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__run_timers(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut heap_node: *mut heap_node = ::core::ptr::null_mut::<heap_node>();
+        let mut handle: *mut uv_timer_t = ::core::ptr::null_mut::<uv_timer_t>();
+        let mut queue_node: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut ready_queue: uv__queue = uv__queue {
+            next: ::core::ptr::null_mut::<uv__queue>(),
+            prev: ::core::ptr::null_mut::<uv__queue>(),
+        };
+        uv__queue_init(&raw mut ready_queue);
+        loop {
+            heap_node = heap_min(timer_heap(loop_0));
+            if heap_node.is_null() {
+                break;
+            }
+            handle = (heap_node as *mut ::core::ffi::c_char)
+                .offset(-(104 as ::core::ffi::c_ulong as isize))
+                as *mut uv_timer_t;
+            if (*handle).timeout > (*loop_0).time {
+                break;
+            }
+            uv_timer_stop(handle);
+            uv__queue_insert_tail(&raw mut ready_queue, &raw mut (*handle).node.queue);
+        }
+        while uv__queue_empty(&raw mut ready_queue) == 0 {
+            queue_node = uv__queue_head(&raw mut ready_queue);
+            uv__queue_remove(queue_node);
+            uv__queue_init(queue_node);
+            handle = (queue_node as *mut ::core::ffi::c_char)
+                .offset(-(104 as ::core::ffi::c_ulong as isize))
+                as *mut uv_timer_t;
+            uv_timer_again(handle);
+            (*handle).timer_cb.expect("non-null function pointer")(handle);
+        }
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__timer_close(mut handle: *mut uv_timer_t) {
+    unsafe {
+        uv_timer_stop(handle);
+    }
 }
 pub const __INT_MAX__: ::core::ffi::c_int = 2147483647 as ::core::ffi::c_int;

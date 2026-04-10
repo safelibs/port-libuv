@@ -149,403 +149,433 @@ pub const PF_INET6: ::core::ffi::c_int = 10;
 pub const AF_INET: ::core::ffi::c_int = PF_INET;
 pub const AF_INET6: ::core::ffi::c_int = PF_INET6;
 pub const UV__INET6_ADDRSTRLEN: ::core::ffi::c_int = 46 as ::core::ffi::c_int;
-pub(crate) unsafe fn uv_inet_ntop(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_inet_ntop(
     mut af: ::core::ffi::c_int,
     mut src: *const ::core::ffi::c_void,
     mut dst: *mut ::core::ffi::c_char,
     mut size: size_t,
 ) -> ::core::ffi::c_int {
-    match af {
-        AF_INET => return inet_ntop4(src as *const ::core::ffi::c_uchar, dst, size),
-        AF_INET6 => return inet_ntop6(src as *const ::core::ffi::c_uchar, dst, size),
-        _ => return UV_EAFNOSUPPORT as ::core::ffi::c_int,
-    };
+    unsafe {
+        match af {
+            AF_INET => return inet_ntop4(src as *const ::core::ffi::c_uchar, dst, size),
+            AF_INET6 => return inet_ntop6(src as *const ::core::ffi::c_uchar, dst, size),
+            _ => return UV_EAFNOSUPPORT as ::core::ffi::c_int,
+        };
+    }
 }
-unsafe extern "C" fn inet_ntop4(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn inet_ntop4(
     mut src: *const ::core::ffi::c_uchar,
     mut dst: *mut ::core::ffi::c_char,
     mut size: size_t,
 ) -> ::core::ffi::c_int {
-    static mut fmt: [::core::ffi::c_char; 12] =
-        unsafe { ::core::mem::transmute::<[u8; 12], [::core::ffi::c_char; 12]>(*b"%u.%u.%u.%u\0") };
-    let mut tmp: [::core::ffi::c_char; 16] = [0; 16];
-    let mut l: ::core::ffi::c_int = 0;
-    l = snprintf(
-        &raw mut tmp as *mut ::core::ffi::c_char,
-        ::core::mem::size_of::<[::core::ffi::c_char; 16]>() as size_t,
-        &raw const fmt as *const ::core::ffi::c_char,
-        *src.offset(0 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
-        *src.offset(1 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
-        *src.offset(2 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
-        *src.offset(3 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
-    );
-    if l <= 0 as ::core::ffi::c_int || l as size_t >= size {
-        return UV_ENOSPC as ::core::ffi::c_int;
+    unsafe {
+        static mut fmt: [::core::ffi::c_char; 12] = unsafe {
+            ::core::mem::transmute::<[u8; 12], [::core::ffi::c_char; 12]>(*b"%u.%u.%u.%u\0")
+        };
+        let mut tmp: [::core::ffi::c_char; 16] = [0; 16];
+        let mut l: ::core::ffi::c_int = 0;
+        l = snprintf(
+            &raw mut tmp as *mut ::core::ffi::c_char,
+            ::core::mem::size_of::<[::core::ffi::c_char; 16]>() as size_t,
+            &raw const fmt as *const ::core::ffi::c_char,
+            *src.offset(0 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
+            *src.offset(1 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
+            *src.offset(2 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
+            *src.offset(3 as ::core::ffi::c_int as isize) as ::core::ffi::c_int,
+        );
+        if l <= 0 as ::core::ffi::c_int || l as size_t >= size {
+            return UV_ENOSPC as ::core::ffi::c_int;
+        }
+        uv__strscpy(dst, &raw mut tmp as *mut ::core::ffi::c_char, size);
+        return 0 as ::core::ffi::c_int;
     }
-    uv__strscpy(dst, &raw mut tmp as *mut ::core::ffi::c_char, size);
-    return 0 as ::core::ffi::c_int;
 }
-unsafe extern "C" fn inet_ntop6(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn inet_ntop6(
     mut src: *const ::core::ffi::c_uchar,
     mut dst: *mut ::core::ffi::c_char,
     mut size: size_t,
 ) -> ::core::ffi::c_int {
-    let mut tmp: [::core::ffi::c_char; 46] = [0; 46];
-    let mut tp: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut best: C2RustUnnamed_1 = C2RustUnnamed_1 { base: 0, len: 0 };
-    let mut cur: C2RustUnnamed_1 = C2RustUnnamed_1 { base: 0, len: 0 };
-    let mut words: [::core::ffi::c_uint; 8] = [0; 8];
-    let mut i: ::core::ffi::c_int = 0;
-    memset(
-        &raw mut words as *mut ::core::ffi::c_uint as *mut ::core::ffi::c_void,
-        '\0' as i32,
-        ::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as size_t,
-    );
-    i = 0 as ::core::ffi::c_int;
-    while i < ::core::mem::size_of::<in6_addr>() as ::core::ffi::c_int {
-        words[(i / 2 as ::core::ffi::c_int) as usize] |= ((*src.offset(i as isize)
-            as ::core::ffi::c_int)
-            << ((1 as ::core::ffi::c_int - i % 2 as ::core::ffi::c_int) << 3 as ::core::ffi::c_int))
-            as ::core::ffi::c_uint;
-        i += 1;
-    }
-    best.base = -(1 as ::core::ffi::c_int);
-    best.len = 0 as ::core::ffi::c_int;
-    cur.base = -(1 as ::core::ffi::c_int);
-    cur.len = 0 as ::core::ffi::c_int;
-    i = 0 as ::core::ffi::c_int;
-    while i
-        < (::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as usize)
-            .wrapping_div(::core::mem::size_of::<::core::ffi::c_uint>() as usize)
-            as ::core::ffi::c_int
-    {
-        if words[i as usize] == 0 as ::core::ffi::c_uint {
-            if cur.base == -(1 as ::core::ffi::c_int) {
-                cur.base = i;
-                cur.len = 1 as ::core::ffi::c_int;
-            } else {
-                cur.len += 1;
+    unsafe {
+        let mut tmp: [::core::ffi::c_char; 46] = [0; 46];
+        let mut tp: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut best: C2RustUnnamed_1 = C2RustUnnamed_1 { base: 0, len: 0 };
+        let mut cur: C2RustUnnamed_1 = C2RustUnnamed_1 { base: 0, len: 0 };
+        let mut words: [::core::ffi::c_uint; 8] = [0; 8];
+        let mut i: ::core::ffi::c_int = 0;
+        memset(
+            &raw mut words as *mut ::core::ffi::c_uint as *mut ::core::ffi::c_void,
+            '\0' as i32,
+            ::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as size_t,
+        );
+        i = 0 as ::core::ffi::c_int;
+        while i < ::core::mem::size_of::<in6_addr>() as ::core::ffi::c_int {
+            words[(i / 2 as ::core::ffi::c_int) as usize] |=
+                ((*src.offset(i as isize) as ::core::ffi::c_int)
+                    << ((1 as ::core::ffi::c_int - i % 2 as ::core::ffi::c_int)
+                        << 3 as ::core::ffi::c_int)) as ::core::ffi::c_uint;
+            i += 1;
+        }
+        best.base = -(1 as ::core::ffi::c_int);
+        best.len = 0 as ::core::ffi::c_int;
+        cur.base = -(1 as ::core::ffi::c_int);
+        cur.len = 0 as ::core::ffi::c_int;
+        i = 0 as ::core::ffi::c_int;
+        while i
+            < (::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as usize)
+                .wrapping_div(::core::mem::size_of::<::core::ffi::c_uint>() as usize)
+                as ::core::ffi::c_int
+        {
+            if words[i as usize] == 0 as ::core::ffi::c_uint {
+                if cur.base == -(1 as ::core::ffi::c_int) {
+                    cur.base = i;
+                    cur.len = 1 as ::core::ffi::c_int;
+                } else {
+                    cur.len += 1;
+                }
+            } else if cur.base != -(1 as ::core::ffi::c_int) {
+                if best.base == -(1 as ::core::ffi::c_int) || cur.len > best.len {
+                    best = cur;
+                }
+                cur.base = -(1 as ::core::ffi::c_int);
             }
-        } else if cur.base != -(1 as ::core::ffi::c_int) {
+            i += 1;
+        }
+        if cur.base != -(1 as ::core::ffi::c_int) {
             if best.base == -(1 as ::core::ffi::c_int) || cur.len > best.len {
                 best = cur;
             }
-            cur.base = -(1 as ::core::ffi::c_int);
         }
-        i += 1;
-    }
-    if cur.base != -(1 as ::core::ffi::c_int) {
-        if best.base == -(1 as ::core::ffi::c_int) || cur.len > best.len {
-            best = cur;
+        if best.base != -(1 as ::core::ffi::c_int) && best.len < 2 as ::core::ffi::c_int {
+            best.base = -(1 as ::core::ffi::c_int);
         }
-    }
-    if best.base != -(1 as ::core::ffi::c_int) && best.len < 2 as ::core::ffi::c_int {
-        best.base = -(1 as ::core::ffi::c_int);
-    }
-    tp = &raw mut tmp as *mut ::core::ffi::c_char;
-    i = 0 as ::core::ffi::c_int;
-    while i
-        < (::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as usize)
-            .wrapping_div(::core::mem::size_of::<::core::ffi::c_uint>() as usize)
-            as ::core::ffi::c_int
-    {
-        if best.base != -(1 as ::core::ffi::c_int) && i >= best.base && i < best.base + best.len {
-            if i == best.base {
-                let fresh0 = tp;
-                tp = tp.offset(1);
-                *fresh0 = ':' as i32 as ::core::ffi::c_char;
-            }
-        } else {
-            if i != 0 as ::core::ffi::c_int {
-                let fresh1 = tp;
-                tp = tp.offset(1);
-                *fresh1 = ':' as i32 as ::core::ffi::c_char;
-            }
-            if i == 6 as ::core::ffi::c_int
-                && best.base == 0 as ::core::ffi::c_int
-                && (best.len == 6 as ::core::ffi::c_int
-                    || best.len == 7 as ::core::ffi::c_int
-                        && words[7 as ::core::ffi::c_int as usize] != 0x1 as ::core::ffi::c_uint
-                    || best.len == 5 as ::core::ffi::c_int
-                        && words[5 as ::core::ffi::c_int as usize] == 0xffff as ::core::ffi::c_uint)
-            {
-                let mut err: ::core::ffi::c_int = inet_ntop4(
-                    src.offset(12 as ::core::ffi::c_int as isize),
-                    tp,
-                    (::core::mem::size_of::<[::core::ffi::c_char; 46]>() as size_t)
-                        .wrapping_sub(tp.offset_from(&raw mut tmp as *mut ::core::ffi::c_char)
-                            as ::core::ffi::c_long as size_t),
-                );
-                if err != 0 {
-                    return err;
-                }
-                tp = tp.offset(strlen(tp) as isize);
-                break;
-            } else {
-                tp = tp.offset(snprintf(
-                    tp,
-                    (::core::mem::size_of::<[::core::ffi::c_char; 46]>() as size_t)
-                        .wrapping_sub(tp.offset_from(&raw mut tmp as *mut ::core::ffi::c_char)
-                            as ::core::ffi::c_long as size_t),
-                    b"%x\0" as *const u8 as *const ::core::ffi::c_char,
-                    words[i as usize],
-                ) as isize);
-            }
-        }
-        i += 1;
-    }
-    if best.base != -(1 as ::core::ffi::c_int)
-        && (best.base + best.len) as usize
-            == (::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as usize)
+        tp = &raw mut tmp as *mut ::core::ffi::c_char;
+        i = 0 as ::core::ffi::c_int;
+        while i
+            < (::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as usize)
                 .wrapping_div(::core::mem::size_of::<::core::ffi::c_uint>() as usize)
-    {
-        let fresh2 = tp;
+                as ::core::ffi::c_int
+        {
+            if best.base != -(1 as ::core::ffi::c_int) && i >= best.base && i < best.base + best.len
+            {
+                if i == best.base {
+                    let fresh0 = tp;
+                    tp = tp.offset(1);
+                    *fresh0 = ':' as i32 as ::core::ffi::c_char;
+                }
+            } else {
+                if i != 0 as ::core::ffi::c_int {
+                    let fresh1 = tp;
+                    tp = tp.offset(1);
+                    *fresh1 = ':' as i32 as ::core::ffi::c_char;
+                }
+                if i == 6 as ::core::ffi::c_int
+                    && best.base == 0 as ::core::ffi::c_int
+                    && (best.len == 6 as ::core::ffi::c_int
+                        || best.len == 7 as ::core::ffi::c_int
+                            && words[7 as ::core::ffi::c_int as usize]
+                                != 0x1 as ::core::ffi::c_uint
+                        || best.len == 5 as ::core::ffi::c_int
+                            && words[5 as ::core::ffi::c_int as usize]
+                                == 0xffff as ::core::ffi::c_uint)
+                {
+                    let mut err: ::core::ffi::c_int = inet_ntop4(
+                        src.offset(12 as ::core::ffi::c_int as isize),
+                        tp,
+                        (::core::mem::size_of::<[::core::ffi::c_char; 46]>() as size_t)
+                            .wrapping_sub(tp.offset_from(&raw mut tmp as *mut ::core::ffi::c_char)
+                                as ::core::ffi::c_long
+                                as size_t),
+                    );
+                    if err != 0 {
+                        return err;
+                    }
+                    tp = tp.offset(strlen(tp) as isize);
+                    break;
+                } else {
+                    tp = tp.offset(snprintf(
+                        tp,
+                        (::core::mem::size_of::<[::core::ffi::c_char; 46]>() as size_t)
+                            .wrapping_sub(tp.offset_from(&raw mut tmp as *mut ::core::ffi::c_char)
+                                as ::core::ffi::c_long
+                                as size_t),
+                        b"%x\0" as *const u8 as *const ::core::ffi::c_char,
+                        words[i as usize],
+                    ) as isize);
+                }
+            }
+            i += 1;
+        }
+        if best.base != -(1 as ::core::ffi::c_int)
+            && (best.base + best.len) as usize
+                == (::core::mem::size_of::<[::core::ffi::c_uint; 8]>() as usize)
+                    .wrapping_div(::core::mem::size_of::<::core::ffi::c_uint>() as usize)
+        {
+            let fresh2 = tp;
+            tp = tp.offset(1);
+            *fresh2 = ':' as i32 as ::core::ffi::c_char;
+        }
+        let fresh3 = tp;
         tp = tp.offset(1);
-        *fresh2 = ':' as i32 as ::core::ffi::c_char;
+        *fresh3 = '\0' as i32 as ::core::ffi::c_char;
+        if tp.offset_from(&raw mut tmp as *mut ::core::ffi::c_char) as ::core::ffi::c_long as size_t
+            > size
+        {
+            return UV_ENOSPC as ::core::ffi::c_int;
+        }
+        uv__strscpy(dst, &raw mut tmp as *mut ::core::ffi::c_char, size);
+        return 0 as ::core::ffi::c_int;
     }
-    let fresh3 = tp;
-    tp = tp.offset(1);
-    *fresh3 = '\0' as i32 as ::core::ffi::c_char;
-    if tp.offset_from(&raw mut tmp as *mut ::core::ffi::c_char) as ::core::ffi::c_long as size_t
-        > size
-    {
-        return UV_ENOSPC as ::core::ffi::c_int;
-    }
-    uv__strscpy(dst, &raw mut tmp as *mut ::core::ffi::c_char, size);
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_inet_pton(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_inet_pton(
     mut af: ::core::ffi::c_int,
     mut src: *const ::core::ffi::c_char,
     mut dst: *mut ::core::ffi::c_void,
 ) -> ::core::ffi::c_int {
-    if src.is_null() || dst.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    match af {
-        AF_INET => return inet_pton4(src, dst as *mut ::core::ffi::c_uchar),
-        AF_INET6 => {
-            let mut len: ::core::ffi::c_int = 0;
-            let mut tmp: [::core::ffi::c_char; 46] = [0; 46];
-            let mut s: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-            let mut p: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-            s = src as *mut ::core::ffi::c_char;
-            p = strchr(src, '%' as i32);
-            if !p.is_null() {
-                s = &raw mut tmp as *mut ::core::ffi::c_char;
-                len = p.offset_from(src) as ::core::ffi::c_long as ::core::ffi::c_int;
-                if len > UV__INET6_ADDRSTRLEN - 1 as ::core::ffi::c_int {
-                    return UV_EINVAL as ::core::ffi::c_int;
-                }
-                memcpy(
-                    s as *mut ::core::ffi::c_void,
-                    src as *const ::core::ffi::c_void,
-                    len as size_t,
-                );
-                *s.offset(len as isize) = '\0' as i32 as ::core::ffi::c_char;
-            }
-            return inet_pton6(s, dst as *mut ::core::ffi::c_uchar);
+    unsafe {
+        if src.is_null() || dst.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
         }
-        _ => return UV_EAFNOSUPPORT as ::core::ffi::c_int,
-    };
+        match af {
+            AF_INET => return inet_pton4(src, dst as *mut ::core::ffi::c_uchar),
+            AF_INET6 => {
+                let mut len: ::core::ffi::c_int = 0;
+                let mut tmp: [::core::ffi::c_char; 46] = [0; 46];
+                let mut s: *mut ::core::ffi::c_char =
+                    ::core::ptr::null_mut::<::core::ffi::c_char>();
+                let mut p: *mut ::core::ffi::c_char =
+                    ::core::ptr::null_mut::<::core::ffi::c_char>();
+                s = src as *mut ::core::ffi::c_char;
+                p = strchr(src, '%' as i32);
+                if !p.is_null() {
+                    s = &raw mut tmp as *mut ::core::ffi::c_char;
+                    len = p.offset_from(src) as ::core::ffi::c_long as ::core::ffi::c_int;
+                    if len > UV__INET6_ADDRSTRLEN - 1 as ::core::ffi::c_int {
+                        return UV_EINVAL as ::core::ffi::c_int;
+                    }
+                    memcpy(
+                        s as *mut ::core::ffi::c_void,
+                        src as *const ::core::ffi::c_void,
+                        len as size_t,
+                    );
+                    *s.offset(len as isize) = '\0' as i32 as ::core::ffi::c_char;
+                }
+                return inet_pton6(s, dst as *mut ::core::ffi::c_uchar);
+            }
+            _ => return UV_EAFNOSUPPORT as ::core::ffi::c_int,
+        };
+    }
 }
-unsafe extern "C" fn inet_pton4(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn inet_pton4(
     mut src: *const ::core::ffi::c_char,
     mut dst: *mut ::core::ffi::c_uchar,
 ) -> ::core::ffi::c_int {
-    static mut digits: [::core::ffi::c_char; 11] =
-        unsafe { ::core::mem::transmute::<[u8; 11], [::core::ffi::c_char; 11]>(*b"0123456789\0") };
-    let mut saw_digit: ::core::ffi::c_int = 0;
-    let mut octets: ::core::ffi::c_int = 0;
-    let mut ch: ::core::ffi::c_int = 0;
-    let mut tmp: [::core::ffi::c_uchar; 4] = [0; 4];
-    let mut tp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
-    saw_digit = 0 as ::core::ffi::c_int;
-    octets = 0 as ::core::ffi::c_int;
-    tp = &raw mut tmp as *mut ::core::ffi::c_uchar;
-    *tp = 0 as ::core::ffi::c_uchar;
-    loop {
-        let fresh9 = src;
-        src = src.offset(1);
-        ch = *fresh9 as ::core::ffi::c_int;
-        if !(ch != '\0' as i32) {
-            break;
-        }
-        let mut pch: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
-        pch = strchr(&raw const digits as *const ::core::ffi::c_char, ch);
-        if !pch.is_null() {
-            let mut nw: ::core::ffi::c_uint =
-                ((*tp as ::core::ffi::c_int * 10 as ::core::ffi::c_int) as ::core::ffi::c_long
-                    + pch.offset_from(&raw const digits as *const ::core::ffi::c_char)
-                        as ::core::ffi::c_long) as ::core::ffi::c_uint;
-            if saw_digit != 0 && *tp as ::core::ffi::c_int == 0 as ::core::ffi::c_int {
-                return UV_EINVAL as ::core::ffi::c_int;
+    unsafe {
+        static mut digits: [::core::ffi::c_char; 11] = unsafe {
+            ::core::mem::transmute::<[u8; 11], [::core::ffi::c_char; 11]>(*b"0123456789\0")
+        };
+        let mut saw_digit: ::core::ffi::c_int = 0;
+        let mut octets: ::core::ffi::c_int = 0;
+        let mut ch: ::core::ffi::c_int = 0;
+        let mut tmp: [::core::ffi::c_uchar; 4] = [0; 4];
+        let mut tp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
+        saw_digit = 0 as ::core::ffi::c_int;
+        octets = 0 as ::core::ffi::c_int;
+        tp = &raw mut tmp as *mut ::core::ffi::c_uchar;
+        *tp = 0 as ::core::ffi::c_uchar;
+        loop {
+            let fresh9 = src;
+            src = src.offset(1);
+            ch = *fresh9 as ::core::ffi::c_int;
+            if !(ch != '\0' as i32) {
+                break;
             }
-            if nw > 255 as ::core::ffi::c_uint {
-                return UV_EINVAL as ::core::ffi::c_int;
-            }
-            *tp = nw as ::core::ffi::c_uchar;
-            if saw_digit == 0 {
-                octets += 1;
-                if octets > 4 as ::core::ffi::c_int {
+            let mut pch: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
+            pch = strchr(&raw const digits as *const ::core::ffi::c_char, ch);
+            if !pch.is_null() {
+                let mut nw: ::core::ffi::c_uint =
+                    ((*tp as ::core::ffi::c_int * 10 as ::core::ffi::c_int) as ::core::ffi::c_long
+                        + pch.offset_from(&raw const digits as *const ::core::ffi::c_char)
+                            as ::core::ffi::c_long) as ::core::ffi::c_uint;
+                if saw_digit != 0 && *tp as ::core::ffi::c_int == 0 as ::core::ffi::c_int {
                     return UV_EINVAL as ::core::ffi::c_int;
                 }
-                saw_digit = 1 as ::core::ffi::c_int;
-            }
-        } else if ch == '.' as i32 && saw_digit != 0 {
-            if octets == 4 as ::core::ffi::c_int {
-                return UV_EINVAL as ::core::ffi::c_int;
-            }
-            tp = tp.offset(1);
-            *tp = 0 as ::core::ffi::c_uchar;
-            saw_digit = 0 as ::core::ffi::c_int;
-        } else {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-    }
-    if octets < 4 as ::core::ffi::c_int {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    memcpy(
-        dst as *mut ::core::ffi::c_void,
-        &raw mut tmp as *mut ::core::ffi::c_uchar as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<in_addr>() as size_t,
-    );
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn inet_pton6(
-    mut src: *const ::core::ffi::c_char,
-    mut dst: *mut ::core::ffi::c_uchar,
-) -> ::core::ffi::c_int {
-    static mut xdigits_l: [::core::ffi::c_char; 17] = unsafe {
-        ::core::mem::transmute::<[u8; 17], [::core::ffi::c_char; 17]>(*b"0123456789abcdef\0")
-    };
-    static mut xdigits_u: [::core::ffi::c_char; 17] = unsafe {
-        ::core::mem::transmute::<[u8; 17], [::core::ffi::c_char; 17]>(*b"0123456789ABCDEF\0")
-    };
-    let mut tmp: [::core::ffi::c_uchar; 16] = [0; 16];
-    let mut tp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
-    let mut endp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
-    let mut colonp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
-    let mut xdigits: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
-    let mut curtok: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
-    let mut ch: ::core::ffi::c_int = 0;
-    let mut seen_xdigits: ::core::ffi::c_int = 0;
-    let mut val: ::core::ffi::c_uint = 0;
-    tp = &raw mut tmp as *mut ::core::ffi::c_uchar;
-    memset(
-        tp as *mut ::core::ffi::c_void,
-        '\0' as i32,
-        ::core::mem::size_of::<[::core::ffi::c_uchar; 16]>() as size_t,
-    );
-    endp = tp.offset(::core::mem::size_of::<[::core::ffi::c_uchar; 16]>() as usize as isize);
-    colonp = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
-    if *src as ::core::ffi::c_int == ':' as i32 {
-        src = src.offset(1);
-        if *src as ::core::ffi::c_int != ':' as i32 {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-    }
-    curtok = src;
-    seen_xdigits = 0 as ::core::ffi::c_int;
-    val = 0 as ::core::ffi::c_uint;
-    loop {
-        let fresh4 = src;
-        src = src.offset(1);
-        ch = *fresh4 as ::core::ffi::c_int;
-        if !(ch != '\0' as i32) {
-            break;
-        }
-        let mut pch: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
-        xdigits = &raw const xdigits_l as *const ::core::ffi::c_char;
-        pch = strchr(xdigits, ch);
-        if pch.is_null() {
-            xdigits = &raw const xdigits_u as *const ::core::ffi::c_char;
-            pch = strchr(xdigits, ch);
-        }
-        if !pch.is_null() {
-            val <<= 4 as ::core::ffi::c_int;
-            val = (val as ::core::ffi::c_long | pch.offset_from(xdigits) as ::core::ffi::c_long)
-                as ::core::ffi::c_uint;
-            seen_xdigits += 1;
-            if seen_xdigits > 4 as ::core::ffi::c_int {
-                return UV_EINVAL as ::core::ffi::c_int;
-            }
-        } else if ch == ':' as i32 {
-            curtok = src;
-            if seen_xdigits == 0 {
-                if !colonp.is_null() {
+                if nw > 255 as ::core::ffi::c_uint {
                     return UV_EINVAL as ::core::ffi::c_int;
                 }
-                colonp = tp;
+                *tp = nw as ::core::ffi::c_uchar;
+                if saw_digit == 0 {
+                    octets += 1;
+                    if octets > 4 as ::core::ffi::c_int {
+                        return UV_EINVAL as ::core::ffi::c_int;
+                    }
+                    saw_digit = 1 as ::core::ffi::c_int;
+                }
+            } else if ch == '.' as i32 && saw_digit != 0 {
+                if octets == 4 as ::core::ffi::c_int {
+                    return UV_EINVAL as ::core::ffi::c_int;
+                }
+                tp = tp.offset(1);
+                *tp = 0 as ::core::ffi::c_uchar;
+                saw_digit = 0 as ::core::ffi::c_int;
             } else {
-                if *src as ::core::ffi::c_int == '\0' as i32 {
-                    return UV_EINVAL as ::core::ffi::c_int;
-                }
-                if tp.offset(::core::mem::size_of::<uint16_t>() as usize as isize) > endp {
-                    return UV_EINVAL as ::core::ffi::c_int;
-                }
-                let fresh5 = tp;
-                tp = tp.offset(1);
-                *fresh5 = ((val >> 8 as ::core::ffi::c_int) as ::core::ffi::c_uchar
-                    as ::core::ffi::c_int
-                    & 0xff as ::core::ffi::c_int) as ::core::ffi::c_uchar;
-                let fresh6 = tp;
-                tp = tp.offset(1);
-                *fresh6 = (val as ::core::ffi::c_uchar as ::core::ffi::c_int
-                    & 0xff as ::core::ffi::c_int) as ::core::ffi::c_uchar;
-                seen_xdigits = 0 as ::core::ffi::c_int;
-                val = 0 as ::core::ffi::c_uint;
+                return UV_EINVAL as ::core::ffi::c_int;
             }
-        } else {
-            if ch == '.' as i32
-                && tp.offset(::core::mem::size_of::<in_addr>() as usize as isize) <= endp
-            {
-                let mut err: ::core::ffi::c_int = inet_pton4(curtok, tp);
-                if err == 0 as ::core::ffi::c_int {
-                    tp = tp.offset(::core::mem::size_of::<in_addr>() as usize as isize);
+        }
+        if octets < 4 as ::core::ffi::c_int {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        memcpy(
+            dst as *mut ::core::ffi::c_void,
+            &raw mut tmp as *mut ::core::ffi::c_uchar as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<in_addr>() as size_t,
+        );
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn inet_pton6(
+    mut src: *const ::core::ffi::c_char,
+    mut dst: *mut ::core::ffi::c_uchar,
+) -> ::core::ffi::c_int {
+    unsafe {
+        static mut xdigits_l: [::core::ffi::c_char; 17] = unsafe {
+            ::core::mem::transmute::<[u8; 17], [::core::ffi::c_char; 17]>(*b"0123456789abcdef\0")
+        };
+        static mut xdigits_u: [::core::ffi::c_char; 17] = unsafe {
+            ::core::mem::transmute::<[u8; 17], [::core::ffi::c_char; 17]>(*b"0123456789ABCDEF\0")
+        };
+        let mut tmp: [::core::ffi::c_uchar; 16] = [0; 16];
+        let mut tp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
+        let mut endp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
+        let mut colonp: *mut ::core::ffi::c_uchar = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
+        let mut xdigits: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
+        let mut curtok: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
+        let mut ch: ::core::ffi::c_int = 0;
+        let mut seen_xdigits: ::core::ffi::c_int = 0;
+        let mut val: ::core::ffi::c_uint = 0;
+        tp = &raw mut tmp as *mut ::core::ffi::c_uchar;
+        memset(
+            tp as *mut ::core::ffi::c_void,
+            '\0' as i32,
+            ::core::mem::size_of::<[::core::ffi::c_uchar; 16]>() as size_t,
+        );
+        endp = tp.offset(::core::mem::size_of::<[::core::ffi::c_uchar; 16]>() as usize as isize);
+        colonp = ::core::ptr::null_mut::<::core::ffi::c_uchar>();
+        if *src as ::core::ffi::c_int == ':' as i32 {
+            src = src.offset(1);
+            if *src as ::core::ffi::c_int != ':' as i32 {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+        }
+        curtok = src;
+        seen_xdigits = 0 as ::core::ffi::c_int;
+        val = 0 as ::core::ffi::c_uint;
+        loop {
+            let fresh4 = src;
+            src = src.offset(1);
+            ch = *fresh4 as ::core::ffi::c_int;
+            if !(ch != '\0' as i32) {
+                break;
+            }
+            let mut pch: *const ::core::ffi::c_char = ::core::ptr::null::<::core::ffi::c_char>();
+            xdigits = &raw const xdigits_l as *const ::core::ffi::c_char;
+            pch = strchr(xdigits, ch);
+            if pch.is_null() {
+                xdigits = &raw const xdigits_u as *const ::core::ffi::c_char;
+                pch = strchr(xdigits, ch);
+            }
+            if !pch.is_null() {
+                val <<= 4 as ::core::ffi::c_int;
+                val = (val as ::core::ffi::c_long | pch.offset_from(xdigits) as ::core::ffi::c_long)
+                    as ::core::ffi::c_uint;
+                seen_xdigits += 1;
+                if seen_xdigits > 4 as ::core::ffi::c_int {
+                    return UV_EINVAL as ::core::ffi::c_int;
+                }
+            } else if ch == ':' as i32 {
+                curtok = src;
+                if seen_xdigits == 0 {
+                    if !colonp.is_null() {
+                        return UV_EINVAL as ::core::ffi::c_int;
+                    }
+                    colonp = tp;
+                } else {
+                    if *src as ::core::ffi::c_int == '\0' as i32 {
+                        return UV_EINVAL as ::core::ffi::c_int;
+                    }
+                    if tp.offset(::core::mem::size_of::<uint16_t>() as usize as isize) > endp {
+                        return UV_EINVAL as ::core::ffi::c_int;
+                    }
+                    let fresh5 = tp;
+                    tp = tp.offset(1);
+                    *fresh5 = ((val >> 8 as ::core::ffi::c_int) as ::core::ffi::c_uchar
+                        as ::core::ffi::c_int
+                        & 0xff as ::core::ffi::c_int)
+                        as ::core::ffi::c_uchar;
+                    let fresh6 = tp;
+                    tp = tp.offset(1);
+                    *fresh6 = (val as ::core::ffi::c_uchar as ::core::ffi::c_int
+                        & 0xff as ::core::ffi::c_int)
+                        as ::core::ffi::c_uchar;
                     seen_xdigits = 0 as ::core::ffi::c_int;
-                    break;
+                    val = 0 as ::core::ffi::c_uint;
                 }
+            } else {
+                if ch == '.' as i32
+                    && tp.offset(::core::mem::size_of::<in_addr>() as usize as isize) <= endp
+                {
+                    let mut err: ::core::ffi::c_int = inet_pton4(curtok, tp);
+                    if err == 0 as ::core::ffi::c_int {
+                        tp = tp.offset(::core::mem::size_of::<in_addr>() as usize as isize);
+                        seen_xdigits = 0 as ::core::ffi::c_int;
+                        break;
+                    }
+                }
+                return UV_EINVAL as ::core::ffi::c_int;
             }
+        }
+        if seen_xdigits != 0 {
+            if tp.offset(::core::mem::size_of::<uint16_t>() as usize as isize) > endp {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+            let fresh7 = tp;
+            tp = tp.offset(1);
+            *fresh7 = ((val >> 8 as ::core::ffi::c_int) as ::core::ffi::c_uchar
+                as ::core::ffi::c_int
+                & 0xff as ::core::ffi::c_int) as ::core::ffi::c_uchar;
+            let fresh8 = tp;
+            tp = tp.offset(1);
+            *fresh8 = (val as ::core::ffi::c_uchar as ::core::ffi::c_int
+                & 0xff as ::core::ffi::c_int) as ::core::ffi::c_uchar;
+        }
+        if !colonp.is_null() {
+            let n: ::core::ffi::c_int =
+                tp.offset_from(colonp) as ::core::ffi::c_long as ::core::ffi::c_int;
+            let mut i: ::core::ffi::c_int = 0;
+            if tp == endp {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+            i = 1 as ::core::ffi::c_int;
+            while i <= n {
+                *endp.offset(-i as isize) = *colonp.offset((n - i) as isize);
+                *colonp.offset((n - i) as isize) = 0 as ::core::ffi::c_uchar;
+                i += 1;
+            }
+            tp = endp;
+        }
+        if tp != endp {
             return UV_EINVAL as ::core::ffi::c_int;
         }
+        memcpy(
+            dst as *mut ::core::ffi::c_void,
+            &raw mut tmp as *mut ::core::ffi::c_uchar as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<[::core::ffi::c_uchar; 16]>() as size_t,
+        );
+        return 0 as ::core::ffi::c_int;
     }
-    if seen_xdigits != 0 {
-        if tp.offset(::core::mem::size_of::<uint16_t>() as usize as isize) > endp {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-        let fresh7 = tp;
-        tp = tp.offset(1);
-        *fresh7 = ((val >> 8 as ::core::ffi::c_int) as ::core::ffi::c_uchar as ::core::ffi::c_int
-            & 0xff as ::core::ffi::c_int) as ::core::ffi::c_uchar;
-        let fresh8 = tp;
-        tp = tp.offset(1);
-        *fresh8 = (val as ::core::ffi::c_uchar as ::core::ffi::c_int & 0xff as ::core::ffi::c_int)
-            as ::core::ffi::c_uchar;
-    }
-    if !colonp.is_null() {
-        let n: ::core::ffi::c_int =
-            tp.offset_from(colonp) as ::core::ffi::c_long as ::core::ffi::c_int;
-        let mut i: ::core::ffi::c_int = 0;
-        if tp == endp {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-        i = 1 as ::core::ffi::c_int;
-        while i <= n {
-            *endp.offset(-i as isize) = *colonp.offset((n - i) as isize);
-            *colonp.offset((n - i) as isize) = 0 as ::core::ffi::c_uchar;
-            i += 1;
-        }
-        tp = endp;
-    }
-    if tp != endp {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    memcpy(
-        dst as *mut ::core::ffi::c_void,
-        &raw mut tmp as *mut ::core::ffi::c_uchar as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<[::core::ffi::c_uchar; 16]>() as size_t,
-    );
-    return 0 as ::core::ffi::c_int;
 }

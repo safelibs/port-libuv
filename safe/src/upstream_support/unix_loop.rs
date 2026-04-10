@@ -469,6 +469,7 @@ pub const UV_LOOP_BLOCK_SIGPROF: C2RustUnnamed_7 = 1;
 pub type C2RustUnnamed_7 = ::core::ffi::c_uint;
 pub const UV_LOOP_REAP_CHILDREN: C2RustUnnamed_7 = 2;
 pub const SIGPROF: ::core::ffi::c_int = 27 as ::core::ffi::c_int;
+// SAFETY(ffi_callback): this translated constant materializes a C string literal with the expected ABI type.
 pub const __ASSERT_FUNCTION: [::core::ffi::c_char; 33] = unsafe {
     ::core::mem::transmute::<[u8; 33], [::core::ffi::c_char; 33]>(
         *b"void uv__loop_close(uv_loop_t *)\0",
@@ -476,251 +477,281 @@ pub const __ASSERT_FUNCTION: [::core::ffi::c_char; 33] = unsafe {
 };
 pub const NULL: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
-}
-#[inline]
-unsafe extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
-    return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
-}
-#[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
-}
-unsafe extern "C" fn uv__update_time(mut loop_0: *mut uv_loop_t) {
-    (*loop_0).time = uv__hrtime(UV_CLOCK_FAST).wrapping_div(1000000 as uint64_t);
-}
-unsafe extern "C" fn heap_init(mut heap: *mut heap) {
-    (*heap).min = ::core::ptr::null_mut::<heap_node>();
-    (*heap).nelts = 0 as ::core::ffi::c_uint;
-}
-pub(crate) unsafe fn uv_loop_init(mut loop_0: *mut uv_loop_t) -> ::core::ffi::c_int {
-    let mut lfields: *mut uv__loop_internal_fields_t =
-        ::core::ptr::null_mut::<uv__loop_internal_fields_t>();
-    let mut saved_data: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
-    let mut err: ::core::ffi::c_int = 0;
-    saved_data = (*loop_0).data;
-    memset(
-        loop_0 as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<uv_loop_t>() as size_t,
-    );
-    (*loop_0).data = saved_data;
-    lfields = uv__calloc(
-        1 as size_t,
-        ::core::mem::size_of::<uv__loop_internal_fields_t>() as size_t,
-    ) as *mut uv__loop_internal_fields_t;
-    if lfields.is_null() {
-        return UV_ENOMEM as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
     }
-    (*loop_0).internal_fields = lfields as *mut ::core::ffi::c_void;
-    err = uv_mutex_init(&raw mut (*lfields).loop_metrics.lock);
-    if !(err != 0) {
+}
+#[inline]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
+    unsafe {
+        return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+    }
+}
+#[inline]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__update_time(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        (*loop_0).time = uv__hrtime(UV_CLOCK_FAST).wrapping_div(1000000 as uint64_t);
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn heap_init(mut heap: *mut heap) {
+    unsafe {
+        (*heap).min = ::core::ptr::null_mut::<heap_node>();
+        (*heap).nelts = 0 as ::core::ffi::c_uint;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_init(mut loop_0: *mut uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut lfields: *mut uv__loop_internal_fields_t =
+            ::core::ptr::null_mut::<uv__loop_internal_fields_t>();
+        let mut saved_data: *mut ::core::ffi::c_void =
+            ::core::ptr::null_mut::<::core::ffi::c_void>();
+        let mut err: ::core::ffi::c_int = 0;
+        saved_data = (*loop_0).data;
         memset(
-            &raw mut (*lfields).loop_metrics.metrics as *mut ::core::ffi::c_void,
+            loop_0 as *mut ::core::ffi::c_void,
             0 as ::core::ffi::c_int,
-            ::core::mem::size_of::<uv_metrics_t>() as size_t,
+            ::core::mem::size_of::<uv_loop_t>() as size_t,
         );
-        heap_init(&raw mut (*loop_0).timer_heap as *mut heap);
-        uv__queue_init(&raw mut (*loop_0).wq);
-        uv__queue_init(&raw mut (*loop_0).idle_handles);
-        uv__queue_init(&raw mut (*loop_0).async_handles);
-        uv__queue_init(&raw mut (*loop_0).check_handles);
-        uv__queue_init(&raw mut (*loop_0).prepare_handles);
-        uv__queue_init(&raw mut (*loop_0).handle_queue);
-        (*loop_0).active_handles = 0 as ::core::ffi::c_uint;
-        (*loop_0).active_reqs.count = 0 as ::core::ffi::c_uint;
-        (*loop_0).nfds = 0 as ::core::ffi::c_uint;
-        (*loop_0).watchers = ::core::ptr::null_mut::<*mut uv__io_t>();
-        (*loop_0).nwatchers = 0 as ::core::ffi::c_uint;
-        uv__queue_init(&raw mut (*loop_0).pending_queue);
-        uv__queue_init(&raw mut (*loop_0).watcher_queue);
-        (*loop_0).closing_handles = ::core::ptr::null_mut::<uv_handle_t>();
-        uv__update_time(loop_0);
-        (*loop_0).async_io_watcher.fd = -(1 as ::core::ffi::c_int);
-        (*loop_0).async_wfd = -(1 as ::core::ffi::c_int);
-        (*loop_0).signal_pipefd[0 as ::core::ffi::c_int as usize] = -(1 as ::core::ffi::c_int);
-        (*loop_0).signal_pipefd[1 as ::core::ffi::c_int as usize] = -(1 as ::core::ffi::c_int);
-        (*loop_0).backend_fd = -(1 as ::core::ffi::c_int);
-        (*loop_0).emfile_fd = -(1 as ::core::ffi::c_int);
-        (*loop_0).timer_counter = 0 as uint64_t;
-        (*loop_0).stop_flag = 0 as ::core::ffi::c_uint;
-        err = uv__platform_loop_init(loop_0);
+        (*loop_0).data = saved_data;
+        lfields = uv__calloc(
+            1 as size_t,
+            ::core::mem::size_of::<uv__loop_internal_fields_t>() as size_t,
+        ) as *mut uv__loop_internal_fields_t;
+        if lfields.is_null() {
+            return UV_ENOMEM as ::core::ffi::c_int;
+        }
+        (*loop_0).internal_fields = lfields as *mut ::core::ffi::c_void;
+        err = uv_mutex_init(&raw mut (*lfields).loop_metrics.lock);
         if !(err != 0) {
-            uv__signal_global_once_init();
-            err = uv__process_init(loop_0);
+            memset(
+                &raw mut (*lfields).loop_metrics.metrics as *mut ::core::ffi::c_void,
+                0 as ::core::ffi::c_int,
+                ::core::mem::size_of::<uv_metrics_t>() as size_t,
+            );
+            heap_init(&raw mut (*loop_0).timer_heap as *mut heap);
+            uv__queue_init(&raw mut (*loop_0).wq);
+            uv__queue_init(&raw mut (*loop_0).idle_handles);
+            uv__queue_init(&raw mut (*loop_0).async_handles);
+            uv__queue_init(&raw mut (*loop_0).check_handles);
+            uv__queue_init(&raw mut (*loop_0).prepare_handles);
+            uv__queue_init(&raw mut (*loop_0).handle_queue);
+            (*loop_0).active_handles = 0 as ::core::ffi::c_uint;
+            (*loop_0).active_reqs.count = 0 as ::core::ffi::c_uint;
+            (*loop_0).nfds = 0 as ::core::ffi::c_uint;
+            (*loop_0).watchers = ::core::ptr::null_mut::<*mut uv__io_t>();
+            (*loop_0).nwatchers = 0 as ::core::ffi::c_uint;
+            uv__queue_init(&raw mut (*loop_0).pending_queue);
+            uv__queue_init(&raw mut (*loop_0).watcher_queue);
+            (*loop_0).closing_handles = ::core::ptr::null_mut::<uv_handle_t>();
+            uv__update_time(loop_0);
+            (*loop_0).async_io_watcher.fd = -(1 as ::core::ffi::c_int);
+            (*loop_0).async_wfd = -(1 as ::core::ffi::c_int);
+            (*loop_0).signal_pipefd[0 as ::core::ffi::c_int as usize] = -(1 as ::core::ffi::c_int);
+            (*loop_0).signal_pipefd[1 as ::core::ffi::c_int as usize] = -(1 as ::core::ffi::c_int);
+            (*loop_0).backend_fd = -(1 as ::core::ffi::c_int);
+            (*loop_0).emfile_fd = -(1 as ::core::ffi::c_int);
+            (*loop_0).timer_counter = 0 as uint64_t;
+            (*loop_0).stop_flag = 0 as ::core::ffi::c_uint;
+            err = uv__platform_loop_init(loop_0);
             if !(err != 0) {
-                uv__queue_init(&raw mut (*loop_0).process_handles);
-                err = uv_rwlock_init(&raw mut (*loop_0).cloexec_lock);
+                uv__signal_global_once_init();
+                err = uv__process_init(loop_0);
                 if !(err != 0) {
-                    err = uv_mutex_init(&raw mut (*loop_0).wq_mutex);
+                    uv__queue_init(&raw mut (*loop_0).process_handles);
+                    err = uv_rwlock_init(&raw mut (*loop_0).cloexec_lock);
                     if !(err != 0) {
-                        err = uv_async_init(
-                            loop_0,
-                            &raw mut (*loop_0).wq_async,
-                            Some(uv__work_done as unsafe extern "C" fn(*mut uv_async_t) -> ()),
-                        );
-                        if err != 0 {
-                            uv_mutex_destroy(&raw mut (*loop_0).wq_mutex);
-                        } else {
-                            if !((*loop_0).wq_async.flags
-                                & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-                                == 0 as ::core::ffi::c_uint)
-                            {
-                                (*loop_0).wq_async.flags &=
-                                    !(UV_HANDLE_REF as ::core::ffi::c_int) as ::core::ffi::c_uint;
+                        err = uv_mutex_init(&raw mut (*loop_0).wq_mutex);
+                        if !(err != 0) {
+                            err = uv_async_init(
+                                loop_0,
+                                &raw mut (*loop_0).wq_async,
+                                Some(uv__work_done as unsafe extern "C" fn(*mut uv_async_t) -> ()),
+                            );
+                            if err != 0 {
+                                uv_mutex_destroy(&raw mut (*loop_0).wq_mutex);
+                            } else {
                                 if !((*loop_0).wq_async.flags
-                                    & UV_HANDLE_CLOSING as ::core::ffi::c_int
-                                        as ::core::ffi::c_uint
-                                    != 0 as ::core::ffi::c_uint)
+                                    & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                                    == 0 as ::core::ffi::c_uint)
                                 {
-                                    if (*loop_0).wq_async.flags
-                                        & UV_HANDLE_ACTIVE as ::core::ffi::c_int
+                                    (*loop_0).wq_async.flags &= !(UV_HANDLE_REF
+                                        as ::core::ffi::c_int)
+                                        as ::core::ffi::c_uint;
+                                    if !((*loop_0).wq_async.flags
+                                        & UV_HANDLE_CLOSING as ::core::ffi::c_int
                                             as ::core::ffi::c_uint
-                                        != 0 as ::core::ffi::c_uint
+                                        != 0 as ::core::ffi::c_uint)
                                     {
-                                        (*(*loop_0).wq_async.loop_0).active_handles =
-                                            (*(*loop_0).wq_async.loop_0)
-                                                .active_handles
-                                                .wrapping_sub(1);
+                                        if (*loop_0).wq_async.flags
+                                            & UV_HANDLE_ACTIVE as ::core::ffi::c_int
+                                                as ::core::ffi::c_uint
+                                            != 0 as ::core::ffi::c_uint
+                                        {
+                                            (*(*loop_0).wq_async.loop_0).active_handles =
+                                                (*(*loop_0).wq_async.loop_0)
+                                                    .active_handles
+                                                    .wrapping_sub(1);
+                                        }
                                     }
                                 }
+                                (*loop_0).wq_async.flags |=
+                                    UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint;
+                                return 0 as ::core::ffi::c_int;
                             }
-                            (*loop_0).wq_async.flags |=
-                                UV_HANDLE_INTERNAL as ::core::ffi::c_int as ::core::ffi::c_uint;
-                            return 0 as ::core::ffi::c_int;
                         }
+                        uv_rwlock_destroy(&raw mut (*loop_0).cloexec_lock);
                     }
-                    uv_rwlock_destroy(&raw mut (*loop_0).cloexec_lock);
+                    uv__signal_loop_cleanup(loop_0);
                 }
-                uv__signal_loop_cleanup(loop_0);
+                uv__platform_loop_delete(loop_0);
             }
-            uv__platform_loop_delete(loop_0);
+            uv_mutex_destroy(&raw mut (*lfields).loop_metrics.lock);
         }
-        uv_mutex_destroy(&raw mut (*lfields).loop_metrics.lock);
+        uv__free(lfields as *mut ::core::ffi::c_void);
+        (*loop_0).internal_fields = NULL;
+        uv__free((*loop_0).watchers as *mut ::core::ffi::c_void);
+        (*loop_0).nwatchers = 0 as ::core::ffi::c_uint;
+        return err;
     }
-    uv__free(lfields as *mut ::core::ffi::c_void);
-    (*loop_0).internal_fields = NULL;
-    uv__free((*loop_0).watchers as *mut ::core::ffi::c_void);
-    (*loop_0).nwatchers = 0 as ::core::ffi::c_uint;
-    return err;
 }
-pub(crate) unsafe fn uv_loop_fork(mut loop_0: *mut uv_loop_t) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut i: ::core::ffi::c_uint = 0;
-    let mut w: *mut uv__io_t = ::core::ptr::null_mut::<uv__io_t>();
-    err = uv__io_fork(loop_0);
-    if err != 0 {
-        return err;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_loop_fork(mut loop_0: *mut uv_loop_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut i: ::core::ffi::c_uint = 0;
+        let mut w: *mut uv__io_t = ::core::ptr::null_mut::<uv__io_t>();
+        err = uv__io_fork(loop_0);
+        if err != 0 {
+            return err;
+        }
+        err = uv__async_fork(loop_0);
+        if err != 0 {
+            return err;
+        }
+        err = uv__signal_loop_fork(loop_0);
+        if err != 0 {
+            return err;
+        }
+        i = 0 as ::core::ffi::c_uint;
+        while i < (*loop_0).nwatchers {
+            w = *(*loop_0).watchers.offset(i as isize);
+            if !w.is_null() {
+                if (*w).pevents != 0 as ::core::ffi::c_uint
+                    && uv__queue_empty(&raw mut (*w).watcher_queue) != 0
+                {
+                    (*w).events = 0 as ::core::ffi::c_uint;
+                    uv__queue_insert_tail(
+                        &raw mut (*loop_0).watcher_queue,
+                        &raw mut (*w).watcher_queue,
+                    );
+                }
+            }
+            i = i.wrapping_add(1);
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    err = uv__async_fork(loop_0);
-    if err != 0 {
-        return err;
-    }
-    err = uv__signal_loop_fork(loop_0);
-    if err != 0 {
-        return err;
-    }
-    i = 0 as ::core::ffi::c_uint;
-    while i < (*loop_0).nwatchers {
-        w = *(*loop_0).watchers.offset(i as isize);
-        if !w.is_null() {
-            if (*w).pevents != 0 as ::core::ffi::c_uint
-                && uv__queue_empty(&raw mut (*w).watcher_queue) != 0
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__loop_close(mut loop_0: *mut uv_loop_t) {
+    unsafe {
+        let mut lfields: *mut uv__loop_internal_fields_t =
+            ::core::ptr::null_mut::<uv__loop_internal_fields_t>();
+        uv__signal_loop_cleanup(loop_0);
+        uv__platform_loop_delete(loop_0);
+        uv__async_stop(loop_0);
+        if (*loop_0).emfile_fd != -(1 as ::core::ffi::c_int) {
+            uv__close((*loop_0).emfile_fd);
+            (*loop_0).emfile_fd = -(1 as ::core::ffi::c_int);
+        }
+        if (*loop_0).backend_fd != -(1 as ::core::ffi::c_int) {
+            uv__close((*loop_0).backend_fd);
+            (*loop_0).backend_fd = -(1 as ::core::ffi::c_int);
+        }
+        uv_mutex_lock(&raw mut (*loop_0).wq_mutex);
+        '_c2rust_label: {
+            if uv__queue_empty(&raw mut (*loop_0).wq) != 0
+                && !(b"thread pool work queue not empty!\0" as *const u8
+                    as *const ::core::ffi::c_char)
+                    .is_null()
             {
-                (*w).events = 0 as ::core::ffi::c_uint;
-                uv__queue_insert_tail(
-                    &raw mut (*loop_0).watcher_queue,
-                    &raw mut (*w).watcher_queue,
+            } else {
+                __assert_fail(
+                    b"uv__queue_empty(&loop->wq) && \"thread pool work queue not empty!\"\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/loop.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    183 as ::core::ffi::c_uint,
+                    __ASSERT_FUNCTION.as_ptr(),
                 );
             }
-        }
-        i = i.wrapping_add(1);
+        };
+        '_c2rust_label_0: {
+            if !((*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint) {
+            } else {
+                __assert_fail(
+                    b"!uv__has_active_reqs(loop)\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/loop.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    184 as ::core::ffi::c_uint,
+                    __ASSERT_FUNCTION.as_ptr(),
+                );
+            }
+        };
+        uv_mutex_unlock(&raw mut (*loop_0).wq_mutex);
+        uv_mutex_destroy(&raw mut (*loop_0).wq_mutex);
+        uv_rwlock_destroy(&raw mut (*loop_0).cloexec_lock);
+        uv__free((*loop_0).watchers as *mut ::core::ffi::c_void);
+        (*loop_0).watchers = ::core::ptr::null_mut::<*mut uv__io_t>();
+        (*loop_0).nwatchers = 0 as ::core::ffi::c_uint;
+        lfields = (*loop_0).internal_fields as *mut uv__loop_internal_fields_t;
+        uv_mutex_destroy(&raw mut (*lfields).loop_metrics.lock);
+        uv__free(lfields as *mut ::core::ffi::c_void);
+        (*loop_0).internal_fields = NULL;
     }
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__loop_close(mut loop_0: *mut uv_loop_t) {
-    let mut lfields: *mut uv__loop_internal_fields_t =
-        ::core::ptr::null_mut::<uv__loop_internal_fields_t>();
-    uv__signal_loop_cleanup(loop_0);
-    uv__platform_loop_delete(loop_0);
-    uv__async_stop(loop_0);
-    if (*loop_0).emfile_fd != -(1 as ::core::ffi::c_int) {
-        uv__close((*loop_0).emfile_fd);
-        (*loop_0).emfile_fd = -(1 as ::core::ffi::c_int);
-    }
-    if (*loop_0).backend_fd != -(1 as ::core::ffi::c_int) {
-        uv__close((*loop_0).backend_fd);
-        (*loop_0).backend_fd = -(1 as ::core::ffi::c_int);
-    }
-    uv_mutex_lock(&raw mut (*loop_0).wq_mutex);
-    '_c2rust_label: {
-        if uv__queue_empty(&raw mut (*loop_0).wq) != 0
-            && !(b"thread pool work queue not empty!\0" as *const u8 as *const ::core::ffi::c_char)
-                .is_null()
-        {
-        } else {
-            __assert_fail(
-                b"uv__queue_empty(&loop->wq) && \"thread pool work queue not empty!\"\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/loop.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                183 as ::core::ffi::c_uint,
-                __ASSERT_FUNCTION.as_ptr(),
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if !((*loop_0).active_reqs.count > 0 as ::core::ffi::c_uint) {
-        } else {
-            __assert_fail(
-                b"!uv__has_active_reqs(loop)\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/loop.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                184 as ::core::ffi::c_uint,
-                __ASSERT_FUNCTION.as_ptr(),
-            );
-        }
-    };
-    uv_mutex_unlock(&raw mut (*loop_0).wq_mutex);
-    uv_mutex_destroy(&raw mut (*loop_0).wq_mutex);
-    uv_rwlock_destroy(&raw mut (*loop_0).cloexec_lock);
-    uv__free((*loop_0).watchers as *mut ::core::ffi::c_void);
-    (*loop_0).watchers = ::core::ptr::null_mut::<*mut uv__io_t>();
-    (*loop_0).nwatchers = 0 as ::core::ffi::c_uint;
-    lfields = (*loop_0).internal_fields as *mut uv__loop_internal_fields_t;
-    uv_mutex_destroy(&raw mut (*lfields).loop_metrics.lock);
-    uv__free(lfields as *mut ::core::ffi::c_void);
-    (*loop_0).internal_fields = NULL;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__loop_configure(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__loop_configure(
     mut loop_0: *mut uv_loop_t,
     mut option: uv_loop_option,
     mut arg: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut lfields: *mut uv__loop_internal_fields_t =
-        ::core::ptr::null_mut::<uv__loop_internal_fields_t>();
-    lfields = (*loop_0).internal_fields as *mut uv__loop_internal_fields_t;
-    if option as ::core::ffi::c_uint
-        == UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        (*lfields).flags |= UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint;
+    unsafe {
+        let mut lfields: *mut uv__loop_internal_fields_t =
+            ::core::ptr::null_mut::<uv__loop_internal_fields_t>();
+        lfields = (*loop_0).internal_fields as *mut uv__loop_internal_fields_t;
+        if option as ::core::ffi::c_uint
+            == UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            (*lfields).flags |= UV_METRICS_IDLE_TIME as ::core::ffi::c_int as ::core::ffi::c_uint;
+            return 0 as ::core::ffi::c_int;
+        }
+        if option as ::core::ffi::c_uint
+            != UV_LOOP_BLOCK_SIGNAL as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            return UV_ENOSYS as ::core::ffi::c_int;
+        }
+        if arg != SIGPROF {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        (*loop_0).flags |= UV_LOOP_BLOCK_SIGPROF as ::core::ffi::c_int as ::core::ffi::c_ulong;
         return 0 as ::core::ffi::c_int;
     }
-    if option as ::core::ffi::c_uint
-        != UV_LOOP_BLOCK_SIGNAL as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        return UV_ENOSYS as ::core::ffi::c_int;
-    }
-    if arg != SIGPROF {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    (*loop_0).flags |= UV_LOOP_BLOCK_SIGPROF as ::core::ffi::c_int as ::core::ffi::c_ulong;
-    return 0 as ::core::ffi::c_int;
 }

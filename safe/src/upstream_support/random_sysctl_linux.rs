@@ -113,63 +113,66 @@ pub struct uv__sysctl_args {
 pub const __NR__sysctl: ::core::ffi::c_int = 156 as ::core::ffi::c_int;
 pub const SYS__sysctl: ::core::ffi::c_int = __NR__sysctl;
 #[no_mangle]
-pub unsafe extern "C" fn uv__random_sysctl(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__random_sysctl(
     mut buf: *mut ::core::ffi::c_void,
     mut buflen: size_t,
 ) -> ::core::ffi::c_int {
-    static mut name: [::core::ffi::c_int; 3] = [
-        1 as ::core::ffi::c_int,
-        40 as ::core::ffi::c_int,
-        6 as ::core::ffi::c_int,
-    ];
-    let mut args: uv__sysctl_args = uv__sysctl_args {
-        name: ::core::ptr::null_mut::<::core::ffi::c_int>(),
-        nlen: 0,
-        oldval: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        oldlenp: ::core::ptr::null_mut::<size_t>(),
-        newval: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        newlen: 0,
-        unused: [0; 4],
-    };
-    let mut uuid: [::core::ffi::c_char; 16] = [0; 16];
-    let mut p: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut pe: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut n: size_t = 0;
-    p = buf as *mut ::core::ffi::c_char;
-    pe = p.offset(buflen as isize);
-    while p < pe {
-        memset(
-            &raw mut args as *mut ::core::ffi::c_void,
-            0 as ::core::ffi::c_int,
-            ::core::mem::size_of::<uv__sysctl_args>() as size_t,
-        );
-        args.name = &raw mut name as *mut ::core::ffi::c_int;
-        args.nlen = (::core::mem::size_of::<[::core::ffi::c_int; 3]>() as usize)
-            .wrapping_div(::core::mem::size_of::<::core::ffi::c_int>() as usize)
-            as ::core::ffi::c_int;
-        args.oldval = &raw mut uuid as *mut ::core::ffi::c_char as *mut ::core::ffi::c_void;
-        args.oldlenp = &raw mut n;
-        n = ::core::mem::size_of::<[::core::ffi::c_char; 16]>() as usize as size_t;
-        if syscall(SYS__sysctl as ::core::ffi::c_long, &raw mut args)
-            == -(1 as ::core::ffi::c_int) as ::core::ffi::c_long
-        {
-            return -*__errno_location();
+    unsafe {
+        static mut name: [::core::ffi::c_int; 3] = [
+            1 as ::core::ffi::c_int,
+            40 as ::core::ffi::c_int,
+            6 as ::core::ffi::c_int,
+        ];
+        let mut args: uv__sysctl_args = uv__sysctl_args {
+            name: ::core::ptr::null_mut::<::core::ffi::c_int>(),
+            nlen: 0,
+            oldval: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+            oldlenp: ::core::ptr::null_mut::<size_t>(),
+            newval: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+            newlen: 0,
+            unused: [0; 4],
+        };
+        let mut uuid: [::core::ffi::c_char; 16] = [0; 16];
+        let mut p: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut pe: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut n: size_t = 0;
+        p = buf as *mut ::core::ffi::c_char;
+        pe = p.offset(buflen as isize);
+        while p < pe {
+            memset(
+                &raw mut args as *mut ::core::ffi::c_void,
+                0 as ::core::ffi::c_int,
+                ::core::mem::size_of::<uv__sysctl_args>() as size_t,
+            );
+            args.name = &raw mut name as *mut ::core::ffi::c_int;
+            args.nlen = (::core::mem::size_of::<[::core::ffi::c_int; 3]>() as usize)
+                .wrapping_div(::core::mem::size_of::<::core::ffi::c_int>() as usize)
+                as ::core::ffi::c_int;
+            args.oldval = &raw mut uuid as *mut ::core::ffi::c_char as *mut ::core::ffi::c_void;
+            args.oldlenp = &raw mut n;
+            n = ::core::mem::size_of::<[::core::ffi::c_char; 16]>() as usize as size_t;
+            if syscall(SYS__sysctl as ::core::ffi::c_long, &raw mut args)
+                == -(1 as ::core::ffi::c_int) as ::core::ffi::c_long
+            {
+                return -*__errno_location();
+            }
+            if n != ::core::mem::size_of::<[::core::ffi::c_char; 16]>() as usize {
+                return UV_EIO as ::core::ffi::c_int;
+            }
+            uuid[6 as ::core::ffi::c_int as usize] = uuid[14 as ::core::ffi::c_int as usize];
+            uuid[8 as ::core::ffi::c_int as usize] = uuid[15 as ::core::ffi::c_int as usize];
+            n = pe.offset_from(p) as ::core::ffi::c_long as size_t;
+            if n > 14 as size_t {
+                n = 14 as size_t;
+            }
+            memcpy(
+                p as *mut ::core::ffi::c_void,
+                &raw mut uuid as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
+                n,
+            );
+            p = p.offset(n as isize);
         }
-        if n != ::core::mem::size_of::<[::core::ffi::c_char; 16]>() as usize {
-            return UV_EIO as ::core::ffi::c_int;
-        }
-        uuid[6 as ::core::ffi::c_int as usize] = uuid[14 as ::core::ffi::c_int as usize];
-        uuid[8 as ::core::ffi::c_int as usize] = uuid[15 as ::core::ffi::c_int as usize];
-        n = pe.offset_from(p) as ::core::ffi::c_long as size_t;
-        if n > 14 as size_t {
-            n = 14 as size_t;
-        }
-        memcpy(
-            p as *mut ::core::ffi::c_void,
-            &raw mut uuid as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
-            n,
-        );
-        p = p.offset(n as isize);
+        return 0 as ::core::ffi::c_int;
     }
-    return 0 as ::core::ffi::c_int;
 }

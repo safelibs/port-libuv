@@ -759,302 +759,133 @@ pub const PF_UNIX: ::core::ffi::c_int = PF_LOCAL;
 pub const AF_UNIX: ::core::ffi::c_int = PF_UNIX;
 pub const UV_FS_O_NONBLOCK: ::core::ffi::c_int = O_NONBLOCK;
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 pub const POLLIN: ::core::ffi::c_int = 0x1 as ::core::ffi::c_int;
 pub const POLLOUT: ::core::ffi::c_int = 0x4 as ::core::ffi::c_int;
-unsafe extern "C" fn uv__stat(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__stat(
     mut path: *const ::core::ffi::c_char,
     mut s: *mut stat,
 ) -> ::core::ffi::c_int {
-    let mut rc: ::core::ffi::c_int = 0;
-    rc = stat(path, s);
-    rc >= 0 as ::core::ffi::c_int;
-    return rc;
-}
-unsafe extern "C" fn includes_nul(
-    mut s: *const ::core::ffi::c_char,
-    mut n: size_t,
-) -> ::core::ffi::c_int {
-    if n == 0 as size_t {
-        return 0 as ::core::ffi::c_int;
+    unsafe {
+        let mut rc: ::core::ffi::c_int = 0;
+        rc = stat(path, s);
+        rc >= 0 as ::core::ffi::c_int;
+        return rc;
     }
-    s = s.offset(1);
-    n = n.wrapping_sub(1);
-    return (NULL != memchr(s as *const ::core::ffi::c_void, '\0' as i32, n)) as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_pipe_init(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn includes_nul(mut s: *const ::core::ffi::c_char, mut n: size_t) -> ::core::ffi::c_int {
+    unsafe {
+        if n == 0 as size_t {
+            return 0 as ::core::ffi::c_int;
+        }
+        s = s.offset(1);
+        n = n.wrapping_sub(1);
+        return (NULL != memchr(s as *const ::core::ffi::c_void, '\0' as i32, n))
+            as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_init(
     mut loop_0: *mut uv_loop_t,
     mut handle: *mut uv_pipe_t,
     mut ipc: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    uv__stream_init(loop_0, handle as *mut uv_stream_t, UV_NAMED_PIPE);
-    (*handle).shutdown_req = ::core::ptr::null_mut::<uv_shutdown_t>();
-    (*handle).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
-    (*handle).pipe_fname = ::core::ptr::null::<::core::ffi::c_char>();
-    (*handle).ipc = ipc;
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_pipe_bind(
-    mut handle: *mut uv_pipe_t,
-    mut name: *const ::core::ffi::c_char,
-) -> ::core::ffi::c_int {
-    return uv_pipe_bind2(handle, name, strlen(name), 0 as ::core::ffi::c_uint);
-}
-pub(crate) unsafe fn uv_pipe_bind2(
-    mut handle: *mut uv_pipe_t,
-    mut name: *const ::core::ffi::c_char,
-    mut namelen: size_t,
-    mut flags: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut saddr: sockaddr_un = sockaddr_un {
-        sun_family: 0,
-        sun_path: [0; 108],
-    };
-    let mut pipe_fname: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut sockfd: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    let mut addrlen: socklen_t = 0;
-    pipe_fname = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    if flags & !(UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if name.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if namelen == 0 as size_t {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if includes_nul(name, namelen) != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if flags & UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-    }
-    if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
-        namelen = ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize as size_t;
-    }
-    if (*handle).io_watcher.fd >= 0 as ::core::ffi::c_int {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if (*handle).flags
-        & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-            as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if *name as ::core::ffi::c_int == '\0' as i32 {
-        addrlen = (2 as size_t).wrapping_add(namelen) as socklen_t;
-    } else {
-        pipe_fname = uv__malloc(namelen.wrapping_add(1 as size_t)) as *mut ::core::ffi::c_char;
-        if pipe_fname.is_null() {
-            return UV_ENOMEM as ::core::ffi::c_int;
-        }
-        memcpy(
-            pipe_fname as *mut ::core::ffi::c_void,
-            name as *const ::core::ffi::c_void,
-            namelen,
-        );
-        *pipe_fname.offset(namelen as isize) = '\0' as i32 as ::core::ffi::c_char;
-        addrlen = ::core::mem::size_of::<sockaddr_un>() as socklen_t;
-    }
-    err = uv__socket(
-        AF_UNIX,
-        SOCK_STREAM as ::core::ffi::c_int,
-        0 as ::core::ffi::c_int,
-    );
-    if !(err < 0 as ::core::ffi::c_int) {
-        sockfd = err;
-        memset(
-            &raw mut saddr as *mut ::core::ffi::c_void,
-            0 as ::core::ffi::c_int,
-            ::core::mem::size_of::<sockaddr_un>() as size_t,
-        );
-        memcpy(
-            &raw mut saddr.sun_path as *mut ::core::ffi::c_void,
-            name as *const ::core::ffi::c_void,
-            namelen,
-        );
-        saddr.sun_family = AF_UNIX as sa_family_t;
-        if bind(
-            sockfd,
-            __CONST_SOCKADDR_ARG {
-                __sockaddr__: &raw mut saddr as *mut sockaddr,
-            },
-            addrlen,
-        ) != 0
-        {
-            err = -*__errno_location();
-            if err == UV_ENOENT as ::core::ffi::c_int {
-                err = UV_EACCES as ::core::ffi::c_int;
-            }
-            uv__close(sockfd);
-        } else {
-            (*handle).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
-            (*handle).pipe_fname = pipe_fname;
-            (*handle).io_watcher.fd = sockfd;
-            return 0 as ::core::ffi::c_int;
-        }
-    }
-    uv__free(pipe_fname as *mut ::core::ffi::c_void);
-    return err;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__pipe_listen(
-    mut handle: *mut uv_pipe_t,
-    mut backlog: ::core::ffi::c_int,
-    mut cb: uv_connection_cb,
-) -> ::core::ffi::c_int {
-    if (*handle).io_watcher.fd == -(1 as ::core::ffi::c_int) {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if (*handle).ipc != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if listen((*handle).io_watcher.fd, backlog) != 0 {
-        return -*__errno_location();
-    }
-    (*handle).connection_cb = cb;
-    (*handle).io_watcher.cb = Some(
-        uv__server_io
-            as unsafe extern "C" fn(*mut uv_loop_t, *mut uv__io_t, ::core::ffi::c_uint) -> (),
-    ) as uv__io_cb;
-    uv__io_start(
-        (*handle).loop_0,
-        &raw mut (*handle).io_watcher,
-        POLLIN as ::core::ffi::c_uint,
-    );
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__pipe_close(mut handle: *mut uv_pipe_t) {
-    if !(*handle).pipe_fname.is_null() {
-        unlink((*handle).pipe_fname);
-        uv__free((*handle).pipe_fname as *mut ::core::ffi::c_void);
+    unsafe {
+        uv__stream_init(loop_0, handle as *mut uv_stream_t, UV_NAMED_PIPE);
+        (*handle).shutdown_req = ::core::ptr::null_mut::<uv_shutdown_t>();
+        (*handle).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
         (*handle).pipe_fname = ::core::ptr::null::<::core::ffi::c_char>();
+        (*handle).ipc = ipc;
+        return 0 as ::core::ffi::c_int;
     }
-    uv__stream_close(handle as *mut uv_stream_t);
 }
-pub(crate) unsafe fn uv_pipe_open(
-    mut handle: *mut uv_pipe_t,
-    mut fd: uv_file,
-) -> ::core::ffi::c_int {
-    let mut flags: ::core::ffi::c_int = 0;
-    let mut mode: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    flags = 0 as ::core::ffi::c_int;
-    if uv__fd_exists((*handle).loop_0, fd as ::core::ffi::c_int) != 0 {
-        return UV_EEXIST as ::core::ffi::c_int;
-    }
-    loop {
-        mode = fcntl(fd as ::core::ffi::c_int, F_GETFL);
-        if !(mode == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
-        }
-    }
-    if mode == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
-    }
-    err = uv__nonblock_ioctl(fd as ::core::ffi::c_int, 1 as ::core::ffi::c_int);
-    if err != 0 {
-        return err;
-    }
-    mode &= O_ACCMODE;
-    if mode != O_WRONLY {
-        flags |= UV_HANDLE_READABLE as ::core::ffi::c_int;
-    }
-    if mode != O_RDONLY {
-        flags |= UV_HANDLE_WRITABLE as ::core::ffi::c_int;
-    }
-    return uv__stream_open(handle as *mut uv_stream_t, fd as ::core::ffi::c_int, flags);
-}
-pub(crate) unsafe fn uv_pipe_connect(
-    mut req: *mut uv_connect_t,
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_bind(
     mut handle: *mut uv_pipe_t,
     mut name: *const ::core::ffi::c_char,
-    mut cb: uv_connect_cb,
-) {
-    let mut err: ::core::ffi::c_int = 0;
-    err = uv_pipe_connect2(
-        req,
-        handle,
-        name,
-        strlen(name),
-        0 as ::core::ffi::c_uint,
-        cb,
-    );
-    if err != 0 {
-        (*handle).delayed_error = err;
-        (*handle).connect_req = req;
-        (*req).type_0 = UV_CONNECT;
-        (*(*handle).loop_0).active_reqs.count =
-            (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
-        (*req).handle = handle as *mut uv_stream_t;
-        (*req).cb = cb;
-        uv__queue_init(&raw mut (*req).queue);
-        uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
+) -> ::core::ffi::c_int {
+    unsafe {
+        return uv_pipe_bind2(handle, name, strlen(name), 0 as ::core::ffi::c_uint);
     }
 }
-pub(crate) unsafe fn uv_pipe_connect2(
-    mut req: *mut uv_connect_t,
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_bind2(
     mut handle: *mut uv_pipe_t,
     mut name: *const ::core::ffi::c_char,
     mut namelen: size_t,
     mut flags: ::core::ffi::c_uint,
-    mut cb: uv_connect_cb,
 ) -> ::core::ffi::c_int {
-    let mut current_block: u64;
-    let mut saddr: sockaddr_un = sockaddr_un {
-        sun_family: 0,
-        sun_path: [0; 108],
-    };
-    let mut new_sock: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    let mut addrlen: socklen_t = 0;
-    if flags & !(UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if name.is_null() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if namelen == 0 as size_t {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if includes_nul(name, namelen) != 0 {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if flags & UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
+    unsafe {
+        let mut saddr: sockaddr_un = sockaddr_un {
+            sun_family: 0,
+            sun_path: [0; 108],
+        };
+        let mut pipe_fname: *mut ::core::ffi::c_char =
+            ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut sockfd: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        let mut addrlen: socklen_t = 0;
+        pipe_fname = ::core::ptr::null_mut::<::core::ffi::c_char>();
+        if flags & !(UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
             return UV_EINVAL as ::core::ffi::c_int;
         }
-    }
-    if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
-        namelen = ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize as size_t;
-    }
-    new_sock = ((*handle).io_watcher.fd == -(1 as ::core::ffi::c_int)) as ::core::ffi::c_int;
-    if new_sock != 0 {
+        if name.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if namelen == 0 as size_t {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if includes_nul(name, namelen) != 0 {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if flags & UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+        }
+        if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
+            namelen = ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize as size_t;
+        }
+        if (*handle).io_watcher.fd >= 0 as ::core::ffi::c_int {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*handle).flags
+            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if *name as ::core::ffi::c_int == '\0' as i32 {
+            addrlen = (2 as size_t).wrapping_add(namelen) as socklen_t;
+        } else {
+            pipe_fname = uv__malloc(namelen.wrapping_add(1 as size_t)) as *mut ::core::ffi::c_char;
+            if pipe_fname.is_null() {
+                return UV_ENOMEM as ::core::ffi::c_int;
+            }
+            memcpy(
+                pipe_fname as *mut ::core::ffi::c_void,
+                name as *const ::core::ffi::c_void,
+                namelen,
+            );
+            *pipe_fname.offset(namelen as isize) = '\0' as i32 as ::core::ffi::c_char;
+            addrlen = ::core::mem::size_of::<sockaddr_un>() as socklen_t;
+        }
         err = uv__socket(
             AF_UNIX,
             SOCK_STREAM as ::core::ffi::c_int,
             0 as ::core::ffi::c_int,
         );
-        if err < 0 as ::core::ffi::c_int {
-            current_block = 16426492275326419079;
-        } else {
-            (*handle).io_watcher.fd = err;
-            current_block = 17407779659766490442;
-        }
-    } else {
-        current_block = 17407779659766490442;
-    }
-    match current_block {
-        17407779659766490442 => {
+        if !(err < 0 as ::core::ffi::c_int) {
+            sockfd = err;
             memset(
                 &raw mut saddr as *mut ::core::ffi::c_void,
                 0 as ::core::ffi::c_int,
@@ -1066,399 +897,629 @@ pub(crate) unsafe fn uv_pipe_connect2(
                 namelen,
             );
             saddr.sun_family = AF_UNIX as sa_family_t;
-            if *name as ::core::ffi::c_int == '\0' as i32 {
-                addrlen = (2 as size_t).wrapping_add(namelen) as socklen_t;
-            } else {
-                addrlen = ::core::mem::size_of::<sockaddr_un>() as socklen_t;
-            }
-            loop {
-                r = connect(
-                    (*handle).io_watcher.fd,
-                    __CONST_SOCKADDR_ARG {
-                        __sockaddr__: &raw mut saddr as *mut sockaddr,
-                    },
-                    addrlen,
-                );
-                if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-                    break;
-                }
-            }
-            if r == -(1 as ::core::ffi::c_int) && *__errno_location() != EINPROGRESS {
+            if bind(
+                sockfd,
+                __CONST_SOCKADDR_ARG {
+                    __sockaddr__: &raw mut saddr as *mut sockaddr,
+                },
+                addrlen,
+            ) != 0
+            {
                 err = -*__errno_location();
+                if err == UV_ENOENT as ::core::ffi::c_int {
+                    err = UV_EACCES as ::core::ffi::c_int;
+                }
+                uv__close(sockfd);
             } else {
-                err = 0 as ::core::ffi::c_int;
-                if new_sock != 0 {
-                    err = uv__stream_open(
-                        handle as *mut uv_stream_t,
-                        (*handle).io_watcher.fd,
-                        UV_HANDLE_READABLE as ::core::ffi::c_int
-                            | UV_HANDLE_WRITABLE as ::core::ffi::c_int,
-                    );
-                }
-                if err == 0 as ::core::ffi::c_int {
-                    uv__io_start(
-                        (*handle).loop_0,
-                        &raw mut (*handle).io_watcher,
-                        POLLOUT as ::core::ffi::c_uint,
-                    );
-                }
+                (*handle).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
+                (*handle).pipe_fname = pipe_fname;
+                (*handle).io_watcher.fd = sockfd;
+                return 0 as ::core::ffi::c_int;
             }
         }
-        _ => {}
+        uv__free(pipe_fname as *mut ::core::ffi::c_void);
+        return err;
     }
-    (*handle).delayed_error = err;
-    (*handle).connect_req = req;
-    (*req).type_0 = UV_CONNECT;
-    (*(*handle).loop_0).active_reqs.count = (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
-    (*req).handle = handle as *mut uv_stream_t;
-    (*req).cb = cb;
-    uv__queue_init(&raw mut (*req).queue);
-    if err != 0 {
-        uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
-    }
-    return 0 as ::core::ffi::c_int;
 }
-unsafe extern "C" fn uv__pipe_getsockpeername(
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__pipe_listen(
+    mut handle: *mut uv_pipe_t,
+    mut backlog: ::core::ffi::c_int,
+    mut cb: uv_connection_cb,
+) -> ::core::ffi::c_int {
+    unsafe {
+        if (*handle).io_watcher.fd == -(1 as ::core::ffi::c_int) {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if (*handle).ipc != 0 {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if listen((*handle).io_watcher.fd, backlog) != 0 {
+            return -*__errno_location();
+        }
+        (*handle).connection_cb = cb;
+        (*handle).io_watcher.cb = Some(
+            uv__server_io
+                as unsafe extern "C" fn(*mut uv_loop_t, *mut uv__io_t, ::core::ffi::c_uint) -> (),
+        ) as uv__io_cb;
+        uv__io_start(
+            (*handle).loop_0,
+            &raw mut (*handle).io_watcher,
+            POLLIN as ::core::ffi::c_uint,
+        );
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__pipe_close(mut handle: *mut uv_pipe_t) {
+    unsafe {
+        if !(*handle).pipe_fname.is_null() {
+            unlink((*handle).pipe_fname);
+            uv__free((*handle).pipe_fname as *mut ::core::ffi::c_void);
+            (*handle).pipe_fname = ::core::ptr::null::<::core::ffi::c_char>();
+        }
+        uv__stream_close(handle as *mut uv_stream_t);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_open(mut handle: *mut uv_pipe_t, mut fd: uv_file) -> ::core::ffi::c_int {
+    unsafe {
+        let mut flags: ::core::ffi::c_int = 0;
+        let mut mode: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        flags = 0 as ::core::ffi::c_int;
+        if uv__fd_exists((*handle).loop_0, fd as ::core::ffi::c_int) != 0 {
+            return UV_EEXIST as ::core::ffi::c_int;
+        }
+        loop {
+            mode = fcntl(fd as ::core::ffi::c_int, F_GETFL);
+            if !(mode == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        if mode == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
+        }
+        err = uv__nonblock_ioctl(fd as ::core::ffi::c_int, 1 as ::core::ffi::c_int);
+        if err != 0 {
+            return err;
+        }
+        mode &= O_ACCMODE;
+        if mode != O_WRONLY {
+            flags |= UV_HANDLE_READABLE as ::core::ffi::c_int;
+        }
+        if mode != O_RDONLY {
+            flags |= UV_HANDLE_WRITABLE as ::core::ffi::c_int;
+        }
+        return uv__stream_open(handle as *mut uv_stream_t, fd as ::core::ffi::c_int, flags);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_connect(
+    mut req: *mut uv_connect_t,
+    mut handle: *mut uv_pipe_t,
+    mut name: *const ::core::ffi::c_char,
+    mut cb: uv_connect_cb,
+) {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        err = uv_pipe_connect2(
+            req,
+            handle,
+            name,
+            strlen(name),
+            0 as ::core::ffi::c_uint,
+            cb,
+        );
+        if err != 0 {
+            (*handle).delayed_error = err;
+            (*handle).connect_req = req;
+            (*req).type_0 = UV_CONNECT;
+            (*(*handle).loop_0).active_reqs.count =
+                (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
+            (*req).handle = handle as *mut uv_stream_t;
+            (*req).cb = cb;
+            uv__queue_init(&raw mut (*req).queue);
+            uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
+        }
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_connect2(
+    mut req: *mut uv_connect_t,
+    mut handle: *mut uv_pipe_t,
+    mut name: *const ::core::ffi::c_char,
+    mut namelen: size_t,
+    mut flags: ::core::ffi::c_uint,
+    mut cb: uv_connect_cb,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut current_block: u64;
+        let mut saddr: sockaddr_un = sockaddr_un {
+            sun_family: 0,
+            sun_path: [0; 108],
+        };
+        let mut new_sock: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        let mut addrlen: socklen_t = 0;
+        if flags & !(UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int) as ::core::ffi::c_uint != 0 {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if name.is_null() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if namelen == 0 as size_t {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if includes_nul(name, namelen) != 0 {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if flags & UV_PIPE_NO_TRUNCATE as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+        }
+        if namelen > ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize {
+            namelen = ::core::mem::size_of::<[::core::ffi::c_char; 108]>() as usize as size_t;
+        }
+        new_sock = ((*handle).io_watcher.fd == -(1 as ::core::ffi::c_int)) as ::core::ffi::c_int;
+        if new_sock != 0 {
+            err = uv__socket(
+                AF_UNIX,
+                SOCK_STREAM as ::core::ffi::c_int,
+                0 as ::core::ffi::c_int,
+            );
+            if err < 0 as ::core::ffi::c_int {
+                current_block = 16426492275326419079;
+            } else {
+                (*handle).io_watcher.fd = err;
+                current_block = 17407779659766490442;
+            }
+        } else {
+            current_block = 17407779659766490442;
+        }
+        match current_block {
+            17407779659766490442 => {
+                memset(
+                    &raw mut saddr as *mut ::core::ffi::c_void,
+                    0 as ::core::ffi::c_int,
+                    ::core::mem::size_of::<sockaddr_un>() as size_t,
+                );
+                memcpy(
+                    &raw mut saddr.sun_path as *mut ::core::ffi::c_void,
+                    name as *const ::core::ffi::c_void,
+                    namelen,
+                );
+                saddr.sun_family = AF_UNIX as sa_family_t;
+                if *name as ::core::ffi::c_int == '\0' as i32 {
+                    addrlen = (2 as size_t).wrapping_add(namelen) as socklen_t;
+                } else {
+                    addrlen = ::core::mem::size_of::<sockaddr_un>() as socklen_t;
+                }
+                loop {
+                    r = connect(
+                        (*handle).io_watcher.fd,
+                        __CONST_SOCKADDR_ARG {
+                            __sockaddr__: &raw mut saddr as *mut sockaddr,
+                        },
+                        addrlen,
+                    );
+                    if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                        break;
+                    }
+                }
+                if r == -(1 as ::core::ffi::c_int) && *__errno_location() != EINPROGRESS {
+                    err = -*__errno_location();
+                } else {
+                    err = 0 as ::core::ffi::c_int;
+                    if new_sock != 0 {
+                        err = uv__stream_open(
+                            handle as *mut uv_stream_t,
+                            (*handle).io_watcher.fd,
+                            UV_HANDLE_READABLE as ::core::ffi::c_int
+                                | UV_HANDLE_WRITABLE as ::core::ffi::c_int,
+                        );
+                    }
+                    if err == 0 as ::core::ffi::c_int {
+                        uv__io_start(
+                            (*handle).loop_0,
+                            &raw mut (*handle).io_watcher,
+                            POLLOUT as ::core::ffi::c_uint,
+                        );
+                    }
+                }
+            }
+            _ => {}
+        }
+        (*handle).delayed_error = err;
+        (*handle).connect_req = req;
+        (*req).type_0 = UV_CONNECT;
+        (*(*handle).loop_0).active_reqs.count =
+            (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
+        (*req).handle = handle as *mut uv_stream_t;
+        (*req).cb = cb;
+        uv__queue_init(&raw mut (*req).queue);
+        if err != 0 {
+            uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__pipe_getsockpeername(
     mut handle: *const uv_pipe_t,
     mut func: uv__peersockfunc,
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    let mut sa: sockaddr_un = sockaddr_un {
-        sun_family: 0,
-        sun_path: [0; 108],
-    };
-    let mut addrlen: socklen_t = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    addrlen = ::core::mem::size_of::<sockaddr_un>() as socklen_t;
-    memset(
-        &raw mut sa as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        addrlen as size_t,
-    );
-    err = uv__getsockpeername(
-        handle as *const uv_handle_t,
-        func,
-        &raw mut sa as *mut sockaddr,
-        &raw mut addrlen as *mut ::core::ffi::c_int,
-    );
-    if err < 0 as ::core::ffi::c_int {
-        *size = 0 as size_t;
-        return err;
+    unsafe {
+        let mut sa: sockaddr_un = sockaddr_un {
+            sun_family: 0,
+            sun_path: [0; 108],
+        };
+        let mut addrlen: socklen_t = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        addrlen = ::core::mem::size_of::<sockaddr_un>() as socklen_t;
+        memset(
+            &raw mut sa as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            addrlen as size_t,
+        );
+        err = uv__getsockpeername(
+            handle as *const uv_handle_t,
+            func,
+            &raw mut sa as *mut sockaddr,
+            &raw mut addrlen as *mut ::core::ffi::c_int,
+        );
+        if err < 0 as ::core::ffi::c_int {
+            *size = 0 as size_t;
+            return err;
+        }
+        if sa.sun_path[0 as ::core::ffi::c_int as usize] as ::core::ffi::c_int
+            == 0 as ::core::ffi::c_int
+        {
+            addrlen = (addrlen as ::core::ffi::c_ulong).wrapping_sub(2 as ::core::ffi::c_ulong)
+                as socklen_t as socklen_t;
+        } else {
+            addrlen = strlen(&raw mut sa.sun_path as *mut ::core::ffi::c_char) as socklen_t;
+        }
+        if addrlen as size_t >= *size {
+            *size = addrlen.wrapping_add(1 as socklen_t) as size_t;
+            return UV_ENOBUFS as ::core::ffi::c_int;
+        }
+        memcpy(
+            buffer as *mut ::core::ffi::c_void,
+            &raw mut sa.sun_path as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
+            addrlen as size_t,
+        );
+        *size = addrlen as size_t;
+        if *buffer.offset(0 as ::core::ffi::c_int as isize) as ::core::ffi::c_int != '\0' as i32 {
+            *buffer.offset(addrlen as isize) = '\0' as i32 as ::core::ffi::c_char;
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if sa.sun_path[0 as ::core::ffi::c_int as usize] as ::core::ffi::c_int
-        == 0 as ::core::ffi::c_int
-    {
-        addrlen = (addrlen as ::core::ffi::c_ulong).wrapping_sub(2 as ::core::ffi::c_ulong)
-            as socklen_t as socklen_t;
-    } else {
-        addrlen = strlen(&raw mut sa.sun_path as *mut ::core::ffi::c_char) as socklen_t;
-    }
-    if addrlen as size_t >= *size {
-        *size = addrlen.wrapping_add(1 as socklen_t) as size_t;
-        return UV_ENOBUFS as ::core::ffi::c_int;
-    }
-    memcpy(
-        buffer as *mut ::core::ffi::c_void,
-        &raw mut sa.sun_path as *mut ::core::ffi::c_char as *const ::core::ffi::c_void,
-        addrlen as size_t,
-    );
-    *size = addrlen as size_t;
-    if *buffer.offset(0 as ::core::ffi::c_int as isize) as ::core::ffi::c_int != '\0' as i32 {
-        *buffer.offset(addrlen as isize) = '\0' as i32 as ::core::ffi::c_char;
-    }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_pipe_getsockname(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_getsockname(
     mut handle: *const uv_pipe_t,
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    return uv__pipe_getsockpeername(
-        handle,
-        ::core::mem::transmute::<
-            Option<
-                unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-            >,
-            uv__peersockfunc,
-        >(Some(
-            getsockname
-                as unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-        )),
-        buffer,
-        size,
-    );
+    unsafe {
+        return uv__pipe_getsockpeername(
+            handle,
+            ::core::mem::transmute::<
+                Option<
+                    unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+                >,
+                uv__peersockfunc,
+            >(Some(
+                getsockname
+                    as unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+            )),
+            buffer,
+            size,
+        );
+    }
 }
-pub(crate) unsafe fn uv_pipe_getpeername(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_getpeername(
     mut handle: *const uv_pipe_t,
     mut buffer: *mut ::core::ffi::c_char,
     mut size: *mut size_t,
 ) -> ::core::ffi::c_int {
-    return uv__pipe_getsockpeername(
-        handle,
-        ::core::mem::transmute::<
-            Option<
-                unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-            >,
-            uv__peersockfunc,
-        >(Some(
-            getpeername
-                as unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-        )),
-        buffer,
-        size,
-    );
-}
-pub(crate) unsafe fn uv_pipe_pending_instances(
-    mut handle: *mut uv_pipe_t,
-    mut count: ::core::ffi::c_int,
-) {
-}
-pub(crate) unsafe fn uv_pipe_pending_count(mut handle: *mut uv_pipe_t) -> ::core::ffi::c_int {
-    let mut queued_fds: *mut uv__stream_queued_fds_t =
-        ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
-    if (*handle).ipc == 0 {
-        return 0 as ::core::ffi::c_int;
+    unsafe {
+        return uv__pipe_getsockpeername(
+            handle,
+            ::core::mem::transmute::<
+                Option<
+                    unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+                >,
+                uv__peersockfunc,
+            >(Some(
+                getpeername
+                    as unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+            )),
+            buffer,
+            size,
+        );
     }
-    if (*handle).accepted_fd == -(1 as ::core::ffi::c_int) {
-        return 0 as ::core::ffi::c_int;
-    }
-    if (*handle).queued_fds.is_null() {
-        return 1 as ::core::ffi::c_int;
-    }
-    queued_fds = (*handle).queued_fds as *mut uv__stream_queued_fds_t;
-    return (*queued_fds).offset.wrapping_add(1 as ::core::ffi::c_uint) as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_pipe_pending_type(mut handle: *mut uv_pipe_t) -> uv_handle_type {
-    if (*handle).ipc == 0 {
-        return UV_UNKNOWN_HANDLE;
-    }
-    if (*handle).accepted_fd == -(1 as ::core::ffi::c_int) {
-        return UV_UNKNOWN_HANDLE;
-    } else {
-        return uv_guess_handle((*handle).accepted_fd as uv_file);
-    };
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_pending_instances(mut handle: *mut uv_pipe_t, mut count: ::core::ffi::c_int) {
+    unsafe {}
 }
-pub(crate) unsafe fn uv_pipe_chmod(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_pending_count(mut handle: *mut uv_pipe_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut queued_fds: *mut uv__stream_queued_fds_t =
+            ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
+        if (*handle).ipc == 0 {
+            return 0 as ::core::ffi::c_int;
+        }
+        if (*handle).accepted_fd == -(1 as ::core::ffi::c_int) {
+            return 0 as ::core::ffi::c_int;
+        }
+        if (*handle).queued_fds.is_null() {
+            return 1 as ::core::ffi::c_int;
+        }
+        queued_fds = (*handle).queued_fds as *mut uv__stream_queued_fds_t;
+        return (*queued_fds).offset.wrapping_add(1 as ::core::ffi::c_uint) as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_pending_type(mut handle: *mut uv_pipe_t) -> uv_handle_type {
+    unsafe {
+        if (*handle).ipc == 0 {
+            return UV_UNKNOWN_HANDLE;
+        }
+        if (*handle).accepted_fd == -(1 as ::core::ffi::c_int) {
+            return UV_UNKNOWN_HANDLE;
+        } else {
+            return uv_guess_handle((*handle).accepted_fd as uv_file);
+        };
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe_chmod(
     mut handle: *mut uv_pipe_t,
     mut mode: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut desired_mode: ::core::ffi::c_uint = 0;
-    let mut pipe_stat: stat = stat {
-        st_dev: 0,
-        st_ino: 0,
-        st_nlink: 0,
-        st_mode: 0,
-        st_uid: 0,
-        st_gid: 0,
-        __pad0: 0,
-        st_rdev: 0,
-        st_size: 0,
-        st_blksize: 0,
-        st_blocks: 0,
-        st_atim: timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        },
-        st_mtim: timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        },
-        st_ctim: timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        },
-        __glibc_reserved: [0; 3],
-    };
-    let mut name_buffer: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<::core::ffi::c_char>();
-    let mut name_len: size_t = 0;
-    let mut r: ::core::ffi::c_int = 0;
-    if handle.is_null() || (*handle).io_watcher.fd == -(1 as ::core::ffi::c_int) {
-        return UV_EBADF as ::core::ffi::c_int;
-    }
-    if mode != UV_READABLE as ::core::ffi::c_int
-        && mode != UV_WRITABLE as ::core::ffi::c_int
-        && mode != UV_WRITABLE as ::core::ffi::c_int | UV_READABLE as ::core::ffi::c_int
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    name_len = 0 as size_t;
-    r = uv_pipe_getsockname(
-        handle,
-        ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        &raw mut name_len,
-    );
-    if r != UV_ENOBUFS as ::core::ffi::c_int {
-        return r;
-    }
-    name_buffer = uv__malloc(name_len) as *mut ::core::ffi::c_char;
-    if name_buffer.is_null() {
-        return UV_ENOMEM as ::core::ffi::c_int;
-    }
-    r = uv_pipe_getsockname(handle, name_buffer, &raw mut name_len);
-    if r != 0 as ::core::ffi::c_int {
+    unsafe {
+        let mut desired_mode: ::core::ffi::c_uint = 0;
+        let mut pipe_stat: stat = stat {
+            st_dev: 0,
+            st_ino: 0,
+            st_nlink: 0,
+            st_mode: 0,
+            st_uid: 0,
+            st_gid: 0,
+            __pad0: 0,
+            st_rdev: 0,
+            st_size: 0,
+            st_blksize: 0,
+            st_blocks: 0,
+            st_atim: timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            },
+            st_mtim: timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            },
+            st_ctim: timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            },
+            __glibc_reserved: [0; 3],
+        };
+        let mut name_buffer: *mut ::core::ffi::c_char =
+            ::core::ptr::null_mut::<::core::ffi::c_char>();
+        let mut name_len: size_t = 0;
+        let mut r: ::core::ffi::c_int = 0;
+        if handle.is_null() || (*handle).io_watcher.fd == -(1 as ::core::ffi::c_int) {
+            return UV_EBADF as ::core::ffi::c_int;
+        }
+        if mode != UV_READABLE as ::core::ffi::c_int
+            && mode != UV_WRITABLE as ::core::ffi::c_int
+            && mode != UV_WRITABLE as ::core::ffi::c_int | UV_READABLE as ::core::ffi::c_int
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        name_len = 0 as size_t;
+        r = uv_pipe_getsockname(
+            handle,
+            ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            &raw mut name_len,
+        );
+        if r != UV_ENOBUFS as ::core::ffi::c_int {
+            return r;
+        }
+        name_buffer = uv__malloc(name_len) as *mut ::core::ffi::c_char;
+        if name_buffer.is_null() {
+            return UV_ENOMEM as ::core::ffi::c_int;
+        }
+        r = uv_pipe_getsockname(handle, name_buffer, &raw mut name_len);
+        if r != 0 as ::core::ffi::c_int {
+            uv__free(name_buffer as *mut ::core::ffi::c_void);
+            return r;
+        }
+        if uv__stat(name_buffer, &raw mut pipe_stat) == -(1 as ::core::ffi::c_int) {
+            uv__free(name_buffer as *mut ::core::ffi::c_void);
+            return -*__errno_location();
+        }
+        desired_mode = 0 as ::core::ffi::c_uint;
+        if mode & UV_READABLE as ::core::ffi::c_int != 0 {
+            desired_mode |= (S_IRUSR | S_IRGRP | S_IROTH) as ::core::ffi::c_uint;
+        }
+        if mode & UV_WRITABLE as ::core::ffi::c_int != 0 {
+            desired_mode |= (S_IWUSR | S_IWGRP | S_IWOTH) as ::core::ffi::c_uint;
+        }
+        if pipe_stat.st_mode as ::core::ffi::c_uint & desired_mode == desired_mode {
+            uv__free(name_buffer as *mut ::core::ffi::c_void);
+            return 0 as ::core::ffi::c_int;
+        }
+        pipe_stat.st_mode |= desired_mode;
+        r = chmod(name_buffer, pipe_stat.st_mode);
         uv__free(name_buffer as *mut ::core::ffi::c_void);
-        return r;
+        return if r != -(1 as ::core::ffi::c_int) {
+            0 as ::core::ffi::c_int
+        } else {
+            -*__errno_location()
+        };
     }
-    if uv__stat(name_buffer, &raw mut pipe_stat) == -(1 as ::core::ffi::c_int) {
-        uv__free(name_buffer as *mut ::core::ffi::c_void);
-        return -*__errno_location();
-    }
-    desired_mode = 0 as ::core::ffi::c_uint;
-    if mode & UV_READABLE as ::core::ffi::c_int != 0 {
-        desired_mode |= (S_IRUSR | S_IRGRP | S_IROTH) as ::core::ffi::c_uint;
-    }
-    if mode & UV_WRITABLE as ::core::ffi::c_int != 0 {
-        desired_mode |= (S_IWUSR | S_IWGRP | S_IWOTH) as ::core::ffi::c_uint;
-    }
-    if pipe_stat.st_mode as ::core::ffi::c_uint & desired_mode == desired_mode {
-        uv__free(name_buffer as *mut ::core::ffi::c_void);
-        return 0 as ::core::ffi::c_int;
-    }
-    pipe_stat.st_mode |= desired_mode;
-    r = chmod(name_buffer, pipe_stat.st_mode);
-    uv__free(name_buffer as *mut ::core::ffi::c_void);
-    return if r != -(1 as ::core::ffi::c_int) {
-        0 as ::core::ffi::c_int
-    } else {
-        -*__errno_location()
-    };
 }
-pub(crate) unsafe fn uv_pipe(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_pipe(
     mut fds: *mut uv_os_fd_t,
     mut read_flags: ::core::ffi::c_int,
     mut write_flags: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut current_block: u64;
-    let mut temp: [uv_os_fd_t; 2] = [0; 2];
-    let mut err: ::core::ffi::c_int = 0;
-    let mut flags: ::core::ffi::c_int = O_CLOEXEC;
-    if read_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
-        && write_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
-    {
-        flags |= UV_FS_O_NONBLOCK;
-    }
-    if pipe2(&raw mut temp as *mut ::core::ffi::c_int, flags) != 0 {
-        return -*__errno_location();
-    }
-    if flags & UV_FS_O_NONBLOCK != 0 {
-        *fds.offset(0 as ::core::ffi::c_int as isize) = temp[0 as ::core::ffi::c_int as usize];
-        *fds.offset(1 as ::core::ffi::c_int as isize) = temp[1 as ::core::ffi::c_int as usize];
-        return 0 as ::core::ffi::c_int;
-    }
-    if read_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
-        err = uv__nonblock_ioctl(
-            temp[0 as ::core::ffi::c_int as usize],
-            1 as ::core::ffi::c_int,
-        );
-        if err != 0 {
-            current_block = 6504592942649250576;
+    unsafe {
+        let mut current_block: u64;
+        let mut temp: [uv_os_fd_t; 2] = [0; 2];
+        let mut err: ::core::ffi::c_int = 0;
+        let mut flags: ::core::ffi::c_int = O_CLOEXEC;
+        if read_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
+            && write_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0
+        {
+            flags |= UV_FS_O_NONBLOCK;
+        }
+        if pipe2(&raw mut temp as *mut ::core::ffi::c_int, flags) != 0 {
+            return -*__errno_location();
+        }
+        if flags & UV_FS_O_NONBLOCK != 0 {
+            *fds.offset(0 as ::core::ffi::c_int as isize) = temp[0 as ::core::ffi::c_int as usize];
+            *fds.offset(1 as ::core::ffi::c_int as isize) = temp[1 as ::core::ffi::c_int as usize];
+            return 0 as ::core::ffi::c_int;
+        }
+        if read_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
+            err = uv__nonblock_ioctl(
+                temp[0 as ::core::ffi::c_int as usize],
+                1 as ::core::ffi::c_int,
+            );
+            if err != 0 {
+                current_block = 6504592942649250576;
+            } else {
+                current_block = 5720623009719927633;
+            }
         } else {
             current_block = 5720623009719927633;
         }
-    } else {
-        current_block = 5720623009719927633;
-    }
-    match current_block {
-        5720623009719927633 => {
-            if write_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
-                err = uv__nonblock_ioctl(
-                    temp[1 as ::core::ffi::c_int as usize],
-                    1 as ::core::ffi::c_int,
-                );
-                if err != 0 {
-                    current_block = 6504592942649250576;
+        match current_block {
+            5720623009719927633 => {
+                if write_flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int != 0 {
+                    err = uv__nonblock_ioctl(
+                        temp[1 as ::core::ffi::c_int as usize],
+                        1 as ::core::ffi::c_int,
+                    );
+                    if err != 0 {
+                        current_block = 6504592942649250576;
+                    } else {
+                        current_block = 11650488183268122163;
+                    }
                 } else {
                     current_block = 11650488183268122163;
                 }
-            } else {
-                current_block = 11650488183268122163;
-            }
-            match current_block {
-                6504592942649250576 => {}
-                _ => {
-                    *fds.offset(0 as ::core::ffi::c_int as isize) =
-                        temp[0 as ::core::ffi::c_int as usize];
-                    *fds.offset(1 as ::core::ffi::c_int as isize) =
-                        temp[1 as ::core::ffi::c_int as usize];
-                    return 0 as ::core::ffi::c_int;
+                match current_block {
+                    6504592942649250576 => {}
+                    _ => {
+                        *fds.offset(0 as ::core::ffi::c_int as isize) =
+                            temp[0 as ::core::ffi::c_int as usize];
+                        *fds.offset(1 as ::core::ffi::c_int as isize) =
+                            temp[1 as ::core::ffi::c_int as usize];
+                        return 0 as ::core::ffi::c_int;
+                    }
                 }
             }
+            _ => {}
         }
-        _ => {}
+        uv__close(temp[0 as ::core::ffi::c_int as usize]);
+        uv__close(temp[1 as ::core::ffi::c_int as usize]);
+        return err;
     }
-    uv__close(temp[0 as ::core::ffi::c_int as usize]);
-    uv__close(temp[1 as ::core::ffi::c_int as usize]);
-    return err;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__make_pipe(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__make_pipe(
     mut fds: *mut ::core::ffi::c_int,
     mut flags: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    return uv_pipe(
-        fds as *mut uv_os_fd_t,
-        flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int,
-        flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int,
-    );
+    unsafe {
+        return uv_pipe(
+            fds as *mut uv_os_fd_t,
+            flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int,
+            flags & UV_NONBLOCK_PIPE as ::core::ffi::c_int,
+        );
+    }
 }
 
-pub(crate) unsafe fn bind_pipe(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn bind_pipe(
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     name: *const ::std::os::raw::c_char,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_bind(handle.cast(), name) }
+    unsafe { unsafe { uv_pipe_bind(handle.cast(), name) } }
 }
 
-pub(crate) unsafe fn bind2(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn bind2(
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     name: *const ::std::os::raw::c_char,
     namelen: usize,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_bind2(handle.cast(), name, namelen, flags) }
+    unsafe { unsafe { uv_pipe_bind2(handle.cast(), name, namelen, flags) } }
 }
 
-pub(crate) unsafe fn chmod_pipe(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn chmod_pipe(
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     flags: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_chmod(handle.cast(), flags) }
+    unsafe { unsafe { uv_pipe_chmod(handle.cast(), flags) } }
 }
 
-pub(crate) unsafe fn connect_pipe(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn connect_pipe(
     req: *mut crate::abi::linux_x86_64::uv_connect_t,
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     name: *const ::std::os::raw::c_char,
     cb: crate::abi::linux_x86_64::uv_connect_cb,
 ) {
     unsafe {
-        uv_pipe_connect(
-            req.cast(),
-            handle.cast(),
-            name,
-            std::mem::transmute::<_, uv_connect_cb>(cb),
-        );
+        unsafe {
+            uv_pipe_connect(
+                req.cast(),
+                handle.cast(),
+                name,
+                std::mem::transmute::<_, uv_connect_cb>(cb),
+            );
+        }
     }
 }
 
-pub(crate) unsafe fn connect2(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn connect2(
     req: *mut crate::abi::linux_x86_64::uv_connect_t,
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     name: *const ::std::os::raw::c_char,
@@ -1467,67 +1528,78 @@ pub(crate) unsafe fn connect2(
     cb: crate::abi::linux_x86_64::uv_connect_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_pipe_connect2(
-            req.cast(),
-            handle.cast(),
-            name,
-            namelen,
-            flags,
-            std::mem::transmute::<_, uv_connect_cb>(cb),
-        )
+        unsafe {
+            uv_pipe_connect2(
+                req.cast(),
+                handle.cast(),
+                name,
+                namelen,
+                flags,
+                std::mem::transmute::<_, uv_connect_cb>(cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn getpeername_pipe(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn getpeername_pipe(
     handle: *const crate::abi::linux_x86_64::uv_pipe_t,
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_getpeername(handle.cast(), buffer, size) }
+    unsafe { unsafe { uv_pipe_getpeername(handle.cast(), buffer, size) } }
 }
 
-pub(crate) unsafe fn getsockname_pipe(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn getsockname_pipe(
     handle: *const crate::abi::linux_x86_64::uv_pipe_t,
     buffer: *mut ::std::os::raw::c_char,
     size: *mut usize,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_getsockname(handle.cast(), buffer, size) }
+    unsafe { unsafe { uv_pipe_getsockname(handle.cast(), buffer, size) } }
 }
 
-pub(crate) unsafe fn init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     ipc: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_init(loop_.cast(), handle.cast(), ipc) }
+    unsafe { unsafe { uv_pipe_init(loop_.cast(), handle.cast(), ipc) } }
 }
 
-pub(crate) unsafe fn open(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn open(
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     file: crate::abi::linux_x86_64::uv_file,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_open(handle.cast(), file) }
+    unsafe { unsafe { uv_pipe_open(handle.cast(), file) } }
 }
 
-pub(crate) unsafe fn pending_instances(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn pending_instances(
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
     count: ::std::os::raw::c_int,
 ) {
-    unsafe { uv_pipe_pending_instances(handle.cast(), count) }
+    unsafe { unsafe { uv_pipe_pending_instances(handle.cast(), count) } }
 }
 
-pub(crate) unsafe fn pending_count(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn pending_count(
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_pipe_pending_count(handle.cast()) }
+    unsafe { unsafe { uv_pipe_pending_count(handle.cast()) } }
 }
 
-pub(crate) unsafe fn pending_type(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn pending_type(
     handle: *mut crate::abi::linux_x86_64::uv_pipe_t,
 ) -> crate::abi::linux_x86_64::uv_handle_type {
     unsafe {
-        std::mem::transmute::<uv_handle_type, crate::abi::linux_x86_64::uv_handle_type>(
-            uv_pipe_pending_type(handle.cast()),
-        )
+        unsafe {
+            std::mem::transmute::<uv_handle_type, crate::abi::linux_x86_64::uv_handle_type>(
+                uv_pipe_pending_type(handle.cast()),
+            )
+        }
     }
 }

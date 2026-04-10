@@ -852,196 +852,2102 @@ pub const IPV6_ADD_MEMBERSHIP: ::core::ffi::c_int = IPV6_JOIN_GROUP;
 pub const IPV6_DROP_MEMBERSHIP: ::core::ffi::c_int = IPV6_LEAVE_GROUP;
 pub const INADDR_ANY: in_addr_t = 0 as ::core::ffi::c_int as in_addr_t;
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
-    return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
+    unsafe {
+        return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
-    return (*q).next;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
+    unsafe {
+        return (*q).next;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
-    (*(*q).prev).next = (*q).next;
-    (*(*q).next).prev = (*q).prev;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
+    unsafe {
+        (*(*q).prev).next = (*q).next;
+        (*(*q).next).prev = (*q).prev;
+    }
 }
 pub const UV__UDP_DGRAM_MAXSIZE: ::core::ffi::c_int =
     64 as ::core::ffi::c_int * 1024 as ::core::ffi::c_int;
 pub const POLLIN: ::core::ffi::c_int = 0x1 as ::core::ffi::c_int;
 pub const POLLOUT: ::core::ffi::c_int = 0x4 as ::core::ffi::c_int;
 #[no_mangle]
-pub unsafe extern "C" fn uv__udp_close(mut handle: *mut uv_udp_t) {
-    uv__io_close((*handle).loop_0, &raw mut (*handle).io_watcher);
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_close(mut handle: *mut uv_udp_t) {
+    unsafe {
+        uv__io_close((*handle).loop_0, &raw mut (*handle).io_watcher);
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
         {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            }
         }
-    }
-    if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
-        uv__close((*handle).io_watcher.fd);
-        (*handle).io_watcher.fd = -(1 as ::core::ffi::c_int);
+        if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+            uv__close((*handle).io_watcher.fd);
+            (*handle).io_watcher.fd = -(1 as ::core::ffi::c_int);
+        }
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__udp_finish_close(mut handle: *mut uv_udp_t) {
-    let mut req: *mut uv_udp_send_t = ::core::ptr::null_mut::<uv_udp_send_t>();
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    '_c2rust_label: {
-        if uv__io_active(
-            &raw mut (*handle).io_watcher,
-            (0x1 as ::core::ffi::c_int | 0x4 as ::core::ffi::c_int) as ::core::ffi::c_uint,
-        ) == 0
-        {
-        } else {
-            __assert_fail(
-                b"!uv__io_active(&handle->io_watcher, POLLIN | POLLOUT)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                67 as ::core::ffi::c_uint,
-                b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if (*handle).io_watcher.fd == -(1 as ::core::ffi::c_int) {
-        } else {
-            __assert_fail(
-                b"handle->io_watcher.fd == -1\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                68 as ::core::ffi::c_uint,
-                b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    while uv__queue_empty(&raw mut (*handle).write_queue) == 0 {
-        q = uv__queue_head(&raw mut (*handle).write_queue);
-        uv__queue_remove(q);
-        req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
-            as *mut uv_udp_send_t;
-        (*req).status = UV_ECANCELED as ::core::ffi::c_int as ssize_t;
-        uv__queue_insert_tail(
-            &raw mut (*handle).write_completed_queue,
-            &raw mut (*req).queue,
-        );
-    }
-    uv__udp_run_completed(handle);
-    '_c2rust_label_1: {
-        if (*handle).send_queue_size == 0 as size_t {
-        } else {
-            __assert_fail(
-                b"handle->send_queue_size == 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                81 as ::core::ffi::c_uint,
-                b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_2: {
-        if (*handle).send_queue_count == 0 as size_t {
-        } else {
-            __assert_fail(
-                b"handle->send_queue_count == 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                82 as ::core::ffi::c_uint,
-                b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*handle).recv_cb = None;
-    (*handle).alloc_cb = None;
-}
-unsafe extern "C" fn uv__udp_run_completed(mut handle: *mut uv_udp_t) {
-    let mut req: *mut uv_udp_send_t = ::core::ptr::null_mut::<uv_udp_send_t>();
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    '_c2rust_label: {
-        if (*handle).flags & UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int as ::core::ffi::c_uint
-            == 0
-        {
-        } else {
-            __assert_fail(
-                b"!(handle->flags & UV_HANDLE_UDP_PROCESSING)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                95 as ::core::ffi::c_uint,
-                b"void uv__udp_run_completed(uv_udp_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*handle).flags |= UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int as ::core::ffi::c_uint;
-    while uv__queue_empty(&raw mut (*handle).write_completed_queue) == 0 {
-        q = uv__queue_head(&raw mut (*handle).write_completed_queue);
-        uv__queue_remove(q);
-        req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
-            as *mut uv_udp_send_t;
-        '_c2rust_label_0: {
-            if (*(*handle).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_finish_close(mut handle: *mut uv_udp_t) {
+    unsafe {
+        let mut req: *mut uv_udp_send_t = ::core::ptr::null_mut::<uv_udp_send_t>();
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        '_c2rust_label: {
+            if uv__io_active(
+                &raw mut (*handle).io_watcher,
+                (0x1 as ::core::ffi::c_int | 0x4 as ::core::ffi::c_int) as ::core::ffi::c_uint,
+            ) == 0
+            {
             } else {
                 __assert_fail(
-                    b"uv__has_active_reqs(handle->loop)\0" as *const u8
+                    b"!uv__io_active(&handle->io_watcher, POLLIN | POLLOUT)\0" as *const u8
                         as *const ::core::ffi::c_char,
                     b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
                         as *const ::core::ffi::c_char,
-                    103 as ::core::ffi::c_uint,
+                    67 as ::core::ffi::c_uint,
+                    b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if (*handle).io_watcher.fd == -(1 as ::core::ffi::c_int) {
+            } else {
+                __assert_fail(
+                    b"handle->io_watcher.fd == -1\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    68 as ::core::ffi::c_uint,
+                    b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        while uv__queue_empty(&raw mut (*handle).write_queue) == 0 {
+            q = uv__queue_head(&raw mut (*handle).write_queue);
+            uv__queue_remove(q);
+            req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
+                as *mut uv_udp_send_t;
+            (*req).status = UV_ECANCELED as ::core::ffi::c_int as ssize_t;
+            uv__queue_insert_tail(
+                &raw mut (*handle).write_completed_queue,
+                &raw mut (*req).queue,
+            );
+        }
+        uv__udp_run_completed(handle);
+        '_c2rust_label_1: {
+            if (*handle).send_queue_size == 0 as size_t {
+            } else {
+                __assert_fail(
+                    b"handle->send_queue_size == 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    81 as ::core::ffi::c_uint,
+                    b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_2: {
+            if (*handle).send_queue_count == 0 as size_t {
+            } else {
+                __assert_fail(
+                    b"handle->send_queue_count == 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    82 as ::core::ffi::c_uint,
+                    b"void uv__udp_finish_close(uv_udp_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*handle).recv_cb = None;
+        (*handle).alloc_cb = None;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_run_completed(mut handle: *mut uv_udp_t) {
+    unsafe {
+        let mut req: *mut uv_udp_send_t = ::core::ptr::null_mut::<uv_udp_send_t>();
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        '_c2rust_label: {
+            if (*handle).flags
+                & UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int as ::core::ffi::c_uint
+                == 0
+            {
+            } else {
+                __assert_fail(
+                    b"!(handle->flags & UV_HANDLE_UDP_PROCESSING)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    95 as ::core::ffi::c_uint,
                     b"void uv__udp_run_completed(uv_udp_t *)\0" as *const u8
                         as *const ::core::ffi::c_char,
                 );
             }
         };
-        (*(*handle).loop_0).active_reqs.count =
-            (*(*handle).loop_0).active_reqs.count.wrapping_sub(1);
-        (*handle).send_queue_size = (*handle)
-            .send_queue_size
-            .wrapping_sub(uv__count_bufs((*req).bufs as *const uv_buf_t, (*req).nbufs));
-        (*handle).send_queue_count = (*handle).send_queue_count.wrapping_sub(1);
-        if (*req).bufs != &raw mut (*req).bufsml as *mut uv_buf_t {
-            uv__free((*req).bufs as *mut ::core::ffi::c_void);
+        (*handle).flags |= UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int as ::core::ffi::c_uint;
+        while uv__queue_empty(&raw mut (*handle).write_completed_queue) == 0 {
+            q = uv__queue_head(&raw mut (*handle).write_completed_queue);
+            uv__queue_remove(q);
+            req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
+                as *mut uv_udp_send_t;
+            '_c2rust_label_0: {
+                if (*(*handle).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
+                } else {
+                    __assert_fail(
+                        b"uv__has_active_reqs(handle->loop)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        103 as ::core::ffi::c_uint,
+                        b"void uv__udp_run_completed(uv_udp_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            (*(*handle).loop_0).active_reqs.count =
+                (*(*handle).loop_0).active_reqs.count.wrapping_sub(1);
+            (*handle).send_queue_size = (*handle)
+                .send_queue_size
+                .wrapping_sub(uv__count_bufs((*req).bufs as *const uv_buf_t, (*req).nbufs));
+            (*handle).send_queue_count = (*handle).send_queue_count.wrapping_sub(1);
+            if (*req).bufs != &raw mut (*req).bufsml as *mut uv_buf_t {
+                uv__free((*req).bufs as *mut ::core::ffi::c_void);
+            }
+            (*req).bufs = ::core::ptr::null_mut::<uv_buf_t>();
+            if (*req).send_cb.is_none() {
+                continue;
+            }
+            if (*req).status >= 0 as ssize_t {
+                (*req).send_cb.expect("non-null function pointer")(req, 0 as ::core::ffi::c_int);
+            } else {
+                (*req).send_cb.expect("non-null function pointer")(
+                    req,
+                    (*req).status as ::core::ffi::c_int,
+                );
+            }
         }
-        (*req).bufs = ::core::ptr::null_mut::<uv_buf_t>();
-        if (*req).send_cb.is_none() {
-            continue;
-        }
-        if (*req).status >= 0 as ssize_t {
-            (*req).send_cb.expect("non-null function pointer")(req, 0 as ::core::ffi::c_int);
-        } else {
-            (*req).send_cb.expect("non-null function pointer")(
-                req,
-                (*req).status as ::core::ffi::c_int,
+        if uv__queue_empty(&raw mut (*handle).write_queue) != 0 {
+            uv__io_stop(
+                (*handle).loop_0,
+                &raw mut (*handle).io_watcher,
+                POLLOUT as ::core::ffi::c_uint,
             );
+            if uv__io_active(&raw mut (*handle).io_watcher, POLLIN as ::core::ffi::c_uint) == 0 {
+                if !((*handle).flags
+                    & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                    == 0 as ::core::ffi::c_uint)
+                {
+                    (*handle).flags &=
+                        !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+                    if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                        != 0 as ::core::ffi::c_uint
+                    {
+                        (*(*handle).loop_0).active_handles =
+                            (*(*handle).loop_0).active_handles.wrapping_sub(1);
+                    }
+                }
+            }
+        }
+        (*handle).flags &= !(UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int) as ::core::ffi::c_uint;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_io(
+    mut loop_0: *mut uv_loop_t,
+    mut w: *mut uv__io_t,
+    mut revents: ::core::ffi::c_uint,
+) {
+    unsafe {
+        let mut handle: *mut uv_udp_t = ::core::ptr::null_mut::<uv_udp_t>();
+        handle = (w as *mut ::core::ffi::c_char).offset(-(128 as ::core::ffi::c_ulong as isize))
+            as *mut uv_udp_t;
+        '_c2rust_label: {
+            if (*handle).type_0 as ::core::ffi::c_uint
+                == UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"handle->type == UV_UDP\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    139 as ::core::ffi::c_uint,
+                    b"void uv__udp_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if revents & POLLIN as ::core::ffi::c_uint != 0 {
+            uv__udp_recvmsg(handle);
+        }
+        if revents & POLLOUT as ::core::ffi::c_uint != 0 {
+            uv__udp_sendmsg(handle);
+            uv__udp_run_completed(handle);
         }
     }
-    if uv__queue_empty(&raw mut (*handle).write_queue) != 0 {
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_recvmmsg(
+    mut handle: *mut uv_udp_t,
+    mut buf: *mut uv_buf_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut peers: [sockaddr_in6; 20] = [sockaddr_in6 {
+            sin6_family: 0,
+            sin6_port: 0,
+            sin6_flowinfo: 0,
+            sin6_addr: in6_addr {
+                __in6_u: C2RustUnnamed_0 {
+                    __u6_addr8: [0; 16],
+                },
+            },
+            sin6_scope_id: 0,
+        }; 20];
+        let mut iov: [iovec; 20] = [iovec {
+            iov_base: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+            iov_len: 0,
+        }; 20];
+        let mut msgs: [mmsghdr; 20] = [mmsghdr {
+            msg_hdr: msghdr {
+                msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+                msg_namelen: 0,
+                msg_iov: ::core::ptr::null_mut::<iovec>(),
+                msg_iovlen: 0,
+                msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+                msg_controllen: 0,
+                msg_flags: 0,
+            },
+            msg_len: 0,
+        }; 20];
+        let mut nread: ssize_t = 0;
+        let mut chunk_buf: uv_buf_t = uv_buf_t {
+            base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            len: 0,
+        };
+        let mut chunks: size_t = 0;
+        let mut flags: ::core::ffi::c_int = 0;
+        let mut k: size_t = 0;
+        chunks = (*buf).len.wrapping_div(UV__UDP_DGRAM_MAXSIZE as size_t);
+        if chunks
+            > (::core::mem::size_of::<[iovec; 20]>() as usize)
+                .wrapping_div(::core::mem::size_of::<iovec>() as usize)
+        {
+            chunks = (::core::mem::size_of::<[iovec; 20]>() as usize)
+                .wrapping_div(::core::mem::size_of::<iovec>() as usize)
+                as size_t;
+        }
+        k = 0 as size_t;
+        while k < chunks {
+            iov[k as usize].iov_base = (*buf)
+                .base
+                .offset(k.wrapping_mul(UV__UDP_DGRAM_MAXSIZE as size_t) as isize)
+                as *mut ::core::ffi::c_void;
+            iov[k as usize].iov_len = UV__UDP_DGRAM_MAXSIZE as size_t;
+            memset(
+                &raw mut (*(&raw mut msgs as *mut mmsghdr).offset(k as isize)).msg_hdr
+                    as *mut ::core::ffi::c_void,
+                0 as ::core::ffi::c_int,
+                ::core::mem::size_of::<msghdr>() as size_t,
+            );
+            msgs[k as usize].msg_hdr.msg_iov = (&raw mut iov as *mut iovec).offset(k as isize);
+            msgs[k as usize].msg_hdr.msg_iovlen = 1 as size_t;
+            msgs[k as usize].msg_hdr.msg_name = (&raw mut peers as *mut sockaddr_in6)
+                .offset(k as isize)
+                as *mut ::core::ffi::c_void;
+            msgs[k as usize].msg_hdr.msg_namelen =
+                ::core::mem::size_of::<sockaddr_in6>() as socklen_t;
+            msgs[k as usize].msg_hdr.msg_control = NULL;
+            msgs[k as usize].msg_hdr.msg_controllen = 0 as size_t;
+            msgs[k as usize].msg_hdr.msg_flags = 0 as ::core::ffi::c_int;
+            k = k.wrapping_add(1);
+        }
+        loop {
+            nread = recvmmsg(
+                (*handle).io_watcher.fd,
+                &raw mut msgs as *mut mmsghdr,
+                chunks as ::core::ffi::c_uint,
+                0 as ::core::ffi::c_int,
+                ::core::ptr::null_mut::<timespec>(),
+            ) as ssize_t;
+            if !(nread == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        if nread < 1 as ssize_t {
+            if nread == 0 as ssize_t
+                || *__errno_location() == EAGAIN
+                || *__errno_location() == EWOULDBLOCK
+            {
+                (*handle).recv_cb.expect("non-null function pointer")(
+                    handle,
+                    0 as ssize_t,
+                    buf,
+                    ::core::ptr::null::<sockaddr>(),
+                    0 as ::core::ffi::c_uint,
+                );
+            } else {
+                (*handle).recv_cb.expect("non-null function pointer")(
+                    handle,
+                    -*__errno_location() as ssize_t,
+                    buf,
+                    ::core::ptr::null::<sockaddr>(),
+                    0 as ::core::ffi::c_uint,
+                );
+            }
+        } else {
+            k = 0 as size_t;
+            while k < nread as size_t && (*handle).recv_cb.is_some() {
+                flags = UV_UDP_MMSG_CHUNK as ::core::ffi::c_int;
+                if msgs[k as usize].msg_hdr.msg_flags & MSG_TRUNC as ::core::ffi::c_int != 0 {
+                    flags |= UV_UDP_PARTIAL as ::core::ffi::c_int;
+                }
+                chunk_buf = uv_buf_init(
+                    iov[k as usize].iov_base as *mut ::core::ffi::c_char,
+                    iov[k as usize].iov_len as ::core::ffi::c_uint,
+                );
+                (*handle).recv_cb.expect("non-null function pointer")(
+                    handle,
+                    msgs[k as usize].msg_len as ssize_t,
+                    &raw mut chunk_buf,
+                    msgs[k as usize].msg_hdr.msg_name as *const sockaddr,
+                    flags as ::core::ffi::c_uint,
+                );
+                k = k.wrapping_add(1);
+            }
+            if (*handle).recv_cb.is_some() {
+                (*handle).recv_cb.expect("non-null function pointer")(
+                    handle,
+                    0 as ssize_t,
+                    buf,
+                    ::core::ptr::null::<sockaddr>(),
+                    UV_UDP_MMSG_FREE as ::core::ffi::c_int as ::core::ffi::c_uint,
+                );
+            }
+        }
+        return nread as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_recvmsg(mut handle: *mut uv_udp_t) {
+    unsafe {
+        let mut peer: sockaddr_storage = sockaddr_storage {
+            ss_family: 0,
+            __ss_padding: [0; 118],
+            __ss_align: 0,
+        };
+        let mut h: msghdr = msghdr {
+            msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+            msg_namelen: 0,
+            msg_iov: ::core::ptr::null_mut::<iovec>(),
+            msg_iovlen: 0,
+            msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+            msg_controllen: 0,
+            msg_flags: 0,
+        };
+        let mut nread: ssize_t = 0;
+        let mut buf: uv_buf_t = uv_buf_t {
+            base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            len: 0,
+        };
+        let mut flags: ::core::ffi::c_int = 0;
+        let mut count: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if (*handle).recv_cb.is_some() {
+            } else {
+                __assert_fail(
+                    b"handle->recv_cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    220 as ::core::ffi::c_uint,
+                    b"void uv__udp_recvmsg(uv_udp_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if (*handle).alloc_cb.is_some() {
+            } else {
+                __assert_fail(
+                    b"handle->alloc_cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    221 as ::core::ffi::c_uint,
+                    b"void uv__udp_recvmsg(uv_udp_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        count = 32 as ::core::ffi::c_int;
+        loop {
+            buf = uv_buf_init(
+                ::core::ptr::null_mut::<::core::ffi::c_char>(),
+                0 as ::core::ffi::c_uint,
+            );
+            (*handle).alloc_cb.expect("non-null function pointer")(
+                handle as *mut uv_handle_t,
+                UV__UDP_DGRAM_MAXSIZE as size_t,
+                &raw mut buf,
+            );
+            if buf.base.is_null() || buf.len == 0 as size_t {
+                (*handle).recv_cb.expect("non-null function pointer")(
+                    handle,
+                    UV_ENOBUFS as ::core::ffi::c_int as ssize_t,
+                    &raw mut buf,
+                    ::core::ptr::null::<sockaddr>(),
+                    0 as ::core::ffi::c_uint,
+                );
+                return;
+            }
+            '_c2rust_label_1: {
+                if !buf.base.is_null() {
+                } else {
+                    __assert_fail(
+                        b"buf.base != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        235 as ::core::ffi::c_uint,
+                        b"void uv__udp_recvmsg(uv_udp_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            if uv_udp_using_recvmmsg(handle) != 0 {
+                nread = uv__udp_recvmmsg(handle, &raw mut buf) as ssize_t;
+                if nread > 0 as ssize_t {
+                    count = (count as ssize_t - nread) as ::core::ffi::c_int;
+                }
+            } else {
+                memset(
+                    &raw mut h as *mut ::core::ffi::c_void,
+                    0 as ::core::ffi::c_int,
+                    ::core::mem::size_of::<msghdr>() as size_t,
+                );
+                memset(
+                    &raw mut peer as *mut ::core::ffi::c_void,
+                    0 as ::core::ffi::c_int,
+                    ::core::mem::size_of::<sockaddr_storage>() as size_t,
+                );
+                h.msg_name = &raw mut peer as *mut ::core::ffi::c_void;
+                h.msg_namelen = ::core::mem::size_of::<sockaddr_storage>() as socklen_t;
+                h.msg_iov = &raw mut buf as *mut ::core::ffi::c_void as *mut iovec;
+                h.msg_iovlen = 1 as size_t;
+                loop {
+                    nread = recvmsg((*handle).io_watcher.fd, &raw mut h, 0 as ::core::ffi::c_int);
+                    if !(nread == -(1 as ::core::ffi::c_int) as ssize_t
+                        && *__errno_location() == EINTR)
+                    {
+                        break;
+                    }
+                }
+                if nread == -(1 as ::core::ffi::c_int) as ssize_t {
+                    if *__errno_location() == EAGAIN || *__errno_location() == EWOULDBLOCK {
+                        (*handle).recv_cb.expect("non-null function pointer")(
+                            handle,
+                            0 as ssize_t,
+                            &raw mut buf,
+                            ::core::ptr::null::<sockaddr>(),
+                            0 as ::core::ffi::c_uint,
+                        );
+                    } else {
+                        (*handle).recv_cb.expect("non-null function pointer")(
+                            handle,
+                            -*__errno_location() as ssize_t,
+                            &raw mut buf,
+                            ::core::ptr::null::<sockaddr>(),
+                            0 as ::core::ffi::c_uint,
+                        );
+                    }
+                } else {
+                    flags = 0 as ::core::ffi::c_int;
+                    if h.msg_flags & MSG_TRUNC as ::core::ffi::c_int != 0 {
+                        flags |= UV_UDP_PARTIAL as ::core::ffi::c_int;
+                    }
+                    (*handle).recv_cb.expect("non-null function pointer")(
+                        handle,
+                        nread,
+                        &raw mut buf,
+                        &raw mut peer as *const sockaddr,
+                        flags as ::core::ffi::c_uint,
+                    );
+                }
+                count -= 1;
+            }
+            if !(nread != -(1 as ::core::ffi::c_int) as ssize_t
+                && count > 0 as ::core::ffi::c_int
+                && (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int)
+                && (*handle).recv_cb.is_some())
+            {
+                break;
+            }
+        }
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_sendmsg(mut handle: *mut uv_udp_t) {
+    unsafe {
+        let mut req: *mut uv_udp_send_t = ::core::ptr::null_mut::<uv_udp_send_t>();
+        let mut h: [mmsghdr; 20] = [mmsghdr {
+            msg_hdr: msghdr {
+                msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+                msg_namelen: 0,
+                msg_iov: ::core::ptr::null_mut::<iovec>(),
+                msg_iovlen: 0,
+                msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+                msg_controllen: 0,
+                msg_flags: 0,
+            },
+            msg_len: 0,
+        }; 20];
+        let mut p: *mut mmsghdr = ::core::ptr::null_mut::<mmsghdr>();
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut npkts: ssize_t = 0;
+        let mut pkts: size_t = 0;
+        let mut i: size_t = 0;
+        if uv__queue_empty(&raw mut (*handle).write_queue) != 0 {
+            return;
+        }
+        loop {
+            pkts = 0 as size_t;
+            q = uv__queue_head(&raw mut (*handle).write_queue);
+            while pkts
+                < (::core::mem::size_of::<[mmsghdr; 20]>() as usize)
+                    .wrapping_div(::core::mem::size_of::<mmsghdr>() as usize)
+                && q != &raw mut (*handle).write_queue
+            {
+                '_c2rust_label: {
+                    if !q.is_null() {
+                    } else {
+                        __assert_fail(
+                            b"q != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            295 as ::core::ffi::c_uint,
+                            b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
+                    as *mut uv_udp_send_t;
+                '_c2rust_label_0: {
+                    if !req.is_null() {
+                    } else {
+                        __assert_fail(
+                            b"req != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            297 as ::core::ffi::c_uint,
+                            b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                p = (&raw mut h as *mut mmsghdr).offset(pkts as isize) as *mut mmsghdr;
+                memset(
+                    p as *mut ::core::ffi::c_void,
+                    0 as ::core::ffi::c_int,
+                    ::core::mem::size_of::<mmsghdr>() as size_t,
+                );
+                if (*req).addr.ss_family as ::core::ffi::c_int == AF_UNSPEC {
+                    (*p).msg_hdr.msg_name = NULL;
+                    (*p).msg_hdr.msg_namelen = 0 as socklen_t;
+                } else {
+                    (*p).msg_hdr.msg_name = &raw mut (*req).addr as *mut ::core::ffi::c_void;
+                    if (*req).addr.ss_family as ::core::ffi::c_int == AF_INET6 {
+                        (*p).msg_hdr.msg_namelen =
+                            ::core::mem::size_of::<sockaddr_in6>() as socklen_t;
+                    } else if (*req).addr.ss_family as ::core::ffi::c_int == AF_INET {
+                        (*p).msg_hdr.msg_namelen =
+                            ::core::mem::size_of::<sockaddr_in>() as socklen_t;
+                    } else if (*req).addr.ss_family as ::core::ffi::c_int == AF_UNIX {
+                        (*p).msg_hdr.msg_namelen =
+                            ::core::mem::size_of::<sockaddr_un>() as socklen_t;
+                    } else {
+                        '_c2rust_label_1: {
+                            if 0 as ::core::ffi::c_int != 0
+                                && !(b"unsupported address family\0" as *const u8
+                                    as *const ::core::ffi::c_char)
+                                    .is_null()
+                            {
+                            } else {
+                                __assert_fail(
+                                    b"0 && \"unsupported address family\"\0" as *const u8
+                                        as *const ::core::ffi::c_char,
+                                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
+                                        as *const u8
+                                        as *const ::core::ffi::c_char,
+                                    313 as ::core::ffi::c_uint,
+                                    b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
+                                        as *const ::core::ffi::c_char,
+                                );
+                            }
+                        };
+                        abort();
+                    }
+                }
+                h[pkts as usize].msg_hdr.msg_iov = (*req).bufs as *mut iovec;
+                h[pkts as usize].msg_hdr.msg_iovlen = (*req).nbufs as size_t;
+                pkts = pkts.wrapping_add(1);
+                q = uv__queue_head(q);
+            }
+            loop {
+                npkts = sendmmsg(
+                    (*handle).io_watcher.fd,
+                    &raw mut h as *mut mmsghdr,
+                    pkts as ::core::ffi::c_uint,
+                    0 as ::core::ffi::c_int,
+                ) as ssize_t;
+                if !(npkts == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR)
+                {
+                    break;
+                }
+            }
+            if npkts < 1 as ssize_t {
+                if *__errno_location() == EAGAIN
+                    || *__errno_location() == EWOULDBLOCK
+                    || *__errno_location() == ENOBUFS
+                {
+                    return;
+                }
+                i = 0 as size_t;
+                q = uv__queue_head(&raw mut (*handle).write_queue);
+                while i < pkts && q != &raw mut (*handle).write_queue {
+                    '_c2rust_label_2: {
+                        if !q.is_null() {
+                        } else {
+                            __assert_fail(
+                                b"q != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
+                                    as *const u8
+                                    as *const ::core::ffi::c_char,
+                                331 as ::core::ffi::c_uint,
+                                b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
+                                    as *const ::core::ffi::c_char,
+                            );
+                        }
+                    };
+                    req = (q as *mut ::core::ffi::c_char)
+                        .offset(-(80 as ::core::ffi::c_ulong as isize))
+                        as *mut uv_udp_send_t;
+                    '_c2rust_label_3: {
+                        if !req.is_null() {
+                        } else {
+                            __assert_fail(
+                                b"req != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
+                                    as *const u8
+                                    as *const ::core::ffi::c_char,
+                                333 as ::core::ffi::c_uint,
+                                b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
+                                    as *const ::core::ffi::c_char,
+                            );
+                        }
+                    };
+                    (*req).status = -*__errno_location() as ssize_t;
+                    uv__queue_remove(&raw mut (*req).queue);
+                    uv__queue_insert_tail(
+                        &raw mut (*handle).write_completed_queue,
+                        &raw mut (*req).queue,
+                    );
+                    i = i.wrapping_add(1);
+                    q = uv__queue_head(&raw mut (*handle).write_queue);
+                }
+                uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
+                return;
+            }
+            i = 0 as size_t;
+            q = uv__queue_head(&raw mut (*handle).write_queue);
+            while i < npkts as size_t && q != &raw mut (*handle).write_queue {
+                '_c2rust_label_4: {
+                    if !q.is_null() {
+                    } else {
+                        __assert_fail(
+                            b"q != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            349 as ::core::ffi::c_uint,
+                            b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
+                    as *mut uv_udp_send_t;
+                '_c2rust_label_5: {
+                    if !req.is_null() {
+                    } else {
+                        __assert_fail(
+                            b"req != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            351 as ::core::ffi::c_uint,
+                            b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                (*req).status =
+                    (*(*req).bufs.offset(0 as ::core::ffi::c_int as isize)).len as ssize_t;
+                uv__queue_remove(&raw mut (*req).queue);
+                uv__queue_insert_tail(
+                    &raw mut (*handle).write_completed_queue,
+                    &raw mut (*req).queue,
+                );
+                i = i.wrapping_add(1);
+                q = uv__queue_head(&raw mut (*handle).write_queue);
+            }
+            if !(uv__queue_empty(&raw mut (*handle).write_queue) == 0) {
+                break;
+            }
+        }
+        uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__set_reuse(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
+    unsafe {
+        let mut yes: ::core::ffi::c_int = 0;
+        yes = 1 as ::core::ffi::c_int;
+        if setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_REUSEADDR,
+            &raw mut yes as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__set_recverr(
+    mut fd: ::core::ffi::c_int,
+    mut ss_family: sa_family_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut yes: ::core::ffi::c_int = 0;
+        yes = 1 as ::core::ffi::c_int;
+        if ss_family as ::core::ffi::c_int == AF_INET {
+            if setsockopt(
+                fd,
+                IPPROTO_IP as ::core::ffi::c_int,
+                IP_RECVERR,
+                &raw mut yes as *const ::core::ffi::c_void,
+                ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+            ) != 0
+            {
+                return -*__errno_location();
+            }
+        } else if ss_family as ::core::ffi::c_int == AF_INET6 {
+            if setsockopt(
+                fd,
+                IPPROTO_IPV6 as ::core::ffi::c_int,
+                IPV6_RECVERR,
+                &raw mut yes as *const ::core::ffi::c_void,
+                ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+            ) != 0
+            {
+                return -*__errno_location();
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_bind(
+    mut handle: *mut uv_udp_t,
+    mut addr: *const sockaddr,
+    mut addrlen: ::core::ffi::c_uint,
+    mut flags: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut yes: ::core::ffi::c_int = 0;
+        let mut fd: ::core::ffi::c_int = 0;
+        if flags
+            & !(UV_UDP_IPV6ONLY as ::core::ffi::c_int
+                | UV_UDP_REUSEADDR as ::core::ffi::c_int
+                | UV_UDP_LINUX_RECVERR as ::core::ffi::c_int) as ::core::ffi::c_uint
+            != 0
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if flags & UV_UDP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            && (*addr).sa_family as ::core::ffi::c_int != AF_INET6
+        {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        fd = (*handle).io_watcher.fd;
+        if fd == -(1 as ::core::ffi::c_int) {
+            err = uv__socket(
+                (*addr).sa_family as ::core::ffi::c_int,
+                SOCK_DGRAM as ::core::ffi::c_int,
+                0 as ::core::ffi::c_int,
+            );
+            if err < 0 as ::core::ffi::c_int {
+                return err;
+            }
+            fd = err;
+            (*handle).io_watcher.fd = fd;
+        }
+        if flags & UV_UDP_LINUX_RECVERR as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            err = uv__set_recverr(fd, (*addr).sa_family);
+            if err != 0 {
+                return err;
+            }
+        }
+        if flags & UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            err = uv__set_reuse(fd);
+            if err != 0 {
+                return err;
+            }
+        }
+        if flags & UV_UDP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            yes = 1 as ::core::ffi::c_int;
+            if setsockopt(
+                fd,
+                IPPROTO_IPV6 as ::core::ffi::c_int,
+                IPV6_V6ONLY,
+                &raw mut yes as *const ::core::ffi::c_void,
+                ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+            ) == -(1 as ::core::ffi::c_int)
+            {
+                err = -*__errno_location();
+                return err;
+            }
+        }
+        if bind(
+            fd,
+            __CONST_SOCKADDR_ARG { __sockaddr__: addr },
+            addrlen as socklen_t,
+        ) != 0
+        {
+            err = -*__errno_location();
+            if *__errno_location() == EAFNOSUPPORT {
+                err = UV_EINVAL as ::core::ffi::c_int;
+            }
+            return err;
+        }
+        if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
+            (*handle).flags |= UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint;
+        }
+        (*handle).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_maybe_deferred_bind(
+    mut handle: *mut uv_udp_t,
+    mut domain: ::core::ffi::c_int,
+    mut flags: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut taddr: uv__sockaddr = uv__sockaddr {
+            in6: sockaddr_in6 {
+                sin6_family: 0,
+                sin6_port: 0,
+                sin6_flowinfo: 0,
+                sin6_addr: in6_addr {
+                    __in6_u: C2RustUnnamed_0 {
+                        __u6_addr8: [0; 16],
+                    },
+                },
+                sin6_scope_id: 0,
+            },
+        };
+        let mut addrlen: socklen_t = 0;
+        if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+            return 0 as ::core::ffi::c_int;
+        }
+        match domain {
+            AF_INET => {
+                let mut addr: *mut sockaddr_in = &raw mut taddr.in_0;
+                memset(
+                    addr as *mut ::core::ffi::c_void,
+                    0 as ::core::ffi::c_int,
+                    ::core::mem::size_of::<sockaddr_in>() as size_t,
+                );
+                (*addr).sin_family = AF_INET as sa_family_t;
+                (*addr).sin_addr.s_addr = INADDR_ANY;
+                addrlen = ::core::mem::size_of::<sockaddr_in>() as socklen_t;
+            }
+            AF_INET6 => {
+                let mut addr_0: *mut sockaddr_in6 = &raw mut taddr.in6;
+                memset(
+                    addr_0 as *mut ::core::ffi::c_void,
+                    0 as ::core::ffi::c_int,
+                    ::core::mem::size_of::<sockaddr_in6>() as size_t,
+                );
+                (*addr_0).sin6_family = AF_INET6 as sa_family_t;
+                (*addr_0).sin6_addr = in6addr_any;
+                addrlen = ::core::mem::size_of::<sockaddr_in6>() as socklen_t;
+            }
+            _ => {
+                '_c2rust_label: {
+                    if 0 as ::core::ffi::c_int != 0
+                        && !(b"unsupported address family\0" as *const u8
+                            as *const ::core::ffi::c_char)
+                            .is_null()
+                    {
+                    } else {
+                        __assert_fail(
+                            b"0 && \"unsupported address family\"\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            582 as ::core::ffi::c_uint,
+                            b"int uv__udp_maybe_deferred_bind(uv_udp_t *, int, unsigned int)\0"
+                                as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                abort();
+            }
+        }
+        return uv__udp_bind(
+            handle,
+            &raw mut taddr.addr,
+            addrlen as ::core::ffi::c_uint,
+            flags,
+        );
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_connect(
+    mut handle: *mut uv_udp_t,
+    mut addr: *const sockaddr,
+    mut addrlen: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        err = uv__udp_maybe_deferred_bind(
+            handle,
+            (*addr).sa_family as ::core::ffi::c_int,
+            0 as ::core::ffi::c_uint,
+        );
+        if err != 0 {
+            return err;
+        }
+        loop {
+            *__errno_location() = 0 as ::core::ffi::c_int;
+            err = connect(
+                (*handle).io_watcher.fd,
+                __CONST_SOCKADDR_ARG { __sockaddr__: addr },
+                addrlen as socklen_t,
+            );
+            if !(err == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        if err != 0 {
+            return -*__errno_location();
+        }
+        (*handle).flags |= UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_disconnect(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        let mut addr: sockaddr = sockaddr {
+            sa_family: 0,
+            sa_data: [0; 14],
+        };
+        memset(
+            &raw mut addr as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<sockaddr>() as size_t,
+        );
+        addr.sa_family = AF_UNSPEC as sa_family_t;
+        loop {
+            *__errno_location() = 0 as ::core::ffi::c_int;
+            r = connect(
+                (*handle).io_watcher.fd,
+                __CONST_SOCKADDR_ARG {
+                    __sockaddr__: &raw mut addr,
+                },
+                ::core::mem::size_of::<sockaddr>() as socklen_t,
+            );
+            if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        if r == -(1 as ::core::ffi::c_int) {
+            return -*__errno_location();
+        }
+        (*handle).flags &= !(UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_send(
+    mut req: *mut uv_udp_send_t,
+    mut handle: *mut uv_udp_t,
+    mut bufs: *const uv_buf_t,
+    mut nbufs: ::core::ffi::c_uint,
+    mut addr: *const sockaddr,
+    mut addrlen: ::core::ffi::c_uint,
+    mut send_cb: uv_udp_send_cb,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut empty_queue: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if nbufs > 0 as ::core::ffi::c_uint {
+            } else {
+                __assert_fail(
+                    b"nbufs > 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    696 as ::core::ffi::c_uint,
+                    b"int uv__udp_send(uv_udp_send_t *, uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int, uv_udp_send_cb)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if !addr.is_null() {
+            err = uv__udp_maybe_deferred_bind(
+                handle,
+                (*addr).sa_family as ::core::ffi::c_int,
+                0 as ::core::ffi::c_uint,
+            );
+            if err != 0 {
+                return err;
+            }
+        }
+        empty_queue = ((*handle).send_queue_count == 0 as size_t) as ::core::ffi::c_int;
+        (*req).type_0 = UV_UDP_SEND;
+        (*(*handle).loop_0).active_reqs.count =
+            (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
+        '_c2rust_label_0: {
+            if addrlen as usize <= ::core::mem::size_of::<sockaddr_storage>() as usize {
+            } else {
+                __assert_fail(
+                    b"addrlen <= sizeof(req->addr)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    711 as ::core::ffi::c_uint,
+                    b"int uv__udp_send(uv_udp_send_t *, uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int, uv_udp_send_cb)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if addr.is_null() {
+            (*req).addr.ss_family = AF_UNSPEC as sa_family_t;
+        } else {
+            memcpy(
+                &raw mut (*req).addr as *mut ::core::ffi::c_void,
+                addr as *const ::core::ffi::c_void,
+                addrlen as size_t,
+            );
+        }
+        (*req).send_cb = send_cb;
+        (*req).handle = handle;
+        (*req).nbufs = nbufs;
+        (*req).bufs = &raw mut (*req).bufsml as *mut uv_buf_t;
+        if nbufs as usize
+            > (::core::mem::size_of::<[uv_buf_t; 4]>() as usize)
+                .wrapping_div(::core::mem::size_of::<uv_buf_t>() as usize)
+        {
+            (*req).bufs = uv__malloc(
+                (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
+            ) as *mut uv_buf_t;
+        }
+        if (*req).bufs.is_null() {
+            '_c2rust_label_1: {
+                if (*(*handle).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
+                } else {
+                    __assert_fail(
+                        b"uv__has_active_reqs(handle->loop)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
+                            as *const u8 as *const ::core::ffi::c_char,
+                        725 as ::core::ffi::c_uint,
+                        b"int uv__udp_send(uv_udp_send_t *, uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int, uv_udp_send_cb)\0"
+                            as *const u8 as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            (*(*handle).loop_0).active_reqs.count =
+                (*(*handle).loop_0).active_reqs.count.wrapping_sub(1);
+            return UV_ENOMEM as ::core::ffi::c_int;
+        }
+        memcpy(
+            (*req).bufs as *mut ::core::ffi::c_void,
+            bufs as *const ::core::ffi::c_void,
+            (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
+        );
+        (*handle).send_queue_size = (*handle)
+            .send_queue_size
+            .wrapping_add(uv__count_bufs((*req).bufs as *const uv_buf_t, (*req).nbufs));
+        (*handle).send_queue_count = (*handle).send_queue_count.wrapping_add(1);
+        uv__queue_insert_tail(&raw mut (*handle).write_queue, &raw mut (*req).queue);
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_add(1);
+            }
+        }
+        if empty_queue != 0
+            && (*handle).flags
+                & UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int as ::core::ffi::c_uint
+                == 0
+        {
+            uv__udp_sendmsg(handle);
+            if uv__queue_empty(&raw mut (*handle).write_queue) == 0 {
+                uv__io_start(
+                    (*handle).loop_0,
+                    &raw mut (*handle).io_watcher,
+                    POLLOUT as ::core::ffi::c_uint,
+                );
+            }
+        } else {
+            uv__io_start(
+                (*handle).loop_0,
+                &raw mut (*handle).io_watcher,
+                POLLOUT as ::core::ffi::c_uint,
+            );
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_try_send(
+    mut handle: *mut uv_udp_t,
+    mut bufs: *const uv_buf_t,
+    mut nbufs: ::core::ffi::c_uint,
+    mut addr: *const sockaddr,
+    mut addrlen: ::core::ffi::c_uint,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut h: msghdr = msghdr {
+            msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+            msg_namelen: 0,
+            msg_iov: ::core::ptr::null_mut::<iovec>(),
+            msg_iovlen: 0,
+            msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+            msg_controllen: 0,
+            msg_flags: 0,
+        };
+        let mut size: ssize_t = 0;
+        '_c2rust_label: {
+            if nbufs > 0 as ::core::ffi::c_uint {
+            } else {
+                __assert_fail(
+                    b"nbufs > 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    761 as ::core::ffi::c_uint,
+                    b"int uv__udp_try_send(uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*handle).send_queue_count != 0 as size_t {
+            return UV_EAGAIN as ::core::ffi::c_int;
+        }
+        if !addr.is_null() {
+            err = uv__udp_maybe_deferred_bind(
+                handle,
+                (*addr).sa_family as ::core::ffi::c_int,
+                0 as ::core::ffi::c_uint,
+            );
+            if err != 0 {
+                return err;
+            }
+        } else {
+            '_c2rust_label_0: {
+                if (*handle).flags
+                    & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0
+                {
+                } else {
+                    __assert_fail(
+                        b"handle->flags & UV_HANDLE_UDP_CONNECTED\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
+                            as *const u8 as *const ::core::ffi::c_char,
+                        772 as ::core::ffi::c_uint,
+                        b"int uv__udp_try_send(uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int)\0"
+                            as *const u8 as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+        }
+        memset(
+            &raw mut h as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<msghdr>() as size_t,
+        );
+        h.msg_name = addr as *mut sockaddr as *mut ::core::ffi::c_void;
+        h.msg_namelen = addrlen as socklen_t;
+        h.msg_iov = bufs as *mut iovec;
+        h.msg_iovlen = nbufs as size_t;
+        loop {
+            size = sendmsg((*handle).io_watcher.fd, &raw mut h, 0 as ::core::ffi::c_int);
+            if !(size == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
+                break;
+            }
+        }
+        if size == -(1 as ::core::ffi::c_int) as ssize_t {
+            if *__errno_location() == EAGAIN
+                || *__errno_location() == EWOULDBLOCK
+                || *__errno_location() == ENOBUFS
+            {
+                return UV_EAGAIN as ::core::ffi::c_int;
+            } else {
+                return -*__errno_location();
+            }
+        }
+        return size as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_set_membership4(
+    mut handle: *mut uv_udp_t,
+    mut multicast_addr: *const sockaddr_in,
+    mut interface_addr: *const ::core::ffi::c_char,
+    mut membership: uv_membership,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut mreq: ip_mreq = ip_mreq {
+            imr_multiaddr: in_addr { s_addr: 0 },
+            imr_interface: in_addr { s_addr: 0 },
+        };
+        let mut optname: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        memset(
+            &raw mut mreq as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<ip_mreq>() as size_t,
+        );
+        if !interface_addr.is_null() {
+            err = uv_inet_pton(
+                AF_INET,
+                interface_addr,
+                &raw mut mreq.imr_interface.s_addr as *mut ::core::ffi::c_void,
+            );
+            if err != 0 {
+                return err;
+            }
+        } else {
+            mreq.imr_interface.s_addr = htonl(INADDR_ANY) as in_addr_t;
+        }
+        mreq.imr_multiaddr.s_addr = (*multicast_addr).sin_addr.s_addr;
+        match membership as ::core::ffi::c_uint {
+            1 => {
+                optname = IP_ADD_MEMBERSHIP;
+            }
+            0 => {
+                optname = IP_DROP_MEMBERSHIP;
+            }
+            _ => return UV_EINVAL as ::core::ffi::c_int,
+        }
+        if setsockopt(
+            (*handle).io_watcher.fd,
+            IPPROTO_IP as ::core::ffi::c_int,
+            optname,
+            &raw mut mreq as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<ip_mreq>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_set_membership6(
+    mut handle: *mut uv_udp_t,
+    mut multicast_addr: *const sockaddr_in6,
+    mut interface_addr: *const ::core::ffi::c_char,
+    mut membership: uv_membership,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut optname: ::core::ffi::c_int = 0;
+        let mut mreq: ipv6_mreq = ipv6_mreq {
+            ipv6mr_multiaddr: in6_addr {
+                __in6_u: C2RustUnnamed_0 {
+                    __u6_addr8: [0; 16],
+                },
+            },
+            ipv6mr_interface: 0,
+        };
+        let mut addr6: sockaddr_in6 = sockaddr_in6 {
+            sin6_family: 0,
+            sin6_port: 0,
+            sin6_flowinfo: 0,
+            sin6_addr: in6_addr {
+                __in6_u: C2RustUnnamed_0 {
+                    __u6_addr8: [0; 16],
+                },
+            },
+            sin6_scope_id: 0,
+        };
+        memset(
+            &raw mut mreq as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<ipv6_mreq>() as size_t,
+        );
+        if !interface_addr.is_null() {
+            if uv_ip6_addr(interface_addr, 0 as ::core::ffi::c_int, &raw mut addr6) != 0 {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+            mreq.ipv6mr_interface = addr6.sin6_scope_id as ::core::ffi::c_uint;
+        } else {
+            mreq.ipv6mr_interface = 0 as ::core::ffi::c_uint;
+        }
+        mreq.ipv6mr_multiaddr = (*multicast_addr).sin6_addr;
+        match membership as ::core::ffi::c_uint {
+            1 => {
+                optname = IPV6_ADD_MEMBERSHIP;
+            }
+            0 => {
+                optname = IPV6_DROP_MEMBERSHIP;
+            }
+            _ => return UV_EINVAL as ::core::ffi::c_int,
+        }
+        if setsockopt(
+            (*handle).io_watcher.fd,
+            IPPROTO_IPV6 as ::core::ffi::c_int,
+            optname,
+            &raw mut mreq as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<ipv6_mreq>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_set_source_membership4(
+    mut handle: *mut uv_udp_t,
+    mut multicast_addr: *const sockaddr_in,
+    mut interface_addr: *const ::core::ffi::c_char,
+    mut source_addr: *const sockaddr_in,
+    mut membership: uv_membership,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut mreq: ip_mreq_source = ip_mreq_source {
+            imr_multiaddr: in_addr { s_addr: 0 },
+            imr_interface: in_addr { s_addr: 0 },
+            imr_sourceaddr: in_addr { s_addr: 0 },
+        };
+        let mut optname: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        err = uv__udp_maybe_deferred_bind(
+            handle,
+            AF_INET,
+            UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
+        );
+        if err != 0 {
+            return err;
+        }
+        memset(
+            &raw mut mreq as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<ip_mreq_source>() as size_t,
+        );
+        if !interface_addr.is_null() {
+            err = uv_inet_pton(
+                AF_INET,
+                interface_addr,
+                &raw mut mreq.imr_interface.s_addr as *mut ::core::ffi::c_void,
+            );
+            if err != 0 {
+                return err;
+            }
+        } else {
+            mreq.imr_interface.s_addr = htonl(INADDR_ANY) as in_addr_t;
+        }
+        mreq.imr_multiaddr.s_addr = (*multicast_addr).sin_addr.s_addr;
+        mreq.imr_sourceaddr.s_addr = (*source_addr).sin_addr.s_addr;
+        if membership as ::core::ffi::c_uint
+            == UV_JOIN_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            optname = IP_ADD_SOURCE_MEMBERSHIP;
+        } else if membership as ::core::ffi::c_uint
+            == UV_LEAVE_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            optname = IP_DROP_SOURCE_MEMBERSHIP;
+        } else {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if setsockopt(
+            (*handle).io_watcher.fd,
+            IPPROTO_IP as ::core::ffi::c_int,
+            optname,
+            &raw mut mreq as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<ip_mreq_source>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__udp_set_source_membership6(
+    mut handle: *mut uv_udp_t,
+    mut multicast_addr: *const sockaddr_in6,
+    mut interface_addr: *const ::core::ffi::c_char,
+    mut source_addr: *const sockaddr_in6,
+    mut membership: uv_membership,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut mreq: group_source_req = group_source_req {
+            gsr_interface: 0,
+            gsr_group: sockaddr_storage {
+                ss_family: 0,
+                __ss_padding: [0; 118],
+                __ss_align: 0,
+            },
+            gsr_source: sockaddr_storage {
+                ss_family: 0,
+                __ss_padding: [0; 118],
+                __ss_align: 0,
+            },
+        };
+        let mut addr6: sockaddr_in6 = sockaddr_in6 {
+            sin6_family: 0,
+            sin6_port: 0,
+            sin6_flowinfo: 0,
+            sin6_addr: in6_addr {
+                __in6_u: C2RustUnnamed_0 {
+                    __u6_addr8: [0; 16],
+                },
+            },
+            sin6_scope_id: 0,
+        };
+        let mut optname: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        err = uv__udp_maybe_deferred_bind(
+            handle,
+            AF_INET6,
+            UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
+        );
+        if err != 0 {
+            return err;
+        }
+        memset(
+            &raw mut mreq as *mut ::core::ffi::c_void,
+            0 as ::core::ffi::c_int,
+            ::core::mem::size_of::<group_source_req>() as size_t,
+        );
+        if !interface_addr.is_null() {
+            err = uv_ip6_addr(interface_addr, 0 as ::core::ffi::c_int, &raw mut addr6);
+            if err != 0 {
+                return err;
+            }
+            mreq.gsr_interface = addr6.sin6_scope_id;
+        } else {
+            mreq.gsr_interface = 0 as uint32_t;
+        }
+        memcpy(
+            &raw mut mreq.gsr_group as *mut ::core::ffi::c_void,
+            multicast_addr as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<sockaddr_in6>() as size_t,
+        );
+        memcpy(
+            &raw mut mreq.gsr_source as *mut ::core::ffi::c_void,
+            source_addr as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<sockaddr_in6>() as size_t,
+        );
+        if membership as ::core::ffi::c_uint
+            == UV_JOIN_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            optname = MCAST_JOIN_SOURCE_GROUP;
+        } else if membership as ::core::ffi::c_uint
+            == UV_LEAVE_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
+        {
+            optname = MCAST_LEAVE_SOURCE_GROUP;
+        } else {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if setsockopt(
+            (*handle).io_watcher.fd,
+            IPPROTO_IPV6 as ::core::ffi::c_int,
+            optname,
+            &raw mut mreq as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<group_source_req>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_init_ex(
+    mut loop_0: *mut uv_loop_t,
+    mut handle: *mut uv_udp_t,
+    mut flags: ::core::ffi::c_uint,
+    mut domain: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut fd: ::core::ffi::c_int = 0;
+        fd = -(1 as ::core::ffi::c_int);
+        if domain != AF_UNSPEC {
+            fd = uv__socket(
+                domain,
+                SOCK_DGRAM as ::core::ffi::c_int,
+                0 as ::core::ffi::c_int,
+            );
+            if fd < 0 as ::core::ffi::c_int {
+                return fd;
+            }
+        }
+        let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
+        *fresh0 = loop_0;
+        (*(handle as *mut uv_handle_t)).type_0 = UV_UDP;
+        (*(handle as *mut uv_handle_t)).flags =
+            UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        uv__queue_insert_tail(
+            &raw mut (*loop_0).handle_queue,
+            &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
+        );
+        let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
+        *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
+        (*handle).alloc_cb = None;
+        (*handle).recv_cb = None;
+        (*handle).send_queue_size = 0 as size_t;
+        (*handle).send_queue_count = 0 as size_t;
+        uv__io_init(
+            &raw mut (*handle).io_watcher,
+            Some(
+                uv__udp_io
+                    as unsafe extern "C" fn(
+                        *mut uv_loop_t,
+                        *mut uv__io_t,
+                        ::core::ffi::c_uint,
+                    ) -> (),
+            ),
+            fd,
+        );
+        uv__queue_init(&raw mut (*handle).write_queue);
+        uv__queue_init(&raw mut (*handle).write_completed_queue);
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_using_recvmmsg(mut handle: *const uv_udp_t) -> ::core::ffi::c_int {
+    unsafe {
+        if (*handle).flags & UV_HANDLE_UDP_RECVMMSG as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0
+        {
+            return 1 as ::core::ffi::c_int;
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_open(mut handle: *mut uv_udp_t, mut sock: uv_os_sock_t) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+            return UV_EBUSY as ::core::ffi::c_int;
+        }
+        if uv__fd_exists((*handle).loop_0, sock as ::core::ffi::c_int) != 0 {
+            return UV_EEXIST as ::core::ffi::c_int;
+        }
+        err = uv__nonblock_ioctl(sock as ::core::ffi::c_int, 1 as ::core::ffi::c_int);
+        if err != 0 {
+            return err;
+        }
+        err = uv__set_reuse(sock as ::core::ffi::c_int);
+        if err != 0 {
+            return err;
+        }
+        (*handle).io_watcher.fd = sock as ::core::ffi::c_int;
+        if uv__udp_is_connected(handle) != 0 {
+            (*handle).flags |= UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint;
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_set_membership(
+    mut handle: *mut uv_udp_t,
+    mut multicast_addr: *const ::core::ffi::c_char,
+    mut interface_addr: *const ::core::ffi::c_char,
+    mut membership: uv_membership,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut addr4: sockaddr_in = sockaddr_in {
+            sin_family: 0,
+            sin_port: 0,
+            sin_addr: in_addr { s_addr: 0 },
+            sin_zero: [0; 8],
+        };
+        let mut addr6: sockaddr_in6 = sockaddr_in6 {
+            sin6_family: 0,
+            sin6_port: 0,
+            sin6_flowinfo: 0,
+            sin6_addr: in6_addr {
+                __in6_u: C2RustUnnamed_0 {
+                    __u6_addr8: [0; 16],
+                },
+            },
+            sin6_scope_id: 0,
+        };
+        if uv_ip4_addr(multicast_addr, 0 as ::core::ffi::c_int, &raw mut addr4)
+            == 0 as ::core::ffi::c_int
+        {
+            err = uv__udp_maybe_deferred_bind(
+                handle,
+                AF_INET,
+                UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
+            );
+            if err != 0 {
+                return err;
+            }
+            return uv__udp_set_membership4(handle, &raw mut addr4, interface_addr, membership);
+        } else if uv_ip6_addr(multicast_addr, 0 as ::core::ffi::c_int, &raw mut addr6)
+            == 0 as ::core::ffi::c_int
+        {
+            err = uv__udp_maybe_deferred_bind(
+                handle,
+                AF_INET6,
+                UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
+            );
+            if err != 0 {
+                return err;
+            }
+            return uv__udp_set_membership6(handle, &raw mut addr6, interface_addr, membership);
+        } else {
+            return UV_EINVAL as ::core::ffi::c_int;
+        };
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_set_source_membership(
+    mut handle: *mut uv_udp_t,
+    mut multicast_addr: *const ::core::ffi::c_char,
+    mut interface_addr: *const ::core::ffi::c_char,
+    mut source_addr: *const ::core::ffi::c_char,
+    mut membership: uv_membership,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut mcast_addr: uv__sockaddr = uv__sockaddr {
+            in6: sockaddr_in6 {
+                sin6_family: 0,
+                sin6_port: 0,
+                sin6_flowinfo: 0,
+                sin6_addr: in6_addr {
+                    __in6_u: C2RustUnnamed_0 {
+                        __u6_addr8: [0; 16],
+                    },
+                },
+                sin6_scope_id: 0,
+            },
+        };
+        let mut src_addr: uv__sockaddr = uv__sockaddr {
+            in6: sockaddr_in6 {
+                sin6_family: 0,
+                sin6_port: 0,
+                sin6_flowinfo: 0,
+                sin6_addr: in6_addr {
+                    __in6_u: C2RustUnnamed_0 {
+                        __u6_addr8: [0; 16],
+                    },
+                },
+                sin6_scope_id: 0,
+            },
+        };
+        err = uv_ip4_addr(
+            multicast_addr,
+            0 as ::core::ffi::c_int,
+            &raw mut mcast_addr.in_0,
+        );
+        if err != 0 {
+            err = uv_ip6_addr(
+                multicast_addr,
+                0 as ::core::ffi::c_int,
+                &raw mut mcast_addr.in6,
+            );
+            if err != 0 {
+                return err;
+            }
+            err = uv_ip6_addr(source_addr, 0 as ::core::ffi::c_int, &raw mut src_addr.in6);
+            if err != 0 {
+                return err;
+            }
+            return uv__udp_set_source_membership6(
+                handle,
+                &raw mut mcast_addr.in6,
+                interface_addr,
+                &raw mut src_addr.in6,
+                membership,
+            );
+        }
+        err = uv_ip4_addr(source_addr, 0 as ::core::ffi::c_int, &raw mut src_addr.in_0);
+        if err != 0 {
+            return err;
+        }
+        return uv__udp_set_source_membership4(
+            handle,
+            &raw mut mcast_addr.in_0,
+            interface_addr,
+            &raw mut src_addr.in_0,
+            membership,
+        );
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__setsockopt(
+    mut handle: *mut uv_udp_t,
+    mut option4: ::core::ffi::c_int,
+    mut option6: ::core::ffi::c_int,
+    mut val: *const ::core::ffi::c_void,
+    mut size: socklen_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut r: ::core::ffi::c_int = 0;
+        if (*handle).flags & UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+            r = setsockopt(
+                (*handle).io_watcher.fd,
+                IPPROTO_IPV6 as ::core::ffi::c_int,
+                option6,
+                val,
+                size,
+            );
+        } else {
+            r = setsockopt(
+                (*handle).io_watcher.fd,
+                IPPROTO_IP as ::core::ffi::c_int,
+                option4,
+                val,
+                size,
+            );
+        }
+        if r != 0 {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__setsockopt_maybe_char(
+    mut handle: *mut uv_udp_t,
+    mut option4: ::core::ffi::c_int,
+    mut option6: ::core::ffi::c_int,
+    mut val: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut arg: ::core::ffi::c_int = val;
+        if val < 0 as ::core::ffi::c_int || val > 255 as ::core::ffi::c_int {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        return uv__setsockopt(
+            handle,
+            option4,
+            option6,
+            &raw mut arg as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        );
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_set_broadcast(
+    mut handle: *mut uv_udp_t,
+    mut on: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        if setsockopt(
+            (*handle).io_watcher.fd,
+            SOL_SOCKET,
+            SO_BROADCAST,
+            &raw mut on as *const ::core::ffi::c_void,
+            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
+        ) != 0
+        {
+            return -*__errno_location();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_set_ttl(
+    mut handle: *mut uv_udp_t,
+    mut ttl: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        if ttl < 1 as ::core::ffi::c_int || ttl > 255 as ::core::ffi::c_int {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        return uv__setsockopt_maybe_char(handle, IP_TTL, IPV6_UNICAST_HOPS, ttl);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_set_multicast_ttl(
+    mut handle: *mut uv_udp_t,
+    mut ttl: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        return uv__setsockopt_maybe_char(handle, IP_MULTICAST_TTL, IPV6_MULTICAST_HOPS, ttl);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_set_multicast_loop(
+    mut handle: *mut uv_udp_t,
+    mut on: ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        return uv__setsockopt_maybe_char(handle, IP_MULTICAST_LOOP, IPV6_MULTICAST_LOOP, on);
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_set_multicast_interface(
+    mut handle: *mut uv_udp_t,
+    mut interface_addr: *const ::core::ffi::c_char,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut addr_st: sockaddr_storage = sockaddr_storage {
+            ss_family: 0,
+            __ss_padding: [0; 118],
+            __ss_align: 0,
+        };
+        let mut addr4: *mut sockaddr_in = ::core::ptr::null_mut::<sockaddr_in>();
+        let mut addr6: *mut sockaddr_in6 = ::core::ptr::null_mut::<sockaddr_in6>();
+        addr4 = &raw mut addr_st as *mut sockaddr_in;
+        addr6 = &raw mut addr_st as *mut sockaddr_in6;
+        if interface_addr.is_null() {
+            memset(
+                &raw mut addr_st as *mut ::core::ffi::c_void,
+                0 as ::core::ffi::c_int,
+                ::core::mem::size_of::<sockaddr_storage>() as size_t,
+            );
+            if (*handle).flags & UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
+                addr_st.ss_family = AF_INET6 as sa_family_t;
+                (*addr6).sin6_scope_id = 0 as uint32_t;
+            } else {
+                addr_st.ss_family = AF_INET as sa_family_t;
+                (*addr4).sin_addr.s_addr = htonl(INADDR_ANY) as in_addr_t;
+            }
+        } else if !(uv_ip4_addr(interface_addr, 0 as ::core::ffi::c_int, addr4)
+            == 0 as ::core::ffi::c_int)
+        {
+            if uv_ip6_addr(interface_addr, 0 as ::core::ffi::c_int, addr6)
+                == 0 as ::core::ffi::c_int
+            {
+            } else {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+        }
+        if addr_st.ss_family as ::core::ffi::c_int == AF_INET {
+            if setsockopt(
+                (*handle).io_watcher.fd,
+                IPPROTO_IP as ::core::ffi::c_int,
+                IP_MULTICAST_IF,
+                &raw mut (*addr4).sin_addr as *mut ::core::ffi::c_void,
+                ::core::mem::size_of::<in_addr>() as socklen_t,
+            ) == -(1 as ::core::ffi::c_int)
+            {
+                return -*__errno_location();
+            }
+        } else if addr_st.ss_family as ::core::ffi::c_int == AF_INET6 {
+            if setsockopt(
+                (*handle).io_watcher.fd,
+                IPPROTO_IPV6 as ::core::ffi::c_int,
+                IPV6_MULTICAST_IF,
+                &raw mut (*addr6).sin6_scope_id as *const ::core::ffi::c_void,
+                ::core::mem::size_of::<uint32_t>() as socklen_t,
+            ) == -(1 as ::core::ffi::c_int)
+            {
+                return -*__errno_location();
+            }
+        } else {
+            '_c2rust_label: {
+                if 0 as ::core::ffi::c_int != 0
+                    && !(b"unexpected address family\0" as *const u8 as *const ::core::ffi::c_char)
+                        .is_null()
+                {
+                } else {
+                    __assert_fail(
+                        b"0 && \"unexpected address family\"\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        1305 as ::core::ffi::c_uint,
+                        b"int uv_udp_set_multicast_interface(uv_udp_t *, const char *)\0"
+                            as *const u8 as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            abort();
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_getpeername(
+    mut handle: *const uv_udp_t,
+    mut name: *mut sockaddr,
+    mut namelen: *mut ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        return uv__getsockpeername(
+            handle as *const uv_handle_t,
+            ::core::mem::transmute::<
+                Option<
+                    unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+                >,
+                uv__peersockfunc,
+            >(Some(
+                getpeername
+                    as unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+            )),
+            name,
+            namelen,
+        );
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_udp_getsockname(
+    mut handle: *const uv_udp_t,
+    mut name: *mut sockaddr,
+    mut namelen: *mut ::core::ffi::c_int,
+) -> ::core::ffi::c_int {
+    unsafe {
+        return uv__getsockpeername(
+            handle as *const uv_handle_t,
+            ::core::mem::transmute::<
+                Option<
+                    unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+                >,
+                uv__peersockfunc,
+            >(Some(
+                getsockname
+                    as unsafe extern "C" fn(
+                        ::core::ffi::c_int,
+                        __SOCKADDR_ARG,
+                        *mut socklen_t,
+                    ) -> ::core::ffi::c_int,
+            )),
+            name,
+            namelen,
+        );
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_recv_start(
+    mut handle: *mut uv_udp_t,
+    mut alloc_cb: uv_alloc_cb,
+    mut recv_cb: uv_udp_recv_cb,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if alloc_cb.is_none() || recv_cb.is_none() {
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        if uv__io_active(&raw mut (*handle).io_watcher, POLLIN as ::core::ffi::c_uint) != 0 {
+            return UV_EALREADY as ::core::ffi::c_int;
+        }
+        err = uv__udp_maybe_deferred_bind(handle, AF_INET, 0 as ::core::ffi::c_uint);
+        if err != 0 {
+            return err;
+        }
+        (*handle).alloc_cb = alloc_cb;
+        (*handle).recv_cb = recv_cb;
+        uv__io_start(
+            (*handle).loop_0,
+            &raw mut (*handle).io_watcher,
+            POLLIN as ::core::ffi::c_uint,
+        );
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
+        {
+            (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_add(1);
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+#[no_mangle]
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__udp_recv_stop(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
+    unsafe {
         uv__io_stop(
             (*handle).loop_0,
             &raw mut (*handle).io_watcher,
-            POLLOUT as ::core::ffi::c_uint,
+            POLLIN as ::core::ffi::c_uint,
         );
-        if uv__io_active(&raw mut (*handle).io_watcher, POLLIN as ::core::ffi::c_uint) == 0 {
+        if uv__io_active(
+            &raw mut (*handle).io_watcher,
+            POLLOUT as ::core::ffi::c_uint,
+        ) == 0
+        {
             if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
                 == 0 as ::core::ffi::c_uint)
             {
@@ -1054,1851 +2960,117 @@ unsafe extern "C" fn uv__udp_run_completed(mut handle: *mut uv_udp_t) {
                 }
             }
         }
-    }
-    (*handle).flags &= !(UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int) as ::core::ffi::c_uint;
-}
-unsafe extern "C" fn uv__udp_io(
-    mut loop_0: *mut uv_loop_t,
-    mut w: *mut uv__io_t,
-    mut revents: ::core::ffi::c_uint,
-) {
-    let mut handle: *mut uv_udp_t = ::core::ptr::null_mut::<uv_udp_t>();
-    handle = (w as *mut ::core::ffi::c_char).offset(-(128 as ::core::ffi::c_ulong as isize))
-        as *mut uv_udp_t;
-    '_c2rust_label: {
-        if (*handle).type_0 as ::core::ffi::c_uint
-            == UV_UDP as ::core::ffi::c_int as ::core::ffi::c_uint
-        {
-        } else {
-            __assert_fail(
-                b"handle->type == UV_UDP\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                139 as ::core::ffi::c_uint,
-                b"void uv__udp_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if revents & POLLIN as ::core::ffi::c_uint != 0 {
-        uv__udp_recvmsg(handle);
-    }
-    if revents & POLLOUT as ::core::ffi::c_uint != 0 {
-        uv__udp_sendmsg(handle);
-        uv__udp_run_completed(handle);
-    }
-}
-unsafe extern "C" fn uv__udp_recvmmsg(
-    mut handle: *mut uv_udp_t,
-    mut buf: *mut uv_buf_t,
-) -> ::core::ffi::c_int {
-    let mut peers: [sockaddr_in6; 20] = [sockaddr_in6 {
-        sin6_family: 0,
-        sin6_port: 0,
-        sin6_flowinfo: 0,
-        sin6_addr: in6_addr {
-            __in6_u: C2RustUnnamed_0 {
-                __u6_addr8: [0; 16],
-            },
-        },
-        sin6_scope_id: 0,
-    }; 20];
-    let mut iov: [iovec; 20] = [iovec {
-        iov_base: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        iov_len: 0,
-    }; 20];
-    let mut msgs: [mmsghdr; 20] = [mmsghdr {
-        msg_hdr: msghdr {
-            msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-            msg_namelen: 0,
-            msg_iov: ::core::ptr::null_mut::<iovec>(),
-            msg_iovlen: 0,
-            msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-            msg_controllen: 0,
-            msg_flags: 0,
-        },
-        msg_len: 0,
-    }; 20];
-    let mut nread: ssize_t = 0;
-    let mut chunk_buf: uv_buf_t = uv_buf_t {
-        base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        len: 0,
-    };
-    let mut chunks: size_t = 0;
-    let mut flags: ::core::ffi::c_int = 0;
-    let mut k: size_t = 0;
-    chunks = (*buf).len.wrapping_div(UV__UDP_DGRAM_MAXSIZE as size_t);
-    if chunks
-        > (::core::mem::size_of::<[iovec; 20]>() as usize)
-            .wrapping_div(::core::mem::size_of::<iovec>() as usize)
-    {
-        chunks = (::core::mem::size_of::<[iovec; 20]>() as usize)
-            .wrapping_div(::core::mem::size_of::<iovec>() as usize) as size_t;
-    }
-    k = 0 as size_t;
-    while k < chunks {
-        iov[k as usize].iov_base = (*buf)
-            .base
-            .offset(k.wrapping_mul(UV__UDP_DGRAM_MAXSIZE as size_t) as isize)
-            as *mut ::core::ffi::c_void;
-        iov[k as usize].iov_len = UV__UDP_DGRAM_MAXSIZE as size_t;
-        memset(
-            &raw mut (*(&raw mut msgs as *mut mmsghdr).offset(k as isize)).msg_hdr
-                as *mut ::core::ffi::c_void,
-            0 as ::core::ffi::c_int,
-            ::core::mem::size_of::<msghdr>() as size_t,
-        );
-        msgs[k as usize].msg_hdr.msg_iov = (&raw mut iov as *mut iovec).offset(k as isize);
-        msgs[k as usize].msg_hdr.msg_iovlen = 1 as size_t;
-        msgs[k as usize].msg_hdr.msg_name =
-            (&raw mut peers as *mut sockaddr_in6).offset(k as isize) as *mut ::core::ffi::c_void;
-        msgs[k as usize].msg_hdr.msg_namelen = ::core::mem::size_of::<sockaddr_in6>() as socklen_t;
-        msgs[k as usize].msg_hdr.msg_control = NULL;
-        msgs[k as usize].msg_hdr.msg_controllen = 0 as size_t;
-        msgs[k as usize].msg_hdr.msg_flags = 0 as ::core::ffi::c_int;
-        k = k.wrapping_add(1);
-    }
-    loop {
-        nread = recvmmsg(
-            (*handle).io_watcher.fd,
-            &raw mut msgs as *mut mmsghdr,
-            chunks as ::core::ffi::c_uint,
-            0 as ::core::ffi::c_int,
-            ::core::ptr::null_mut::<timespec>(),
-        ) as ssize_t;
-        if !(nread == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
-            break;
-        }
-    }
-    if nread < 1 as ssize_t {
-        if nread == 0 as ssize_t
-            || *__errno_location() == EAGAIN
-            || *__errno_location() == EWOULDBLOCK
-        {
-            (*handle).recv_cb.expect("non-null function pointer")(
-                handle,
-                0 as ssize_t,
-                buf,
-                ::core::ptr::null::<sockaddr>(),
-                0 as ::core::ffi::c_uint,
-            );
-        } else {
-            (*handle).recv_cb.expect("non-null function pointer")(
-                handle,
-                -*__errno_location() as ssize_t,
-                buf,
-                ::core::ptr::null::<sockaddr>(),
-                0 as ::core::ffi::c_uint,
-            );
-        }
-    } else {
-        k = 0 as size_t;
-        while k < nread as size_t && (*handle).recv_cb.is_some() {
-            flags = UV_UDP_MMSG_CHUNK as ::core::ffi::c_int;
-            if msgs[k as usize].msg_hdr.msg_flags & MSG_TRUNC as ::core::ffi::c_int != 0 {
-                flags |= UV_UDP_PARTIAL as ::core::ffi::c_int;
-            }
-            chunk_buf = uv_buf_init(
-                iov[k as usize].iov_base as *mut ::core::ffi::c_char,
-                iov[k as usize].iov_len as ::core::ffi::c_uint,
-            );
-            (*handle).recv_cb.expect("non-null function pointer")(
-                handle,
-                msgs[k as usize].msg_len as ssize_t,
-                &raw mut chunk_buf,
-                msgs[k as usize].msg_hdr.msg_name as *const sockaddr,
-                flags as ::core::ffi::c_uint,
-            );
-            k = k.wrapping_add(1);
-        }
-        if (*handle).recv_cb.is_some() {
-            (*handle).recv_cb.expect("non-null function pointer")(
-                handle,
-                0 as ssize_t,
-                buf,
-                ::core::ptr::null::<sockaddr>(),
-                UV_UDP_MMSG_FREE as ::core::ffi::c_int as ::core::ffi::c_uint,
-            );
-        }
-    }
-    return nread as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__udp_recvmsg(mut handle: *mut uv_udp_t) {
-    let mut peer: sockaddr_storage = sockaddr_storage {
-        ss_family: 0,
-        __ss_padding: [0; 118],
-        __ss_align: 0,
-    };
-    let mut h: msghdr = msghdr {
-        msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        msg_namelen: 0,
-        msg_iov: ::core::ptr::null_mut::<iovec>(),
-        msg_iovlen: 0,
-        msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        msg_controllen: 0,
-        msg_flags: 0,
-    };
-    let mut nread: ssize_t = 0;
-    let mut buf: uv_buf_t = uv_buf_t {
-        base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        len: 0,
-    };
-    let mut flags: ::core::ffi::c_int = 0;
-    let mut count: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if (*handle).recv_cb.is_some() {
-        } else {
-            __assert_fail(
-                b"handle->recv_cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                220 as ::core::ffi::c_uint,
-                b"void uv__udp_recvmsg(uv_udp_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if (*handle).alloc_cb.is_some() {
-        } else {
-            __assert_fail(
-                b"handle->alloc_cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                221 as ::core::ffi::c_uint,
-                b"void uv__udp_recvmsg(uv_udp_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    count = 32 as ::core::ffi::c_int;
-    loop {
-        buf = uv_buf_init(
-            ::core::ptr::null_mut::<::core::ffi::c_char>(),
-            0 as ::core::ffi::c_uint,
-        );
-        (*handle).alloc_cb.expect("non-null function pointer")(
-            handle as *mut uv_handle_t,
-            UV__UDP_DGRAM_MAXSIZE as size_t,
-            &raw mut buf,
-        );
-        if buf.base.is_null() || buf.len == 0 as size_t {
-            (*handle).recv_cb.expect("non-null function pointer")(
-                handle,
-                UV_ENOBUFS as ::core::ffi::c_int as ssize_t,
-                &raw mut buf,
-                ::core::ptr::null::<sockaddr>(),
-                0 as ::core::ffi::c_uint,
-            );
-            return;
-        }
-        '_c2rust_label_1: {
-            if !buf.base.is_null() {
-            } else {
-                __assert_fail(
-                    b"buf.base != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    235 as ::core::ffi::c_uint,
-                    b"void uv__udp_recvmsg(uv_udp_t *)\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        if uv_udp_using_recvmmsg(handle) != 0 {
-            nread = uv__udp_recvmmsg(handle, &raw mut buf) as ssize_t;
-            if nread > 0 as ssize_t {
-                count = (count as ssize_t - nread) as ::core::ffi::c_int;
-            }
-        } else {
-            memset(
-                &raw mut h as *mut ::core::ffi::c_void,
-                0 as ::core::ffi::c_int,
-                ::core::mem::size_of::<msghdr>() as size_t,
-            );
-            memset(
-                &raw mut peer as *mut ::core::ffi::c_void,
-                0 as ::core::ffi::c_int,
-                ::core::mem::size_of::<sockaddr_storage>() as size_t,
-            );
-            h.msg_name = &raw mut peer as *mut ::core::ffi::c_void;
-            h.msg_namelen = ::core::mem::size_of::<sockaddr_storage>() as socklen_t;
-            h.msg_iov = &raw mut buf as *mut ::core::ffi::c_void as *mut iovec;
-            h.msg_iovlen = 1 as size_t;
-            loop {
-                nread = recvmsg((*handle).io_watcher.fd, &raw mut h, 0 as ::core::ffi::c_int);
-                if !(nread == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR)
-                {
-                    break;
-                }
-            }
-            if nread == -(1 as ::core::ffi::c_int) as ssize_t {
-                if *__errno_location() == EAGAIN || *__errno_location() == EWOULDBLOCK {
-                    (*handle).recv_cb.expect("non-null function pointer")(
-                        handle,
-                        0 as ssize_t,
-                        &raw mut buf,
-                        ::core::ptr::null::<sockaddr>(),
-                        0 as ::core::ffi::c_uint,
-                    );
-                } else {
-                    (*handle).recv_cb.expect("non-null function pointer")(
-                        handle,
-                        -*__errno_location() as ssize_t,
-                        &raw mut buf,
-                        ::core::ptr::null::<sockaddr>(),
-                        0 as ::core::ffi::c_uint,
-                    );
-                }
-            } else {
-                flags = 0 as ::core::ffi::c_int;
-                if h.msg_flags & MSG_TRUNC as ::core::ffi::c_int != 0 {
-                    flags |= UV_UDP_PARTIAL as ::core::ffi::c_int;
-                }
-                (*handle).recv_cb.expect("non-null function pointer")(
-                    handle,
-                    nread,
-                    &raw mut buf,
-                    &raw mut peer as *const sockaddr,
-                    flags as ::core::ffi::c_uint,
-                );
-            }
-            count -= 1;
-        }
-        if !(nread != -(1 as ::core::ffi::c_int) as ssize_t
-            && count > 0 as ::core::ffi::c_int
-            && (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int)
-            && (*handle).recv_cb.is_some())
-        {
-            break;
-        }
-    }
-}
-unsafe extern "C" fn uv__udp_sendmsg(mut handle: *mut uv_udp_t) {
-    let mut req: *mut uv_udp_send_t = ::core::ptr::null_mut::<uv_udp_send_t>();
-    let mut h: [mmsghdr; 20] = [mmsghdr {
-        msg_hdr: msghdr {
-            msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-            msg_namelen: 0,
-            msg_iov: ::core::ptr::null_mut::<iovec>(),
-            msg_iovlen: 0,
-            msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-            msg_controllen: 0,
-            msg_flags: 0,
-        },
-        msg_len: 0,
-    }; 20];
-    let mut p: *mut mmsghdr = ::core::ptr::null_mut::<mmsghdr>();
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut npkts: ssize_t = 0;
-    let mut pkts: size_t = 0;
-    let mut i: size_t = 0;
-    if uv__queue_empty(&raw mut (*handle).write_queue) != 0 {
-        return;
-    }
-    loop {
-        pkts = 0 as size_t;
-        q = uv__queue_head(&raw mut (*handle).write_queue);
-        while pkts
-            < (::core::mem::size_of::<[mmsghdr; 20]>() as usize)
-                .wrapping_div(::core::mem::size_of::<mmsghdr>() as usize)
-            && q != &raw mut (*handle).write_queue
-        {
-            '_c2rust_label: {
-                if !q.is_null() {
-                } else {
-                    __assert_fail(
-                        b"q != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        295 as ::core::ffi::c_uint,
-                        b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
-                as *mut uv_udp_send_t;
-            '_c2rust_label_0: {
-                if !req.is_null() {
-                } else {
-                    __assert_fail(
-                        b"req != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        297 as ::core::ffi::c_uint,
-                        b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            p = (&raw mut h as *mut mmsghdr).offset(pkts as isize) as *mut mmsghdr;
-            memset(
-                p as *mut ::core::ffi::c_void,
-                0 as ::core::ffi::c_int,
-                ::core::mem::size_of::<mmsghdr>() as size_t,
-            );
-            if (*req).addr.ss_family as ::core::ffi::c_int == AF_UNSPEC {
-                (*p).msg_hdr.msg_name = NULL;
-                (*p).msg_hdr.msg_namelen = 0 as socklen_t;
-            } else {
-                (*p).msg_hdr.msg_name = &raw mut (*req).addr as *mut ::core::ffi::c_void;
-                if (*req).addr.ss_family as ::core::ffi::c_int == AF_INET6 {
-                    (*p).msg_hdr.msg_namelen = ::core::mem::size_of::<sockaddr_in6>() as socklen_t;
-                } else if (*req).addr.ss_family as ::core::ffi::c_int == AF_INET {
-                    (*p).msg_hdr.msg_namelen = ::core::mem::size_of::<sockaddr_in>() as socklen_t;
-                } else if (*req).addr.ss_family as ::core::ffi::c_int == AF_UNIX {
-                    (*p).msg_hdr.msg_namelen = ::core::mem::size_of::<sockaddr_un>() as socklen_t;
-                } else {
-                    '_c2rust_label_1: {
-                        if 0 as ::core::ffi::c_int != 0
-                            && !(b"unsupported address family\0" as *const u8
-                                as *const ::core::ffi::c_char)
-                                .is_null()
-                        {
-                        } else {
-                            __assert_fail(
-                                b"0 && \"unsupported address family\"\0" as *const u8
-                                    as *const ::core::ffi::c_char,
-                                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
-                                    as *const u8
-                                    as *const ::core::ffi::c_char,
-                                313 as ::core::ffi::c_uint,
-                                b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
-                                    as *const ::core::ffi::c_char,
-                            );
-                        }
-                    };
-                    abort();
-                }
-            }
-            h[pkts as usize].msg_hdr.msg_iov = (*req).bufs as *mut iovec;
-            h[pkts as usize].msg_hdr.msg_iovlen = (*req).nbufs as size_t;
-            pkts = pkts.wrapping_add(1);
-            q = uv__queue_head(q);
-        }
-        loop {
-            npkts = sendmmsg(
-                (*handle).io_watcher.fd,
-                &raw mut h as *mut mmsghdr,
-                pkts as ::core::ffi::c_uint,
-                0 as ::core::ffi::c_int,
-            ) as ssize_t;
-            if !(npkts == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
-                break;
-            }
-        }
-        if npkts < 1 as ssize_t {
-            if *__errno_location() == EAGAIN
-                || *__errno_location() == EWOULDBLOCK
-                || *__errno_location() == ENOBUFS
-            {
-                return;
-            }
-            i = 0 as size_t;
-            q = uv__queue_head(&raw mut (*handle).write_queue);
-            while i < pkts && q != &raw mut (*handle).write_queue {
-                '_c2rust_label_2: {
-                    if !q.is_null() {
-                    } else {
-                        __assert_fail(
-                            b"q != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                            b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                                as *const ::core::ffi::c_char,
-                            331 as ::core::ffi::c_uint,
-                            b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
-                                as *const ::core::ffi::c_char,
-                        );
-                    }
-                };
-                req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
-                    as *mut uv_udp_send_t;
-                '_c2rust_label_3: {
-                    if !req.is_null() {
-                    } else {
-                        __assert_fail(
-                            b"req != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                            b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                                as *const ::core::ffi::c_char,
-                            333 as ::core::ffi::c_uint,
-                            b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
-                                as *const ::core::ffi::c_char,
-                        );
-                    }
-                };
-                (*req).status = -*__errno_location() as ssize_t;
-                uv__queue_remove(&raw mut (*req).queue);
-                uv__queue_insert_tail(
-                    &raw mut (*handle).write_completed_queue,
-                    &raw mut (*req).queue,
-                );
-                i = i.wrapping_add(1);
-                q = uv__queue_head(&raw mut (*handle).write_queue);
-            }
-            uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
-            return;
-        }
-        i = 0 as size_t;
-        q = uv__queue_head(&raw mut (*handle).write_queue);
-        while i < npkts as size_t && q != &raw mut (*handle).write_queue {
-            '_c2rust_label_4: {
-                if !q.is_null() {
-                } else {
-                    __assert_fail(
-                        b"q != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        349 as ::core::ffi::c_uint,
-                        b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            req = (q as *mut ::core::ffi::c_char).offset(-(80 as ::core::ffi::c_ulong as isize))
-                as *mut uv_udp_send_t;
-            '_c2rust_label_5: {
-                if !req.is_null() {
-                } else {
-                    __assert_fail(
-                        b"req != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        351 as ::core::ffi::c_uint,
-                        b"void uv__udp_sendmsg(uv_udp_t *)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            (*req).status = (*(*req).bufs.offset(0 as ::core::ffi::c_int as isize)).len as ssize_t;
-            uv__queue_remove(&raw mut (*req).queue);
-            uv__queue_insert_tail(
-                &raw mut (*handle).write_completed_queue,
-                &raw mut (*req).queue,
-            );
-            i = i.wrapping_add(1);
-            q = uv__queue_head(&raw mut (*handle).write_queue);
-        }
-        if !(uv__queue_empty(&raw mut (*handle).write_queue) == 0) {
-            break;
-        }
-    }
-    uv__io_feed((*handle).loop_0, &raw mut (*handle).io_watcher);
-}
-unsafe extern "C" fn uv__set_reuse(mut fd: ::core::ffi::c_int) -> ::core::ffi::c_int {
-    let mut yes: ::core::ffi::c_int = 0;
-    yes = 1 as ::core::ffi::c_int;
-    if setsockopt(
-        fd,
-        SOL_SOCKET,
-        SO_REUSEADDR,
-        &raw mut yes as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__set_recverr(
-    mut fd: ::core::ffi::c_int,
-    mut ss_family: sa_family_t,
-) -> ::core::ffi::c_int {
-    let mut yes: ::core::ffi::c_int = 0;
-    yes = 1 as ::core::ffi::c_int;
-    if ss_family as ::core::ffi::c_int == AF_INET {
-        if setsockopt(
-            fd,
-            IPPROTO_IP as ::core::ffi::c_int,
-            IP_RECVERR,
-            &raw mut yes as *const ::core::ffi::c_void,
-            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-        ) != 0
-        {
-            return -*__errno_location();
-        }
-    } else if ss_family as ::core::ffi::c_int == AF_INET6 {
-        if setsockopt(
-            fd,
-            IPPROTO_IPV6 as ::core::ffi::c_int,
-            IPV6_RECVERR,
-            &raw mut yes as *const ::core::ffi::c_void,
-            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-        ) != 0
-        {
-            return -*__errno_location();
-        }
-    }
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_bind(
-    mut handle: *mut uv_udp_t,
-    mut addr: *const sockaddr,
-    mut addrlen: ::core::ffi::c_uint,
-    mut flags: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut yes: ::core::ffi::c_int = 0;
-    let mut fd: ::core::ffi::c_int = 0;
-    if flags
-        & !(UV_UDP_IPV6ONLY as ::core::ffi::c_int
-            | UV_UDP_REUSEADDR as ::core::ffi::c_int
-            | UV_UDP_LINUX_RECVERR as ::core::ffi::c_int) as ::core::ffi::c_uint
-        != 0
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if flags & UV_UDP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint != 0
-        && (*addr).sa_family as ::core::ffi::c_int != AF_INET6
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    fd = (*handle).io_watcher.fd;
-    if fd == -(1 as ::core::ffi::c_int) {
-        err = uv__socket(
-            (*addr).sa_family as ::core::ffi::c_int,
-            SOCK_DGRAM as ::core::ffi::c_int,
-            0 as ::core::ffi::c_int,
-        );
-        if err < 0 as ::core::ffi::c_int {
-            return err;
-        }
-        fd = err;
-        (*handle).io_watcher.fd = fd;
-    }
-    if flags & UV_UDP_LINUX_RECVERR as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        err = uv__set_recverr(fd, (*addr).sa_family);
-        if err != 0 {
-            return err;
-        }
-    }
-    if flags & UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        err = uv__set_reuse(fd);
-        if err != 0 {
-            return err;
-        }
-    }
-    if flags & UV_UDP_IPV6ONLY as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        yes = 1 as ::core::ffi::c_int;
-        if setsockopt(
-            fd,
-            IPPROTO_IPV6 as ::core::ffi::c_int,
-            IPV6_V6ONLY,
-            &raw mut yes as *const ::core::ffi::c_void,
-            ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-        ) == -(1 as ::core::ffi::c_int)
-        {
-            err = -*__errno_location();
-            return err;
-        }
-    }
-    if bind(
-        fd,
-        __CONST_SOCKADDR_ARG { __sockaddr__: addr },
-        addrlen as socklen_t,
-    ) != 0
-    {
-        err = -*__errno_location();
-        if *__errno_location() == EAFNOSUPPORT {
-            err = UV_EINVAL as ::core::ffi::c_int;
-        }
-        return err;
-    }
-    if (*addr).sa_family as ::core::ffi::c_int == AF_INET6 {
-        (*handle).flags |= UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint;
-    }
-    (*handle).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__udp_maybe_deferred_bind(
-    mut handle: *mut uv_udp_t,
-    mut domain: ::core::ffi::c_int,
-    mut flags: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut taddr: uv__sockaddr = uv__sockaddr {
-        in6: sockaddr_in6 {
-            sin6_family: 0,
-            sin6_port: 0,
-            sin6_flowinfo: 0,
-            sin6_addr: in6_addr {
-                __in6_u: C2RustUnnamed_0 {
-                    __u6_addr8: [0; 16],
-                },
-            },
-            sin6_scope_id: 0,
-        },
-    };
-    let mut addrlen: socklen_t = 0;
-    if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+        (*handle).alloc_cb = None;
+        (*handle).recv_cb = None;
         return 0 as ::core::ffi::c_int;
     }
-    match domain {
-        AF_INET => {
-            let mut addr: *mut sockaddr_in = &raw mut taddr.in_0;
-            memset(
-                addr as *mut ::core::ffi::c_void,
-                0 as ::core::ffi::c_int,
-                ::core::mem::size_of::<sockaddr_in>() as size_t,
-            );
-            (*addr).sin_family = AF_INET as sa_family_t;
-            (*addr).sin_addr.s_addr = INADDR_ANY;
-            addrlen = ::core::mem::size_of::<sockaddr_in>() as socklen_t;
-        }
-        AF_INET6 => {
-            let mut addr_0: *mut sockaddr_in6 = &raw mut taddr.in6;
-            memset(
-                addr_0 as *mut ::core::ffi::c_void,
-                0 as ::core::ffi::c_int,
-                ::core::mem::size_of::<sockaddr_in6>() as size_t,
-            );
-            (*addr_0).sin6_family = AF_INET6 as sa_family_t;
-            (*addr_0).sin6_addr = in6addr_any;
-            addrlen = ::core::mem::size_of::<sockaddr_in6>() as socklen_t;
-        }
-        _ => {
-            '_c2rust_label: {
-                if 0 as ::core::ffi::c_int != 0
-                    && !(b"unsupported address family\0" as *const u8 as *const ::core::ffi::c_char)
-                        .is_null()
-                {
-                } else {
-                    __assert_fail(
-                        b"0 && \"unsupported address family\"\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        582 as ::core::ffi::c_uint,
-                        b"int uv__udp_maybe_deferred_bind(uv_udp_t *, int, unsigned int)\0"
-                            as *const u8 as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            abort();
-        }
-    }
-    return uv__udp_bind(
-        handle,
-        &raw mut taddr.addr,
-        addrlen as ::core::ffi::c_uint,
-        flags,
-    );
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_connect(
-    mut handle: *mut uv_udp_t,
-    mut addr: *const sockaddr,
-    mut addrlen: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    err = uv__udp_maybe_deferred_bind(
-        handle,
-        (*addr).sa_family as ::core::ffi::c_int,
-        0 as ::core::ffi::c_uint,
-    );
-    if err != 0 {
-        return err;
-    }
-    loop {
-        *__errno_location() = 0 as ::core::ffi::c_int;
-        err = connect(
-            (*handle).io_watcher.fd,
-            __CONST_SOCKADDR_ARG { __sockaddr__: addr },
-            addrlen as socklen_t,
-        );
-        if !(err == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
-        }
-    }
-    if err != 0 {
-        return -*__errno_location();
-    }
-    (*handle).flags |= UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint;
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_disconnect(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    let mut addr: sockaddr = sockaddr {
-        sa_family: 0,
-        sa_data: [0; 14],
-    };
-    memset(
-        &raw mut addr as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<sockaddr>() as size_t,
-    );
-    addr.sa_family = AF_UNSPEC as sa_family_t;
-    loop {
-        *__errno_location() = 0 as ::core::ffi::c_int;
-        r = connect(
-            (*handle).io_watcher.fd,
-            __CONST_SOCKADDR_ARG {
-                __sockaddr__: &raw mut addr,
-            },
-            ::core::mem::size_of::<sockaddr>() as socklen_t,
-        );
-        if !(r == -(1 as ::core::ffi::c_int) && *__errno_location() == EINTR) {
-            break;
-        }
-    }
-    if r == -(1 as ::core::ffi::c_int) {
-        return -*__errno_location();
-    }
-    (*handle).flags &= !(UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_send(
-    mut req: *mut uv_udp_send_t,
-    mut handle: *mut uv_udp_t,
-    mut bufs: *const uv_buf_t,
-    mut nbufs: ::core::ffi::c_uint,
-    mut addr: *const sockaddr,
-    mut addrlen: ::core::ffi::c_uint,
-    mut send_cb: uv_udp_send_cb,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut empty_queue: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if nbufs > 0 as ::core::ffi::c_uint {
-        } else {
-            __assert_fail(
-                b"nbufs > 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                696 as ::core::ffi::c_uint,
-                b"int uv__udp_send(uv_udp_send_t *, uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int, uv_udp_send_cb)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if !addr.is_null() {
-        err = uv__udp_maybe_deferred_bind(
-            handle,
-            (*addr).sa_family as ::core::ffi::c_int,
-            0 as ::core::ffi::c_uint,
-        );
-        if err != 0 {
-            return err;
-        }
-    }
-    empty_queue = ((*handle).send_queue_count == 0 as size_t) as ::core::ffi::c_int;
-    (*req).type_0 = UV_UDP_SEND;
-    (*(*handle).loop_0).active_reqs.count = (*(*handle).loop_0).active_reqs.count.wrapping_add(1);
-    '_c2rust_label_0: {
-        if addrlen as usize <= ::core::mem::size_of::<sockaddr_storage>() as usize {
-        } else {
-            __assert_fail(
-                b"addrlen <= sizeof(req->addr)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                711 as ::core::ffi::c_uint,
-                b"int uv__udp_send(uv_udp_send_t *, uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int, uv_udp_send_cb)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if addr.is_null() {
-        (*req).addr.ss_family = AF_UNSPEC as sa_family_t;
-    } else {
-        memcpy(
-            &raw mut (*req).addr as *mut ::core::ffi::c_void,
-            addr as *const ::core::ffi::c_void,
-            addrlen as size_t,
-        );
-    }
-    (*req).send_cb = send_cb;
-    (*req).handle = handle;
-    (*req).nbufs = nbufs;
-    (*req).bufs = &raw mut (*req).bufsml as *mut uv_buf_t;
-    if nbufs as usize
-        > (::core::mem::size_of::<[uv_buf_t; 4]>() as usize)
-            .wrapping_div(::core::mem::size_of::<uv_buf_t>() as usize)
-    {
-        (*req).bufs = uv__malloc(
-            (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
-        ) as *mut uv_buf_t;
-    }
-    if (*req).bufs.is_null() {
-        '_c2rust_label_1: {
-            if (*(*handle).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
-            } else {
-                __assert_fail(
-                    b"uv__has_active_reqs(handle->loop)\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
-                        as *const u8 as *const ::core::ffi::c_char,
-                    725 as ::core::ffi::c_uint,
-                    b"int uv__udp_send(uv_udp_send_t *, uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int, uv_udp_send_cb)\0"
-                        as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        (*(*handle).loop_0).active_reqs.count =
-            (*(*handle).loop_0).active_reqs.count.wrapping_sub(1);
-        return UV_ENOMEM as ::core::ffi::c_int;
-    }
-    memcpy(
-        (*req).bufs as *mut ::core::ffi::c_void,
-        bufs as *const ::core::ffi::c_void,
-        (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
-    );
-    (*handle).send_queue_size = (*handle)
-        .send_queue_size
-        .wrapping_add(uv__count_bufs((*req).bufs as *const uv_buf_t, (*req).nbufs));
-    (*handle).send_queue_count = (*handle).send_queue_count.wrapping_add(1);
-    uv__queue_insert_tail(&raw mut (*handle).write_queue, &raw mut (*req).queue);
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_add(1);
-        }
-    }
-    if empty_queue != 0
-        && (*handle).flags & UV_HANDLE_UDP_PROCESSING as ::core::ffi::c_int as ::core::ffi::c_uint
-            == 0
-    {
-        uv__udp_sendmsg(handle);
-        if uv__queue_empty(&raw mut (*handle).write_queue) == 0 {
-            uv__io_start(
-                (*handle).loop_0,
-                &raw mut (*handle).io_watcher,
-                POLLOUT as ::core::ffi::c_uint,
-            );
-        }
-    } else {
-        uv__io_start(
-            (*handle).loop_0,
-            &raw mut (*handle).io_watcher,
-            POLLOUT as ::core::ffi::c_uint,
-        );
-    }
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_try_send(
-    mut handle: *mut uv_udp_t,
-    mut bufs: *const uv_buf_t,
-    mut nbufs: ::core::ffi::c_uint,
-    mut addr: *const sockaddr,
-    mut addrlen: ::core::ffi::c_uint,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut h: msghdr = msghdr {
-        msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        msg_namelen: 0,
-        msg_iov: ::core::ptr::null_mut::<iovec>(),
-        msg_iovlen: 0,
-        msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        msg_controllen: 0,
-        msg_flags: 0,
-    };
-    let mut size: ssize_t = 0;
-    '_c2rust_label: {
-        if nbufs > 0 as ::core::ffi::c_uint {
-        } else {
-            __assert_fail(
-                b"nbufs > 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                761 as ::core::ffi::c_uint,
-                b"int uv__udp_try_send(uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*handle).send_queue_count != 0 as size_t {
-        return UV_EAGAIN as ::core::ffi::c_int;
-    }
-    if !addr.is_null() {
-        err = uv__udp_maybe_deferred_bind(
-            handle,
-            (*addr).sa_family as ::core::ffi::c_int,
-            0 as ::core::ffi::c_uint,
-        );
-        if err != 0 {
-            return err;
-        }
-    } else {
-        '_c2rust_label_0: {
-            if (*handle).flags
-                & UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0
-            {
-            } else {
-                __assert_fail(
-                    b"handle->flags & UV_HANDLE_UDP_CONNECTED\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0"
-                        as *const u8 as *const ::core::ffi::c_char,
-                    772 as ::core::ffi::c_uint,
-                    b"int uv__udp_try_send(uv_udp_t *, const uv_buf_t *, unsigned int, const struct sockaddr *, unsigned int)\0"
-                        as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
-        };
-    }
-    memset(
-        &raw mut h as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<msghdr>() as size_t,
-    );
-    h.msg_name = addr as *mut sockaddr as *mut ::core::ffi::c_void;
-    h.msg_namelen = addrlen as socklen_t;
-    h.msg_iov = bufs as *mut iovec;
-    h.msg_iovlen = nbufs as size_t;
-    loop {
-        size = sendmsg((*handle).io_watcher.fd, &raw mut h, 0 as ::core::ffi::c_int);
-        if !(size == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
-            break;
-        }
-    }
-    if size == -(1 as ::core::ffi::c_int) as ssize_t {
-        if *__errno_location() == EAGAIN
-            || *__errno_location() == EWOULDBLOCK
-            || *__errno_location() == ENOBUFS
-        {
-            return UV_EAGAIN as ::core::ffi::c_int;
-        } else {
-            return -*__errno_location();
-        }
-    }
-    return size as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__udp_set_membership4(
-    mut handle: *mut uv_udp_t,
-    mut multicast_addr: *const sockaddr_in,
-    mut interface_addr: *const ::core::ffi::c_char,
-    mut membership: uv_membership,
-) -> ::core::ffi::c_int {
-    let mut mreq: ip_mreq = ip_mreq {
-        imr_multiaddr: in_addr { s_addr: 0 },
-        imr_interface: in_addr { s_addr: 0 },
-    };
-    let mut optname: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    memset(
-        &raw mut mreq as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<ip_mreq>() as size_t,
-    );
-    if !interface_addr.is_null() {
-        err = uv_inet_pton(
-            AF_INET,
-            interface_addr,
-            &raw mut mreq.imr_interface.s_addr as *mut ::core::ffi::c_void,
-        );
-        if err != 0 {
-            return err;
-        }
-    } else {
-        mreq.imr_interface.s_addr = htonl(INADDR_ANY) as in_addr_t;
-    }
-    mreq.imr_multiaddr.s_addr = (*multicast_addr).sin_addr.s_addr;
-    match membership as ::core::ffi::c_uint {
-        1 => {
-            optname = IP_ADD_MEMBERSHIP;
-        }
-        0 => {
-            optname = IP_DROP_MEMBERSHIP;
-        }
-        _ => return UV_EINVAL as ::core::ffi::c_int,
-    }
-    if setsockopt(
-        (*handle).io_watcher.fd,
-        IPPROTO_IP as ::core::ffi::c_int,
-        optname,
-        &raw mut mreq as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<ip_mreq>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__udp_set_membership6(
-    mut handle: *mut uv_udp_t,
-    mut multicast_addr: *const sockaddr_in6,
-    mut interface_addr: *const ::core::ffi::c_char,
-    mut membership: uv_membership,
-) -> ::core::ffi::c_int {
-    let mut optname: ::core::ffi::c_int = 0;
-    let mut mreq: ipv6_mreq = ipv6_mreq {
-        ipv6mr_multiaddr: in6_addr {
-            __in6_u: C2RustUnnamed_0 {
-                __u6_addr8: [0; 16],
-            },
-        },
-        ipv6mr_interface: 0,
-    };
-    let mut addr6: sockaddr_in6 = sockaddr_in6 {
-        sin6_family: 0,
-        sin6_port: 0,
-        sin6_flowinfo: 0,
-        sin6_addr: in6_addr {
-            __in6_u: C2RustUnnamed_0 {
-                __u6_addr8: [0; 16],
-            },
-        },
-        sin6_scope_id: 0,
-    };
-    memset(
-        &raw mut mreq as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<ipv6_mreq>() as size_t,
-    );
-    if !interface_addr.is_null() {
-        if uv_ip6_addr(interface_addr, 0 as ::core::ffi::c_int, &raw mut addr6) != 0 {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-        mreq.ipv6mr_interface = addr6.sin6_scope_id as ::core::ffi::c_uint;
-    } else {
-        mreq.ipv6mr_interface = 0 as ::core::ffi::c_uint;
-    }
-    mreq.ipv6mr_multiaddr = (*multicast_addr).sin6_addr;
-    match membership as ::core::ffi::c_uint {
-        1 => {
-            optname = IPV6_ADD_MEMBERSHIP;
-        }
-        0 => {
-            optname = IPV6_DROP_MEMBERSHIP;
-        }
-        _ => return UV_EINVAL as ::core::ffi::c_int,
-    }
-    if setsockopt(
-        (*handle).io_watcher.fd,
-        IPPROTO_IPV6 as ::core::ffi::c_int,
-        optname,
-        &raw mut mreq as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<ipv6_mreq>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__udp_set_source_membership4(
-    mut handle: *mut uv_udp_t,
-    mut multicast_addr: *const sockaddr_in,
-    mut interface_addr: *const ::core::ffi::c_char,
-    mut source_addr: *const sockaddr_in,
-    mut membership: uv_membership,
-) -> ::core::ffi::c_int {
-    let mut mreq: ip_mreq_source = ip_mreq_source {
-        imr_multiaddr: in_addr { s_addr: 0 },
-        imr_interface: in_addr { s_addr: 0 },
-        imr_sourceaddr: in_addr { s_addr: 0 },
-    };
-    let mut optname: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    err = uv__udp_maybe_deferred_bind(
-        handle,
-        AF_INET,
-        UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
-    );
-    if err != 0 {
-        return err;
-    }
-    memset(
-        &raw mut mreq as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<ip_mreq_source>() as size_t,
-    );
-    if !interface_addr.is_null() {
-        err = uv_inet_pton(
-            AF_INET,
-            interface_addr,
-            &raw mut mreq.imr_interface.s_addr as *mut ::core::ffi::c_void,
-        );
-        if err != 0 {
-            return err;
-        }
-    } else {
-        mreq.imr_interface.s_addr = htonl(INADDR_ANY) as in_addr_t;
-    }
-    mreq.imr_multiaddr.s_addr = (*multicast_addr).sin_addr.s_addr;
-    mreq.imr_sourceaddr.s_addr = (*source_addr).sin_addr.s_addr;
-    if membership as ::core::ffi::c_uint
-        == UV_JOIN_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        optname = IP_ADD_SOURCE_MEMBERSHIP;
-    } else if membership as ::core::ffi::c_uint
-        == UV_LEAVE_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        optname = IP_DROP_SOURCE_MEMBERSHIP;
-    } else {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if setsockopt(
-        (*handle).io_watcher.fd,
-        IPPROTO_IP as ::core::ffi::c_int,
-        optname,
-        &raw mut mreq as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<ip_mreq_source>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__udp_set_source_membership6(
-    mut handle: *mut uv_udp_t,
-    mut multicast_addr: *const sockaddr_in6,
-    mut interface_addr: *const ::core::ffi::c_char,
-    mut source_addr: *const sockaddr_in6,
-    mut membership: uv_membership,
-) -> ::core::ffi::c_int {
-    let mut mreq: group_source_req = group_source_req {
-        gsr_interface: 0,
-        gsr_group: sockaddr_storage {
-            ss_family: 0,
-            __ss_padding: [0; 118],
-            __ss_align: 0,
-        },
-        gsr_source: sockaddr_storage {
-            ss_family: 0,
-            __ss_padding: [0; 118],
-            __ss_align: 0,
-        },
-    };
-    let mut addr6: sockaddr_in6 = sockaddr_in6 {
-        sin6_family: 0,
-        sin6_port: 0,
-        sin6_flowinfo: 0,
-        sin6_addr: in6_addr {
-            __in6_u: C2RustUnnamed_0 {
-                __u6_addr8: [0; 16],
-            },
-        },
-        sin6_scope_id: 0,
-    };
-    let mut optname: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    err = uv__udp_maybe_deferred_bind(
-        handle,
-        AF_INET6,
-        UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
-    );
-    if err != 0 {
-        return err;
-    }
-    memset(
-        &raw mut mreq as *mut ::core::ffi::c_void,
-        0 as ::core::ffi::c_int,
-        ::core::mem::size_of::<group_source_req>() as size_t,
-    );
-    if !interface_addr.is_null() {
-        err = uv_ip6_addr(interface_addr, 0 as ::core::ffi::c_int, &raw mut addr6);
-        if err != 0 {
-            return err;
-        }
-        mreq.gsr_interface = addr6.sin6_scope_id;
-    } else {
-        mreq.gsr_interface = 0 as uint32_t;
-    }
-    memcpy(
-        &raw mut mreq.gsr_group as *mut ::core::ffi::c_void,
-        multicast_addr as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<sockaddr_in6>() as size_t,
-    );
-    memcpy(
-        &raw mut mreq.gsr_source as *mut ::core::ffi::c_void,
-        source_addr as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<sockaddr_in6>() as size_t,
-    );
-    if membership as ::core::ffi::c_uint
-        == UV_JOIN_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        optname = MCAST_JOIN_SOURCE_GROUP;
-    } else if membership as ::core::ffi::c_uint
-        == UV_LEAVE_GROUP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        optname = MCAST_LEAVE_SOURCE_GROUP;
-    } else {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if setsockopt(
-        (*handle).io_watcher.fd,
-        IPPROTO_IPV6 as ::core::ffi::c_int,
-        optname,
-        &raw mut mreq as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<group_source_req>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_init_ex(
-    mut loop_0: *mut uv_loop_t,
-    mut handle: *mut uv_udp_t,
-    mut flags: ::core::ffi::c_uint,
-    mut domain: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    let mut fd: ::core::ffi::c_int = 0;
-    fd = -(1 as ::core::ffi::c_int);
-    if domain != AF_UNSPEC {
-        fd = uv__socket(
-            domain,
-            SOCK_DGRAM as ::core::ffi::c_int,
-            0 as ::core::ffi::c_int,
-        );
-        if fd < 0 as ::core::ffi::c_int {
-            return fd;
-        }
-    }
-    let ref mut fresh0 = (*(handle as *mut uv_handle_t)).loop_0;
-    *fresh0 = loop_0;
-    (*(handle as *mut uv_handle_t)).type_0 = UV_UDP;
-    (*(handle as *mut uv_handle_t)).flags =
-        UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    uv__queue_insert_tail(
-        &raw mut (*loop_0).handle_queue,
-        &raw mut (*(handle as *mut uv_handle_t)).handle_queue,
-    );
-    let ref mut fresh1 = (*(handle as *mut uv_handle_t)).next_closing;
-    *fresh1 = ::core::ptr::null_mut::<uv_handle_t>();
-    (*handle).alloc_cb = None;
-    (*handle).recv_cb = None;
-    (*handle).send_queue_size = 0 as size_t;
-    (*handle).send_queue_count = 0 as size_t;
-    uv__io_init(
-        &raw mut (*handle).io_watcher,
-        Some(
-            uv__udp_io
-                as unsafe extern "C" fn(*mut uv_loop_t, *mut uv__io_t, ::core::ffi::c_uint) -> (),
-        ),
-        fd,
-    );
-    uv__queue_init(&raw mut (*handle).write_queue);
-    uv__queue_init(&raw mut (*handle).write_completed_queue);
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_udp_using_recvmmsg(mut handle: *const uv_udp_t) -> ::core::ffi::c_int {
-    if (*handle).flags & UV_HANDLE_UDP_RECVMMSG as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        return 1 as ::core::ffi::c_int;
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_udp_open(
-    mut handle: *mut uv_udp_t,
-    mut sock: uv_os_sock_t,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
-        return UV_EBUSY as ::core::ffi::c_int;
-    }
-    if uv__fd_exists((*handle).loop_0, sock as ::core::ffi::c_int) != 0 {
-        return UV_EEXIST as ::core::ffi::c_int;
-    }
-    err = uv__nonblock_ioctl(sock as ::core::ffi::c_int, 1 as ::core::ffi::c_int);
-    if err != 0 {
-        return err;
-    }
-    err = uv__set_reuse(sock as ::core::ffi::c_int);
-    if err != 0 {
-        return err;
-    }
-    (*handle).io_watcher.fd = sock as ::core::ffi::c_int;
-    if uv__udp_is_connected(handle) != 0 {
-        (*handle).flags |= UV_HANDLE_UDP_CONNECTED as ::core::ffi::c_int as ::core::ffi::c_uint;
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_udp_set_membership(
-    mut handle: *mut uv_udp_t,
-    mut multicast_addr: *const ::core::ffi::c_char,
-    mut interface_addr: *const ::core::ffi::c_char,
-    mut membership: uv_membership,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut addr4: sockaddr_in = sockaddr_in {
-        sin_family: 0,
-        sin_port: 0,
-        sin_addr: in_addr { s_addr: 0 },
-        sin_zero: [0; 8],
-    };
-    let mut addr6: sockaddr_in6 = sockaddr_in6 {
-        sin6_family: 0,
-        sin6_port: 0,
-        sin6_flowinfo: 0,
-        sin6_addr: in6_addr {
-            __in6_u: C2RustUnnamed_0 {
-                __u6_addr8: [0; 16],
-            },
-        },
-        sin6_scope_id: 0,
-    };
-    if uv_ip4_addr(multicast_addr, 0 as ::core::ffi::c_int, &raw mut addr4)
-        == 0 as ::core::ffi::c_int
-    {
-        err = uv__udp_maybe_deferred_bind(
-            handle,
-            AF_INET,
-            UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
-        );
-        if err != 0 {
-            return err;
-        }
-        return uv__udp_set_membership4(handle, &raw mut addr4, interface_addr, membership);
-    } else if uv_ip6_addr(multicast_addr, 0 as ::core::ffi::c_int, &raw mut addr6)
-        == 0 as ::core::ffi::c_int
-    {
-        err = uv__udp_maybe_deferred_bind(
-            handle,
-            AF_INET6,
-            UV_UDP_REUSEADDR as ::core::ffi::c_int as ::core::ffi::c_uint,
-        );
-        if err != 0 {
-            return err;
-        }
-        return uv__udp_set_membership6(handle, &raw mut addr6, interface_addr, membership);
-    } else {
-        return UV_EINVAL as ::core::ffi::c_int;
-    };
-}
-pub(crate) unsafe fn uv_udp_set_source_membership(
-    mut handle: *mut uv_udp_t,
-    mut multicast_addr: *const ::core::ffi::c_char,
-    mut interface_addr: *const ::core::ffi::c_char,
-    mut source_addr: *const ::core::ffi::c_char,
-    mut membership: uv_membership,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut mcast_addr: uv__sockaddr = uv__sockaddr {
-        in6: sockaddr_in6 {
-            sin6_family: 0,
-            sin6_port: 0,
-            sin6_flowinfo: 0,
-            sin6_addr: in6_addr {
-                __in6_u: C2RustUnnamed_0 {
-                    __u6_addr8: [0; 16],
-                },
-            },
-            sin6_scope_id: 0,
-        },
-    };
-    let mut src_addr: uv__sockaddr = uv__sockaddr {
-        in6: sockaddr_in6 {
-            sin6_family: 0,
-            sin6_port: 0,
-            sin6_flowinfo: 0,
-            sin6_addr: in6_addr {
-                __in6_u: C2RustUnnamed_0 {
-                    __u6_addr8: [0; 16],
-                },
-            },
-            sin6_scope_id: 0,
-        },
-    };
-    err = uv_ip4_addr(
-        multicast_addr,
-        0 as ::core::ffi::c_int,
-        &raw mut mcast_addr.in_0,
-    );
-    if err != 0 {
-        err = uv_ip6_addr(
-            multicast_addr,
-            0 as ::core::ffi::c_int,
-            &raw mut mcast_addr.in6,
-        );
-        if err != 0 {
-            return err;
-        }
-        err = uv_ip6_addr(source_addr, 0 as ::core::ffi::c_int, &raw mut src_addr.in6);
-        if err != 0 {
-            return err;
-        }
-        return uv__udp_set_source_membership6(
-            handle,
-            &raw mut mcast_addr.in6,
-            interface_addr,
-            &raw mut src_addr.in6,
-            membership,
-        );
-    }
-    err = uv_ip4_addr(source_addr, 0 as ::core::ffi::c_int, &raw mut src_addr.in_0);
-    if err != 0 {
-        return err;
-    }
-    return uv__udp_set_source_membership4(
-        handle,
-        &raw mut mcast_addr.in_0,
-        interface_addr,
-        &raw mut src_addr.in_0,
-        membership,
-    );
-}
-unsafe extern "C" fn uv__setsockopt(
-    mut handle: *mut uv_udp_t,
-    mut option4: ::core::ffi::c_int,
-    mut option6: ::core::ffi::c_int,
-    mut val: *const ::core::ffi::c_void,
-    mut size: socklen_t,
-) -> ::core::ffi::c_int {
-    let mut r: ::core::ffi::c_int = 0;
-    if (*handle).flags & UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        r = setsockopt(
-            (*handle).io_watcher.fd,
-            IPPROTO_IPV6 as ::core::ffi::c_int,
-            option6,
-            val,
-            size,
-        );
-    } else {
-        r = setsockopt(
-            (*handle).io_watcher.fd,
-            IPPROTO_IP as ::core::ffi::c_int,
-            option4,
-            val,
-            size,
-        );
-    }
-    if r != 0 {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__setsockopt_maybe_char(
-    mut handle: *mut uv_udp_t,
-    mut option4: ::core::ffi::c_int,
-    mut option6: ::core::ffi::c_int,
-    mut val: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    let mut arg: ::core::ffi::c_int = val;
-    if val < 0 as ::core::ffi::c_int || val > 255 as ::core::ffi::c_int {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    return uv__setsockopt(
-        handle,
-        option4,
-        option6,
-        &raw mut arg as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    );
-}
-pub(crate) unsafe fn uv_udp_set_broadcast(
-    mut handle: *mut uv_udp_t,
-    mut on: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    if setsockopt(
-        (*handle).io_watcher.fd,
-        SOL_SOCKET,
-        SO_BROADCAST,
-        &raw mut on as *const ::core::ffi::c_void,
-        ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t,
-    ) != 0
-    {
-        return -*__errno_location();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_udp_set_ttl(
-    mut handle: *mut uv_udp_t,
-    mut ttl: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    if ttl < 1 as ::core::ffi::c_int || ttl > 255 as ::core::ffi::c_int {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    return uv__setsockopt_maybe_char(handle, IP_TTL, IPV6_UNICAST_HOPS, ttl);
-}
-pub(crate) unsafe fn uv_udp_set_multicast_ttl(
-    mut handle: *mut uv_udp_t,
-    mut ttl: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    return uv__setsockopt_maybe_char(handle, IP_MULTICAST_TTL, IPV6_MULTICAST_HOPS, ttl);
-}
-pub(crate) unsafe fn uv_udp_set_multicast_loop(
-    mut handle: *mut uv_udp_t,
-    mut on: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    return uv__setsockopt_maybe_char(handle, IP_MULTICAST_LOOP, IPV6_MULTICAST_LOOP, on);
-}
-pub(crate) unsafe fn uv_udp_set_multicast_interface(
-    mut handle: *mut uv_udp_t,
-    mut interface_addr: *const ::core::ffi::c_char,
-) -> ::core::ffi::c_int {
-    let mut addr_st: sockaddr_storage = sockaddr_storage {
-        ss_family: 0,
-        __ss_padding: [0; 118],
-        __ss_align: 0,
-    };
-    let mut addr4: *mut sockaddr_in = ::core::ptr::null_mut::<sockaddr_in>();
-    let mut addr6: *mut sockaddr_in6 = ::core::ptr::null_mut::<sockaddr_in6>();
-    addr4 = &raw mut addr_st as *mut sockaddr_in;
-    addr6 = &raw mut addr_st as *mut sockaddr_in6;
-    if interface_addr.is_null() {
-        memset(
-            &raw mut addr_st as *mut ::core::ffi::c_void,
-            0 as ::core::ffi::c_int,
-            ::core::mem::size_of::<sockaddr_storage>() as size_t,
-        );
-        if (*handle).flags & UV_HANDLE_IPV6 as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-            addr_st.ss_family = AF_INET6 as sa_family_t;
-            (*addr6).sin6_scope_id = 0 as uint32_t;
-        } else {
-            addr_st.ss_family = AF_INET as sa_family_t;
-            (*addr4).sin_addr.s_addr = htonl(INADDR_ANY) as in_addr_t;
-        }
-    } else if !(uv_ip4_addr(interface_addr, 0 as ::core::ffi::c_int, addr4)
-        == 0 as ::core::ffi::c_int)
-    {
-        if uv_ip6_addr(interface_addr, 0 as ::core::ffi::c_int, addr6) == 0 as ::core::ffi::c_int {
-        } else {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-    }
-    if addr_st.ss_family as ::core::ffi::c_int == AF_INET {
-        if setsockopt(
-            (*handle).io_watcher.fd,
-            IPPROTO_IP as ::core::ffi::c_int,
-            IP_MULTICAST_IF,
-            &raw mut (*addr4).sin_addr as *mut ::core::ffi::c_void,
-            ::core::mem::size_of::<in_addr>() as socklen_t,
-        ) == -(1 as ::core::ffi::c_int)
-        {
-            return -*__errno_location();
-        }
-    } else if addr_st.ss_family as ::core::ffi::c_int == AF_INET6 {
-        if setsockopt(
-            (*handle).io_watcher.fd,
-            IPPROTO_IPV6 as ::core::ffi::c_int,
-            IPV6_MULTICAST_IF,
-            &raw mut (*addr6).sin6_scope_id as *const ::core::ffi::c_void,
-            ::core::mem::size_of::<uint32_t>() as socklen_t,
-        ) == -(1 as ::core::ffi::c_int)
-        {
-            return -*__errno_location();
-        }
-    } else {
-        '_c2rust_label: {
-            if 0 as ::core::ffi::c_int != 0
-                && !(b"unexpected address family\0" as *const u8 as *const ::core::ffi::c_char)
-                    .is_null()
-            {
-            } else {
-                __assert_fail(
-                    b"0 && \"unexpected address family\"\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/udp.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    1305 as ::core::ffi::c_uint,
-                    b"int uv_udp_set_multicast_interface(uv_udp_t *, const char *)\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        abort();
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_udp_getpeername(
-    mut handle: *const uv_udp_t,
-    mut name: *mut sockaddr,
-    mut namelen: *mut ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    return uv__getsockpeername(
-        handle as *const uv_handle_t,
-        ::core::mem::transmute::<
-            Option<
-                unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-            >,
-            uv__peersockfunc,
-        >(Some(
-            getpeername
-                as unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-        )),
-        name,
-        namelen,
-    );
-}
-pub(crate) unsafe fn uv_udp_getsockname(
-    mut handle: *const uv_udp_t,
-    mut name: *mut sockaddr,
-    mut namelen: *mut ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    return uv__getsockpeername(
-        handle as *const uv_handle_t,
-        ::core::mem::transmute::<
-            Option<
-                unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-            >,
-            uv__peersockfunc,
-        >(Some(
-            getsockname
-                as unsafe extern "C" fn(
-                    ::core::ffi::c_int,
-                    __SOCKADDR_ARG,
-                    *mut socklen_t,
-                ) -> ::core::ffi::c_int,
-        )),
-        name,
-        namelen,
-    );
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_recv_start(
-    mut handle: *mut uv_udp_t,
-    mut alloc_cb: uv_alloc_cb,
-    mut recv_cb: uv_udp_recv_cb,
-) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if alloc_cb.is_none() || recv_cb.is_none() {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    if uv__io_active(&raw mut (*handle).io_watcher, POLLIN as ::core::ffi::c_uint) != 0 {
-        return UV_EALREADY as ::core::ffi::c_int;
-    }
-    err = uv__udp_maybe_deferred_bind(handle, AF_INET, 0 as ::core::ffi::c_uint);
-    if err != 0 {
-        return err;
-    }
-    (*handle).alloc_cb = alloc_cb;
-    (*handle).recv_cb = recv_cb;
-    uv__io_start(
-        (*handle).loop_0,
-        &raw mut (*handle).io_watcher,
-        POLLIN as ::core::ffi::c_uint,
-    );
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_add(1);
-        }
-    }
-    return 0 as ::core::ffi::c_int;
-}
-#[no_mangle]
-pub unsafe extern "C" fn uv__udp_recv_stop(mut handle: *mut uv_udp_t) -> ::core::ffi::c_int {
-    uv__io_stop(
-        (*handle).loop_0,
-        &raw mut (*handle).io_watcher,
-        POLLIN as ::core::ffi::c_uint,
-    );
-    if uv__io_active(
-        &raw mut (*handle).io_watcher,
-        POLLOUT as ::core::ffi::c_uint,
-    ) == 0
-    {
-        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-            == 0 as ::core::ffi::c_uint)
-        {
-            (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0 as ::core::ffi::c_uint
-            {
-                (*(*handle).loop_0).active_handles =
-                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
-            }
-        }
-    }
-    (*handle).alloc_cb = None;
-    (*handle).recv_cb = None;
-    return 0 as ::core::ffi::c_int;
 }
 
-pub(crate) unsafe fn using_recvmmsg(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn using_recvmmsg(
     handle: *const crate::abi::linux_x86_64::uv_udp_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_using_recvmmsg(handle.cast()) }
+    unsafe { unsafe { uv_udp_using_recvmmsg(handle.cast()) } }
 }
 
-pub(crate) unsafe fn bind_udp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn bind_udp(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     addr: *const crate::abi::linux_x86_64::sockaddr,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::upstream_support::uv_common::uv_udp_bind(handle.cast(), addr.cast(), flags) }
+    unsafe {
+        unsafe {
+            crate::upstream_support::uv_common::uv_udp_bind(handle.cast(), addr.cast(), flags)
+        }
+    }
 }
 
-pub(crate) unsafe fn connect_udp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn connect_udp(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     addr: *const crate::abi::linux_x86_64::sockaddr,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::upstream_support::uv_common::uv_udp_connect(handle.cast(), addr.cast()) }
+    unsafe {
+        unsafe { crate::upstream_support::uv_common::uv_udp_connect(handle.cast(), addr.cast()) }
+    }
 }
 
-pub(crate) unsafe fn getpeername_udp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn getpeername_udp(
     handle: *const crate::abi::linux_x86_64::uv_udp_t,
     name: *mut crate::abi::linux_x86_64::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_getpeername(handle.cast(), name.cast(), namelen) }
+    unsafe { unsafe { uv_udp_getpeername(handle.cast(), name.cast(), namelen) } }
 }
 
-pub(crate) unsafe fn getsockname_udp(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn getsockname_udp(
     handle: *const crate::abi::linux_x86_64::uv_udp_t,
     name: *mut crate::abi::linux_x86_64::sockaddr,
     namelen: *mut ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_getsockname(handle.cast(), name.cast(), namelen) }
+    unsafe { unsafe { uv_udp_getsockname(handle.cast(), name.cast(), namelen) } }
 }
 
-pub(crate) unsafe fn init(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::upstream_support::uv_common::uv_udp_init(loop_.cast(), handle.cast()) }
+    unsafe {
+        unsafe { crate::upstream_support::uv_common::uv_udp_init(loop_.cast(), handle.cast()) }
+    }
 }
 
-pub(crate) unsafe fn init_ex(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn init_ex(
     loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     flags: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        crate::upstream_support::uv_common::uv_udp_init_ex(loop_.cast(), handle.cast(), flags)
+        unsafe {
+            crate::upstream_support::uv_common::uv_udp_init_ex(loop_.cast(), handle.cast(), flags)
+        }
     }
 }
 
-pub(crate) unsafe fn open(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn open(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     sock: crate::abi::linux_x86_64::uv_os_sock_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_open(handle.cast(), sock) }
+    unsafe { unsafe { uv_udp_open(handle.cast(), sock) } }
 }
 
-pub(crate) unsafe fn recv_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn recv_start(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     alloc_cb: crate::abi::linux_x86_64::uv_alloc_cb,
     recv_cb: crate::abi::linux_x86_64::uv_udp_recv_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        crate::upstream_support::uv_common::uv_udp_recv_start(
-            handle.cast(),
-            std::mem::transmute::<_, crate::upstream_support::uv_common::uv_alloc_cb>(alloc_cb),
-            std::mem::transmute::<_, crate::upstream_support::uv_common::uv_udp_recv_cb>(recv_cb),
-        )
+        unsafe {
+            crate::upstream_support::uv_common::uv_udp_recv_start(
+                handle.cast(),
+                std::mem::transmute::<_, crate::upstream_support::uv_common::uv_alloc_cb>(alloc_cb),
+                std::mem::transmute::<_, crate::upstream_support::uv_common::uv_udp_recv_cb>(
+                    recv_cb,
+                ),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn recv_stop(
-    handle: *mut crate::abi::linux_x86_64::uv_udp_t,
-) -> ::std::os::raw::c_int {
-    unsafe { crate::upstream_support::uv_common::uv_udp_recv_stop(handle.cast()) }
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn recv_stop(handle: *mut crate::abi::linux_x86_64::uv_udp_t) -> ::std::os::raw::c_int {
+    unsafe { unsafe { crate::upstream_support::uv_common::uv_udp_recv_stop(handle.cast()) } }
 }
 
-pub(crate) unsafe fn send(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn send(
     req: *mut crate::abi::linux_x86_64::uv_udp_send_t,
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     bufs: *const crate::abi::linux_x86_64::uv_buf_t,
@@ -2907,62 +3079,74 @@ pub(crate) unsafe fn send(
     send_cb: crate::abi::linux_x86_64::uv_udp_send_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        crate::upstream_support::uv_common::uv_udp_send(
-            req.cast(),
-            handle.cast(),
-            bufs.cast(),
-            nbufs,
-            addr.cast(),
-            std::mem::transmute::<_, crate::upstream_support::uv_common::uv_udp_send_cb>(send_cb),
-        )
+        unsafe {
+            crate::upstream_support::uv_common::uv_udp_send(
+                req.cast(),
+                handle.cast(),
+                bufs.cast(),
+                nbufs,
+                addr.cast(),
+                std::mem::transmute::<_, crate::upstream_support::uv_common::uv_udp_send_cb>(
+                    send_cb,
+                ),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn set_broadcast(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_broadcast(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     on: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_set_broadcast(handle.cast(), on) }
+    unsafe { unsafe { uv_udp_set_broadcast(handle.cast(), on) } }
 }
 
-pub(crate) unsafe fn set_membership(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_membership(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     multicast_addr: *const ::std::os::raw::c_char,
     interface_addr: *const ::std::os::raw::c_char,
     membership: crate::abi::linux_x86_64::uv_membership,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_udp_set_membership(
-            handle.cast(),
-            multicast_addr,
-            interface_addr,
-            membership as uv_membership,
-        )
+        unsafe {
+            uv_udp_set_membership(
+                handle.cast(),
+                multicast_addr,
+                interface_addr,
+                membership as uv_membership,
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn set_multicast_interface(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_multicast_interface(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     interface_addr: *const ::std::os::raw::c_char,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_set_multicast_interface(handle.cast(), interface_addr) }
+    unsafe { unsafe { uv_udp_set_multicast_interface(handle.cast(), interface_addr) } }
 }
 
-pub(crate) unsafe fn set_multicast_loop(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_multicast_loop(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     on: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_set_multicast_loop(handle.cast(), on) }
+    unsafe { unsafe { uv_udp_set_multicast_loop(handle.cast(), on) } }
 }
 
-pub(crate) unsafe fn set_multicast_ttl(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_multicast_ttl(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     ttl: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_set_multicast_ttl(handle.cast(), ttl) }
+    unsafe { unsafe { uv_udp_set_multicast_ttl(handle.cast(), ttl) } }
 }
 
-pub(crate) unsafe fn set_source_membership(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_source_membership(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     multicast_addr: *const ::std::os::raw::c_char,
     interface_addr: *const ::std::os::raw::c_char,
@@ -2970,35 +3154,41 @@ pub(crate) unsafe fn set_source_membership(
     membership: crate::abi::linux_x86_64::uv_membership,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_udp_set_source_membership(
-            handle.cast(),
-            multicast_addr,
-            interface_addr,
-            source_addr,
-            membership as uv_membership,
-        )
+        unsafe {
+            uv_udp_set_source_membership(
+                handle.cast(),
+                multicast_addr,
+                interface_addr,
+                source_addr,
+                membership as uv_membership,
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn set_ttl(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_ttl(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     ttl: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_udp_set_ttl(handle.cast(), ttl) }
+    unsafe { unsafe { uv_udp_set_ttl(handle.cast(), ttl) } }
 }
 
-pub(crate) unsafe fn try_send(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn try_send(
     handle: *mut crate::abi::linux_x86_64::uv_udp_t,
     bufs: *const crate::abi::linux_x86_64::uv_buf_t,
     nbufs: ::std::os::raw::c_uint,
     addr: *const crate::abi::linux_x86_64::sockaddr,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        crate::upstream_support::uv_common::uv_udp_try_send(
-            handle.cast(),
-            bufs.cast(),
-            nbufs,
-            addr.cast(),
-        )
+        unsafe {
+            crate::upstream_support::uv_common::uv_udp_try_send(
+                handle.cast(),
+                bufs.cast(),
+                nbufs,
+                addr.cast(),
+            )
+        }
     }
 }

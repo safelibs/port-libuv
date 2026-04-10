@@ -3,6 +3,7 @@ use std::ffi::c_void;
 use std::os::raw::c_int;
 use std::sync::RwLock;
 
+// SAFETY(syscall_ffi): these allocator symbols are provided by the platform C runtime.
 unsafe extern "C" {
     fn malloc(size: usize) -> *mut c_void;
     fn realloc(ptr: *mut c_void, size: usize) -> *mut c_void;
@@ -49,80 +50,102 @@ pub(crate) fn replace_allocator(
 }
 
 #[inline]
-pub(crate) unsafe fn malloc_bytes(size: usize) -> *mut c_void {
-    if size == 0 {
-        return std::ptr::null_mut();
-    }
-    let guard = ALLOCATOR.read().unwrap();
-    unsafe { guard.malloc.unwrap_unchecked()(size) }
-}
-
-#[inline]
-pub(crate) unsafe fn calloc_bytes(count: usize, size: usize) -> *mut c_void {
-    let guard = ALLOCATOR.read().unwrap();
-    unsafe { guard.calloc.unwrap_unchecked()(count, size) }
-}
-
-#[inline]
-pub(crate) unsafe fn realloc_bytes(ptr: *mut c_void, size: usize) -> *mut c_void {
-    if size == 0 {
-        unsafe {
-            free_bytes(ptr);
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn malloc_bytes(size: usize) -> *mut c_void {
+    unsafe {
+        if size == 0 {
+            return std::ptr::null_mut();
         }
-        return std::ptr::null_mut();
+        let guard = ALLOCATOR.read().unwrap();
+        unsafe { guard.malloc.unwrap_unchecked()(size) }
     }
-    let guard = ALLOCATOR.read().unwrap();
-    unsafe { guard.realloc.unwrap_unchecked()(ptr, size) }
 }
 
 #[inline]
-pub(crate) unsafe fn free_bytes(ptr: *mut c_void) {
-    let errno_ptr = unsafe { __errno_location() };
-    let saved_errno = if errno_ptr.is_null() {
-        0
-    } else {
-        unsafe { *errno_ptr }
-    };
-    let guard = ALLOCATOR.read().unwrap();
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn calloc_bytes(count: usize, size: usize) -> *mut c_void {
     unsafe {
-        guard.free.unwrap_unchecked()(ptr);
+        let guard = ALLOCATOR.read().unwrap();
+        unsafe { guard.calloc.unwrap_unchecked()(count, size) }
     }
-    if !errno_ptr.is_null() {
+}
+
+#[inline]
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn realloc_bytes(ptr: *mut c_void, size: usize) -> *mut c_void {
+    unsafe {
+        if size == 0 {
+            unsafe {
+                free_bytes(ptr);
+            }
+            return std::ptr::null_mut();
+        }
+        let guard = ALLOCATOR.read().unwrap();
+        unsafe { guard.realloc.unwrap_unchecked()(ptr, size) }
+    }
+}
+
+#[inline]
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn free_bytes(ptr: *mut c_void) {
+    unsafe {
+        let errno_ptr = unsafe { __errno_location() };
+        let saved_errno = if errno_ptr.is_null() {
+            0
+        } else {
+            unsafe { *errno_ptr }
+        };
+        let guard = ALLOCATOR.read().unwrap();
         unsafe {
-            *errno_ptr = saved_errno;
+            guard.free.unwrap_unchecked()(ptr);
+        }
+        if !errno_ptr.is_null() {
+            unsafe {
+                *errno_ptr = saved_errno;
+            }
         }
     }
 }
 
-pub(crate) unsafe fn alloc_value<T>(value: T) -> *mut T {
-    let raw = unsafe { malloc_bytes(std::mem::size_of::<T>()) }.cast::<T>();
-    if raw.is_null() {
-        return raw;
-    }
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn alloc_value<T>(value: T) -> *mut T {
     unsafe {
-        raw.write(value);
+        let raw = unsafe { malloc_bytes(std::mem::size_of::<T>()) }.cast::<T>();
+        if raw.is_null() {
+            return raw;
+        }
+        unsafe {
+            raw.write(value);
+        }
+        raw
     }
-    raw
 }
 
-pub(crate) unsafe fn alloc_zeroed<T>() -> *mut T {
-    unsafe { calloc_bytes(1, std::mem::size_of::<T>()) }.cast::<T>()
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn alloc_zeroed<T>() -> *mut T {
+    unsafe { unsafe { calloc_bytes(1, std::mem::size_of::<T>()) }.cast::<T>() }
 }
 
-pub(crate) unsafe fn realloc_array<T>(ptr: *mut T, count: usize) -> *mut T {
-    let bytes = match count.checked_mul(std::mem::size_of::<T>()) {
-        Some(bytes) => bytes,
-        None => return std::ptr::null_mut(),
-    };
-    unsafe { realloc_bytes(ptr.cast(), bytes) }.cast::<T>()
-}
-
-pub(crate) unsafe fn free_value<T>(ptr: *mut T) {
-    if ptr.is_null() {
-        return;
-    }
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn realloc_array<T>(ptr: *mut T, count: usize) -> *mut T {
     unsafe {
-        std::ptr::drop_in_place(ptr);
-        free_bytes(ptr.cast());
+        let bytes = match count.checked_mul(std::mem::size_of::<T>()) {
+            Some(bytes) => bytes,
+            None => return std::ptr::null_mut(),
+        };
+        unsafe { realloc_bytes(ptr.cast(), bytes) }.cast::<T>()
+    }
+}
+
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn free_value<T>(ptr: *mut T) {
+    unsafe {
+        if ptr.is_null() {
+            return;
+        }
+        unsafe {
+            std::ptr::drop_in_place(ptr);
+            free_bytes(ptr.cast());
+        }
     }
 }

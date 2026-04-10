@@ -98,102 +98,121 @@ impl LoopState {
 }
 
 #[inline]
-pub(crate) unsafe fn loop_state(loop_: *mut abi::uv_loop_t) -> *mut LoopState {
-    unsafe { (*loop_).internal_fields.cast() }
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn loop_state(loop_: *mut abi::uv_loop_t) -> *mut LoopState {
+    unsafe { unsafe { (*loop_).internal_fields.cast() } }
 }
 
-pub(crate) unsafe fn find_handle_record(
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn find_handle_record(
     inner: &LoopStateInner,
     handle: *mut abi::uv_handle_t,
 ) -> *mut HandleRecord {
-    let mut current = inner.handle_records;
-    while !current.is_null() {
-        if unsafe { (*current).handle == handle } {
-            return current;
+    unsafe {
+        let mut current = inner.handle_records;
+        while !current.is_null() {
+            if unsafe { (*current).handle == handle } {
+                return current;
+            }
+            current = unsafe { (*current).next };
         }
-        current = unsafe { (*current).next };
+        std::ptr::null_mut()
     }
-    std::ptr::null_mut()
 }
 
-pub(crate) unsafe fn remove_handle_record(
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn remove_handle_record(
     inner: &mut LoopStateInner,
     handle: *mut abi::uv_handle_t,
 ) -> *mut HandleRecord {
-    let mut previous: *mut HandleRecord = std::ptr::null_mut();
-    let mut current = inner.handle_records;
-    while !current.is_null() {
-        if unsafe { (*current).handle == handle } {
-            let next = unsafe { (*current).next };
-            if previous.is_null() {
-                inner.handle_records = next;
-            } else {
-                unsafe {
-                    (*previous).next = next;
-                }
-            }
-            unsafe {
-                (*current).next = std::ptr::null_mut();
-            }
-            return current;
-        }
-        previous = current;
-        current = unsafe { (*current).next };
-    }
-    std::ptr::null_mut()
-}
-
-pub(crate) unsafe fn push_handle_record(inner: &mut LoopStateInner, record: *mut HandleRecord) {
     unsafe {
-        (*record).next = inner.handle_records;
+        let mut previous: *mut HandleRecord = std::ptr::null_mut();
+        let mut current = inner.handle_records;
+        while !current.is_null() {
+            if unsafe { (*current).handle == handle } {
+                let next = unsafe { (*current).next };
+                if previous.is_null() {
+                    inner.handle_records = next;
+                } else {
+                    unsafe {
+                        (*previous).next = next;
+                    }
+                }
+                unsafe {
+                    (*current).next = std::ptr::null_mut();
+                }
+                return current;
+            }
+            previous = current;
+            current = unsafe { (*current).next };
+        }
+        std::ptr::null_mut()
     }
-    inner.handle_records = record;
 }
 
-pub(crate) unsafe fn find_request_record(
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn push_handle_record(inner: &mut LoopStateInner, record: *mut HandleRecord) {
+    unsafe {
+        unsafe {
+            (*record).next = inner.handle_records;
+        }
+        inner.handle_records = record;
+    }
+}
+
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn find_request_record(
     inner: &LoopStateInner,
     req: *mut abi::uv_req_t,
 ) -> *mut RequestRecord {
-    let mut current = inner.request_records;
-    while !current.is_null() {
-        if unsafe { (*current).req == req } {
-            return current;
+    unsafe {
+        let mut current = inner.request_records;
+        while !current.is_null() {
+            if unsafe { (*current).req == req } {
+                return current;
+            }
+            current = unsafe { (*current).next };
         }
-        current = unsafe { (*current).next };
+        std::ptr::null_mut()
     }
-    std::ptr::null_mut()
 }
 
-pub(crate) unsafe fn remove_request_record(
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn remove_request_record(
     inner: &mut LoopStateInner,
     req: *mut abi::uv_req_t,
 ) -> *mut RequestRecord {
-    let mut previous: *mut RequestRecord = std::ptr::null_mut();
-    let mut current = inner.request_records;
-    while !current.is_null() {
-        if unsafe { (*current).req == req } {
-            let next = unsafe { (*current).next };
-            if previous.is_null() {
-                inner.request_records = next;
-            } else {
-                unsafe {
-                    (*previous).next = next;
+    unsafe {
+        let mut previous: *mut RequestRecord = std::ptr::null_mut();
+        let mut current = inner.request_records;
+        while !current.is_null() {
+            if unsafe { (*current).req == req } {
+                let next = unsafe { (*current).next };
+                if previous.is_null() {
+                    inner.request_records = next;
+                } else {
+                    unsafe {
+                        (*previous).next = next;
+                    }
                 }
+                unsafe {
+                    (*current).next = std::ptr::null_mut();
+                }
+                return current;
             }
-            unsafe {
-                (*current).next = std::ptr::null_mut();
-            }
-            return current;
+            previous = current;
+            current = unsafe { (*current).next };
         }
-        previous = current;
-        current = unsafe { (*current).next };
+        std::ptr::null_mut()
     }
-    std::ptr::null_mut()
 }
 
-pub(crate) unsafe fn push_request_record(inner: &mut LoopStateInner, record: *mut RequestRecord) {
+// SAFETY(abi_layout): accesses libuv's C ABI layout through raw pointers and stable field offsets.
+pub(crate) fn push_request_record(inner: &mut LoopStateInner, record: *mut RequestRecord) {
     unsafe {
-        (*record).next = inner.request_records;
+        unsafe {
+            (*record).next = inner.request_records;
+        }
+        inner.request_records = record;
     }
-    inner.request_records = record;
 }

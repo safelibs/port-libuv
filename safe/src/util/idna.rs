@@ -25,19 +25,34 @@ fn utf8_decode1_slow(bytes: &[u8], cursor: &mut usize, mut a: u32) -> Result<u32
         _ if a > 0xEF => {
             min = 0x10000;
             a &= 7;
-            b = bytes.get(*cursor).copied().ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
+            b = bytes
+                .get(*cursor)
+                .copied()
+                .ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
             *cursor += 1;
-            c = bytes.get(*cursor).copied().ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
+            c = bytes
+                .get(*cursor)
+                .copied()
+                .ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
             *cursor += 1;
-            d = bytes.get(*cursor).copied().ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
+            d = bytes
+                .get(*cursor)
+                .copied()
+                .ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
             *cursor += 1;
         }
         2.. if a > 0xDF => {
             min = 0x800;
             b = 0x80 | (a & 15);
-            c = bytes.get(*cursor).copied().ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
+            c = bytes
+                .get(*cursor)
+                .copied()
+                .ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
             *cursor += 1;
-            d = bytes.get(*cursor).copied().ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
+            d = bytes
+                .get(*cursor)
+                .copied()
+                .ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
             *cursor += 1;
             a = 0;
         }
@@ -45,7 +60,10 @@ fn utf8_decode1_slow(bytes: &[u8], cursor: &mut usize, mut a: u32) -> Result<u32
             min = 0x80;
             b = 0x80;
             c = 0x80 | (a & 31);
-            d = bytes.get(*cursor).copied().ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
+            d = bytes
+                .get(*cursor)
+                .copied()
+                .ok_or(abi::uv_errno_t_UV_EINVAL)? as u32;
             *cursor += 1;
             a = 0;
         }
@@ -124,9 +142,7 @@ fn idna_toascii_label(label: &[u8], out: &mut Vec<u8>) -> Result<(), c_int> {
             }
         }
 
-        let x = m
-            .checked_sub(n)
-            .ok_or(abi::uv_errno_t_UV_E2BIG)?;
+        let x = m.checked_sub(n).ok_or(abi::uv_errno_t_UV_E2BIG)?;
         let y = h.checked_add(1).ok_or(abi::uv_errno_t_UV_E2BIG)?;
         if x > (!delta) / y {
             return Err(abi::uv_errno_t_UV_E2BIG);

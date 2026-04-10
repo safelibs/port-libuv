@@ -751,494 +751,931 @@ pub const O_RDONLY: ::core::ffi::c_int = 0 as ::core::ffi::c_int;
 pub const NULL: *mut ::core::ffi::c_void = ::core::ptr::null_mut::<::core::ffi::c_void>();
 pub const STDERR_FILENO: ::core::ffi::c_int = 2 as ::core::ffi::c_int;
 #[inline]
-unsafe extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
-    (*q).next = q;
-    (*q).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_init(mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = q;
+        (*q).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
-    return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_empty(mut q: *const uv__queue) -> ::core::ffi::c_int {
+    unsafe {
+        return (q == (*q).next as *const uv__queue) as ::core::ffi::c_int;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
-    return (*q).next;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_head(mut q: *const uv__queue) -> *mut uv__queue {
+    unsafe {
+        return (*q).next;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_split(
-    mut h: *mut uv__queue,
-    mut q: *mut uv__queue,
-    mut n: *mut uv__queue,
-) {
-    (*n).prev = (*h).prev;
-    (*(*n).prev).next = n;
-    (*n).next = q;
-    (*h).prev = (*q).prev;
-    (*(*h).prev).next = h;
-    (*q).prev = n;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_split(mut h: *mut uv__queue, mut q: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        (*n).prev = (*h).prev;
+        (*(*n).prev).next = n;
+        (*n).next = q;
+        (*h).prev = (*q).prev;
+        (*(*h).prev).next = h;
+        (*q).prev = n;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
-    if uv__queue_empty(h) != 0 {
-        uv__queue_init(n);
-    } else {
-        uv__queue_split(h, (*h).next, n);
-    };
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_move(mut h: *mut uv__queue, mut n: *mut uv__queue) {
+    unsafe {
+        if uv__queue_empty(h) != 0 {
+            uv__queue_init(n);
+        } else {
+            uv__queue_split(h, (*h).next, n);
+        };
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
-    (*q).next = h;
-    (*q).prev = (*h).prev;
-    (*(*q).prev).next = q;
-    (*h).prev = q;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_insert_tail(mut h: *mut uv__queue, mut q: *mut uv__queue) {
+    unsafe {
+        (*q).next = h;
+        (*q).prev = (*h).prev;
+        (*(*q).prev).next = q;
+        (*h).prev = q;
+    }
 }
 #[inline]
-unsafe extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
-    (*(*q).prev).next = (*q).next;
-    (*(*q).next).prev = (*q).prev;
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__queue_remove(mut q: *mut uv__queue) {
+    unsafe {
+        (*(*q).prev).next = (*q).next;
+        (*(*q).next).prev = (*q).prev;
+    }
 }
 pub const POLLIN: ::core::ffi::c_int = 0x1 as ::core::ffi::c_int;
 pub const POLLOUT: ::core::ffi::c_int = 0x4 as ::core::ffi::c_int;
 pub const POLLERR: ::core::ffi::c_int = 0x8 as ::core::ffi::c_int;
 pub const POLLHUP: ::core::ffi::c_int = 0x10 as ::core::ffi::c_int;
 #[no_mangle]
-pub unsafe extern "C" fn uv__stream_init(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__stream_init(
     mut loop_0: *mut uv_loop_t,
     mut stream: *mut uv_stream_t,
     mut type_0: uv_handle_type,
 ) {
-    let mut err: ::core::ffi::c_int = 0;
-    let ref mut fresh1 = (*(stream as *mut uv_handle_t)).loop_0;
-    *fresh1 = loop_0;
-    (*(stream as *mut uv_handle_t)).type_0 = type_0;
-    (*(stream as *mut uv_handle_t)).flags =
-        UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    uv__queue_insert_tail(
-        &raw mut (*loop_0).handle_queue,
-        &raw mut (*(stream as *mut uv_handle_t)).handle_queue,
-    );
-    let ref mut fresh2 = (*(stream as *mut uv_handle_t)).next_closing;
-    *fresh2 = ::core::ptr::null_mut::<uv_handle_t>();
-    (*stream).read_cb = None;
-    (*stream).alloc_cb = None;
-    (*stream).close_cb = None;
-    (*stream).connection_cb = None;
-    (*stream).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
-    (*stream).shutdown_req = ::core::ptr::null_mut::<uv_shutdown_t>();
-    (*stream).accepted_fd = -(1 as ::core::ffi::c_int);
-    (*stream).queued_fds = NULL;
-    (*stream).delayed_error = 0 as ::core::ffi::c_int;
-    uv__queue_init(&raw mut (*stream).write_queue);
-    uv__queue_init(&raw mut (*stream).write_completed_queue);
-    (*stream).write_queue_size = 0 as size_t;
-    if (*loop_0).emfile_fd == -(1 as ::core::ffi::c_int) {
-        err = uv__open_cloexec(
-            b"/dev/null\0" as *const u8 as *const ::core::ffi::c_char,
-            O_RDONLY,
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let ref mut fresh1 = (*(stream as *mut uv_handle_t)).loop_0;
+        *fresh1 = loop_0;
+        (*(stream as *mut uv_handle_t)).type_0 = type_0;
+        (*(stream as *mut uv_handle_t)).flags =
+            UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        uv__queue_insert_tail(
+            &raw mut (*loop_0).handle_queue,
+            &raw mut (*(stream as *mut uv_handle_t)).handle_queue,
         );
-        if err < 0 as ::core::ffi::c_int {
-            err = uv__open_cloexec(b"/\0" as *const u8 as *const ::core::ffi::c_char, O_RDONLY);
+        let ref mut fresh2 = (*(stream as *mut uv_handle_t)).next_closing;
+        *fresh2 = ::core::ptr::null_mut::<uv_handle_t>();
+        (*stream).read_cb = None;
+        (*stream).alloc_cb = None;
+        (*stream).close_cb = None;
+        (*stream).connection_cb = None;
+        (*stream).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
+        (*stream).shutdown_req = ::core::ptr::null_mut::<uv_shutdown_t>();
+        (*stream).accepted_fd = -(1 as ::core::ffi::c_int);
+        (*stream).queued_fds = NULL;
+        (*stream).delayed_error = 0 as ::core::ffi::c_int;
+        uv__queue_init(&raw mut (*stream).write_queue);
+        uv__queue_init(&raw mut (*stream).write_completed_queue);
+        (*stream).write_queue_size = 0 as size_t;
+        if (*loop_0).emfile_fd == -(1 as ::core::ffi::c_int) {
+            err = uv__open_cloexec(
+                b"/dev/null\0" as *const u8 as *const ::core::ffi::c_char,
+                O_RDONLY,
+            );
+            if err < 0 as ::core::ffi::c_int {
+                err = uv__open_cloexec(b"/\0" as *const u8 as *const ::core::ffi::c_char, O_RDONLY);
+            }
+            if err >= 0 as ::core::ffi::c_int {
+                (*loop_0).emfile_fd = err;
+            }
         }
-        if err >= 0 as ::core::ffi::c_int {
-            (*loop_0).emfile_fd = err;
-        }
+        uv__io_init(
+            &raw mut (*stream).io_watcher,
+            Some(
+                uv__stream_io
+                    as unsafe extern "C" fn(
+                        *mut uv_loop_t,
+                        *mut uv__io_t,
+                        ::core::ffi::c_uint,
+                    ) -> (),
+            ),
+            -(1 as ::core::ffi::c_int),
+        );
     }
-    uv__io_init(
-        &raw mut (*stream).io_watcher,
-        Some(
-            uv__stream_io
-                as unsafe extern "C" fn(*mut uv_loop_t, *mut uv__io_t, ::core::ffi::c_uint) -> (),
-        ),
-        -(1 as ::core::ffi::c_int),
-    );
 }
-unsafe extern "C" fn uv__stream_osx_interrupt_select(mut stream: *mut uv_stream_t) {}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__stream_osx_interrupt_select(mut stream: *mut uv_stream_t) {
+    unsafe {}
+}
 #[no_mangle]
-pub unsafe extern "C" fn uv__stream_open(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__stream_open(
     mut stream: *mut uv_stream_t,
     mut fd: ::core::ffi::c_int,
     mut flags: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    if !((*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) || (*stream).io_watcher.fd == fd) {
-        return UV_EBUSY as ::core::ffi::c_int;
-    }
-    '_c2rust_label: {
-        if fd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"fd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                411 as ::core::ffi::c_uint,
-                b"int uv__stream_open(uv_stream_t *, int, int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*stream).flags |= flags as ::core::ffi::c_uint;
-    if (*stream).type_0 as ::core::ffi::c_uint
-        == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-    {
-        if (*stream).flags & UV_HANDLE_TCP_NODELAY as ::core::ffi::c_int as ::core::ffi::c_uint != 0
-            && uv__tcp_nodelay(fd, 1 as ::core::ffi::c_int) != 0
+    unsafe {
+        if !((*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) || (*stream).io_watcher.fd == fd)
         {
-            return -*__errno_location();
+            return UV_EBUSY as ::core::ffi::c_int;
         }
-        if (*stream).flags & UV_HANDLE_TCP_KEEPALIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0
-            && uv__tcp_keepalive(fd, 1 as ::core::ffi::c_int, 60 as ::core::ffi::c_uint) != 0
+        '_c2rust_label: {
+            if fd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"fd >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    411 as ::core::ffi::c_uint,
+                    b"int uv__stream_open(uv_stream_t *, int, int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*stream).flags |= flags as ::core::ffi::c_uint;
+        if (*stream).type_0 as ::core::ffi::c_uint
+            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
         {
-            return -*__errno_location();
+            if (*stream).flags & UV_HANDLE_TCP_NODELAY as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0
+                && uv__tcp_nodelay(fd, 1 as ::core::ffi::c_int) != 0
+            {
+                return -*__errno_location();
+            }
+            if (*stream).flags
+                & UV_HANDLE_TCP_KEEPALIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0
+                && uv__tcp_keepalive(fd, 1 as ::core::ffi::c_int, 60 as ::core::ffi::c_uint) != 0
+            {
+                return -*__errno_location();
+            }
         }
+        (*stream).io_watcher.fd = fd;
+        return 0 as ::core::ffi::c_int;
     }
-    (*stream).io_watcher.fd = fd;
-    return 0 as ::core::ffi::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__stream_flush_write_queue(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__stream_flush_write_queue(
     mut stream: *mut uv_stream_t,
     mut error: ::core::ffi::c_int,
 ) {
-    let mut req: *mut uv_write_t = ::core::ptr::null_mut::<uv_write_t>();
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    while uv__queue_empty(&raw mut (*stream).write_queue) == 0 {
-        q = uv__queue_head(&raw mut (*stream).write_queue);
-        uv__queue_remove(q);
-        req = (q as *mut ::core::ffi::c_char).offset(-(88 as ::core::ffi::c_ulong as isize))
-            as *mut uv_write_t;
-        (*req).error = error;
-        uv__queue_insert_tail(
-            &raw mut (*stream).write_completed_queue,
-            &raw mut (*req).queue,
-        );
+    unsafe {
+        let mut req: *mut uv_write_t = ::core::ptr::null_mut::<uv_write_t>();
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        while uv__queue_empty(&raw mut (*stream).write_queue) == 0 {
+            q = uv__queue_head(&raw mut (*stream).write_queue);
+            uv__queue_remove(q);
+            req = (q as *mut ::core::ffi::c_char).offset(-(88 as ::core::ffi::c_ulong as isize))
+                as *mut uv_write_t;
+            (*req).error = error;
+            uv__queue_insert_tail(
+                &raw mut (*stream).write_completed_queue,
+                &raw mut (*req).queue,
+            );
+        }
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__stream_destroy(mut stream: *mut uv_stream_t) {
-    '_c2rust_label: {
-        if uv__io_active(
-            &raw mut (*stream).io_watcher,
-            (0x1 as ::core::ffi::c_int | 0x4 as ::core::ffi::c_int) as ::core::ffi::c_uint,
-        ) == 0
-        {
-        } else {
-            __assert_fail(
-                b"!uv__io_active(&stream->io_watcher, POLLIN | POLLOUT)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                456 as ::core::ffi::c_uint,
-                b"void uv__stream_destroy(uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if (*stream).flags & UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-        } else {
-            __assert_fail(
-                b"stream->flags & UV_HANDLE_CLOSED\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                457 as ::core::ffi::c_uint,
-                b"void uv__stream_destroy(uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if !(*stream).connect_req.is_null() {
-        '_c2rust_label_1: {
-            if (*(*stream).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__stream_destroy(mut stream: *mut uv_stream_t) {
+    unsafe {
+        '_c2rust_label: {
+            if uv__io_active(
+                &raw mut (*stream).io_watcher,
+                (0x1 as ::core::ffi::c_int | 0x4 as ::core::ffi::c_int) as ::core::ffi::c_uint,
+            ) == 0
+            {
             } else {
                 __assert_fail(
-                    b"uv__has_active_reqs(stream->loop)\0" as *const u8
+                    b"!uv__io_active(&stream->io_watcher, POLLIN | POLLOUT)\0" as *const u8
                         as *const ::core::ffi::c_char,
                     b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
                         as *const ::core::ffi::c_char,
-                    460 as ::core::ffi::c_uint,
+                    456 as ::core::ffi::c_uint,
                     b"void uv__stream_destroy(uv_stream_t *)\0" as *const u8
                         as *const ::core::ffi::c_char,
                 );
             }
         };
-        (*(*stream).loop_0).active_reqs.count =
-            (*(*stream).loop_0).active_reqs.count.wrapping_sub(1);
-        (*(*stream).connect_req)
-            .cb
-            .expect("non-null function pointer")(
-            (*stream).connect_req,
-            UV_ECANCELED as ::core::ffi::c_int,
-        );
-        (*stream).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
-    }
-    uv__stream_flush_write_queue(stream, UV_ECANCELED as ::core::ffi::c_int);
-    uv__write_callbacks(stream);
-    uv__drain(stream);
-    '_c2rust_label_2: {
-        if (*stream).write_queue_size == 0 as size_t {
-        } else {
-            __assert_fail(
-                b"stream->write_queue_size == 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                469 as ::core::ffi::c_uint,
-                b"void uv__stream_destroy(uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
+        '_c2rust_label_0: {
+            if (*stream).flags & UV_HANDLE_CLOSED as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            {
+            } else {
+                __assert_fail(
+                    b"stream->flags & UV_HANDLE_CLOSED\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    457 as ::core::ffi::c_uint,
+                    b"void uv__stream_destroy(uv_stream_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if !(*stream).connect_req.is_null() {
+            '_c2rust_label_1: {
+                if (*(*stream).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
+                } else {
+                    __assert_fail(
+                        b"uv__has_active_reqs(stream->loop)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        460 as ::core::ffi::c_uint,
+                        b"void uv__stream_destroy(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            (*(*stream).loop_0).active_reqs.count =
+                (*(*stream).loop_0).active_reqs.count.wrapping_sub(1);
+            (*(*stream).connect_req)
+                .cb
+                .expect("non-null function pointer")(
+                (*stream).connect_req,
+                UV_ECANCELED as ::core::ffi::c_int,
             );
+            (*stream).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
         }
-    };
+        uv__stream_flush_write_queue(stream, UV_ECANCELED as ::core::ffi::c_int);
+        uv__write_callbacks(stream);
+        uv__drain(stream);
+        '_c2rust_label_2: {
+            if (*stream).write_queue_size == 0 as size_t {
+            } else {
+                __assert_fail(
+                    b"stream->write_queue_size == 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    469 as ::core::ffi::c_uint,
+                    b"void uv__stream_destroy(uv_stream_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+    }
 }
-unsafe extern "C" fn uv__emfile_trick(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__emfile_trick(
     mut loop_0: *mut uv_loop_t,
     mut accept_fd: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    let mut emfile_fd: ::core::ffi::c_int = 0;
-    if (*loop_0).emfile_fd == -(1 as ::core::ffi::c_int) {
-        return UV_EMFILE as ::core::ffi::c_int;
-    }
-    uv__close((*loop_0).emfile_fd);
-    (*loop_0).emfile_fd = -(1 as ::core::ffi::c_int);
-    loop {
-        err = uv__accept(accept_fd);
-        if err >= 0 as ::core::ffi::c_int {
-            uv__close(err);
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        let mut emfile_fd: ::core::ffi::c_int = 0;
+        if (*loop_0).emfile_fd == -(1 as ::core::ffi::c_int) {
+            return UV_EMFILE as ::core::ffi::c_int;
         }
-        if !(err >= 0 as ::core::ffi::c_int || err == UV_EINTR as ::core::ffi::c_int) {
-            break;
+        uv__close((*loop_0).emfile_fd);
+        (*loop_0).emfile_fd = -(1 as ::core::ffi::c_int);
+        loop {
+            err = uv__accept(accept_fd);
+            if err >= 0 as ::core::ffi::c_int {
+                uv__close(err);
+            }
+            if !(err >= 0 as ::core::ffi::c_int || err == UV_EINTR as ::core::ffi::c_int) {
+                break;
+            }
         }
+        emfile_fd = uv__open_cloexec(b"/\0" as *const u8 as *const ::core::ffi::c_char, O_RDONLY);
+        if emfile_fd >= 0 as ::core::ffi::c_int {
+            (*loop_0).emfile_fd = emfile_fd;
+        }
+        return err;
     }
-    emfile_fd = uv__open_cloexec(b"/\0" as *const u8 as *const ::core::ffi::c_char, O_RDONLY);
-    if emfile_fd >= 0 as ::core::ffi::c_int {
-        (*loop_0).emfile_fd = emfile_fd;
-    }
-    return err;
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__server_io(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__server_io(
     mut loop_0: *mut uv_loop_t,
     mut w: *mut uv__io_t,
     mut events: ::core::ffi::c_uint,
 ) {
-    let mut stream: *mut uv_stream_t = ::core::ptr::null_mut::<uv_stream_t>();
-    let mut err: ::core::ffi::c_int = 0;
-    let mut fd: ::core::ffi::c_int = 0;
-    stream = (w as *mut ::core::ffi::c_char).offset(-(136 as ::core::ffi::c_ulong as isize))
-        as *mut uv_stream_t;
-    '_c2rust_label: {
-        if events & 0x1 as ::core::ffi::c_uint != 0 {
-        } else {
-            __assert_fail(
-                b"events & POLLIN\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                514 as ::core::ffi::c_uint,
-                b"void uv__server_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
+    unsafe {
+        let mut stream: *mut uv_stream_t = ::core::ptr::null_mut::<uv_stream_t>();
+        let mut err: ::core::ffi::c_int = 0;
+        let mut fd: ::core::ffi::c_int = 0;
+        stream = (w as *mut ::core::ffi::c_char).offset(-(136 as ::core::ffi::c_ulong as isize))
+            as *mut uv_stream_t;
+        '_c2rust_label: {
+            if events & 0x1 as ::core::ffi::c_uint != 0 {
+            } else {
+                __assert_fail(
+                    b"events & POLLIN\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    514 as ::core::ffi::c_uint,
+                    b"void uv__server_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if (*stream).accepted_fd == -(1 as ::core::ffi::c_int) {
+            } else {
+                __assert_fail(
+                    b"stream->accepted_fd == -1\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    515 as ::core::ffi::c_uint,
+                    b"void uv__server_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_1: {
+            if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint == 0
+            {
+            } else {
+                __assert_fail(
+                    b"!(stream->flags & UV_HANDLE_CLOSING)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    516 as ::core::ffi::c_uint,
+                    b"void uv__server_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        fd = (*stream).io_watcher.fd;
+        err = uv__accept(fd);
+        if err == UV_EMFILE as ::core::ffi::c_int || err == UV_ENFILE as ::core::ffi::c_int {
+            err = uv__emfile_trick(loop_0, fd);
         }
-    };
-    '_c2rust_label_0: {
-        if (*stream).accepted_fd == -(1 as ::core::ffi::c_int) {
-        } else {
-            __assert_fail(
-                b"stream->accepted_fd == -1\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                515 as ::core::ffi::c_uint,
-                b"void uv__server_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
+        if err < 0 as ::core::ffi::c_int {
+            return;
         }
-    };
-    '_c2rust_label_1: {
-        if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
-        } else {
-            __assert_fail(
-                b"!(stream->flags & UV_HANDLE_CLOSING)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                516 as ::core::ffi::c_uint,
-                b"void uv__server_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    fd = (*stream).io_watcher.fd;
-    err = uv__accept(fd);
-    if err == UV_EMFILE as ::core::ffi::c_int || err == UV_ENFILE as ::core::ffi::c_int {
-        err = uv__emfile_trick(loop_0, fd);
-    }
-    if err < 0 as ::core::ffi::c_int {
-        return;
-    }
-    (*stream).accepted_fd = err;
-    (*stream).connection_cb.expect("non-null function pointer")(stream, 0 as ::core::ffi::c_int);
-    if (*stream).accepted_fd != -(1 as ::core::ffi::c_int) {
-        uv__io_stop(
-            loop_0,
-            &raw mut (*stream).io_watcher,
-            POLLIN as ::core::ffi::c_uint,
+        (*stream).accepted_fd = err;
+        (*stream).connection_cb.expect("non-null function pointer")(
+            stream,
+            0 as ::core::ffi::c_int,
         );
+        if (*stream).accepted_fd != -(1 as ::core::ffi::c_int) {
+            uv__io_stop(
+                loop_0,
+                &raw mut (*stream).io_watcher,
+                POLLIN as ::core::ffi::c_uint,
+            );
+        }
     }
 }
-pub(crate) unsafe fn uv_accept(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_accept(
     mut server: *mut uv_stream_t,
     mut client: *mut uv_stream_t,
 ) -> ::core::ffi::c_int {
-    let mut current_block: u64;
-    let mut err: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if (*server).loop_0 == (*client).loop_0 {
-        } else {
-            __assert_fail(
-                b"server->loop == client->loop\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                539 as ::core::ffi::c_uint,
-                b"int uv_accept(uv_stream_t *, uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*server).accepted_fd == -(1 as ::core::ffi::c_int) {
-        return UV_EAGAIN as ::core::ffi::c_int;
-    }
-    match (*client).type_0 as ::core::ffi::c_uint {
-        7 | 12 => {
-            err = uv__stream_open(
-                client,
-                (*server).accepted_fd,
-                UV_HANDLE_READABLE as ::core::ffi::c_int | UV_HANDLE_WRITABLE as ::core::ffi::c_int,
-            );
-            if err != 0 {
-                uv__close((*server).accepted_fd);
-                current_block = 9336919489047625507;
-            } else {
-                current_block = 17965632435239708295;
-            }
-        }
-        15 => {
-            err = uv_udp_open(
-                client as *mut uv_udp_t,
-                (*server).accepted_fd as uv_os_sock_t,
-            );
-            if err != 0 {
-                uv__close((*server).accepted_fd);
-                current_block = 9336919489047625507;
-            } else {
-                current_block = 17965632435239708295;
-            }
-        }
-        _ => return UV_EINVAL as ::core::ffi::c_int,
-    }
-    match current_block {
-        17965632435239708295 => {
-            (*client).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
-        }
-        _ => {}
-    }
-    if !(*server).queued_fds.is_null() {
-        let mut queued_fds: *mut uv__stream_queued_fds_t =
-            ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
-        queued_fds = (*server).queued_fds as *mut uv__stream_queued_fds_t;
-        (*server).accepted_fd = *(&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int)
-            .offset(0 as ::core::ffi::c_int as isize);
-        '_c2rust_label_0: {
-            if (*queued_fds).offset > 0 as ::core::ffi::c_uint {
+    unsafe {
+        let mut current_block: u64;
+        let mut err: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if (*server).loop_0 == (*client).loop_0 {
             } else {
                 __assert_fail(
-                    b"queued_fds->offset > 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"server->loop == client->loop\0" as *const u8 as *const ::core::ffi::c_char,
                     b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
                         as *const ::core::ffi::c_char,
-                    582 as ::core::ffi::c_uint,
+                    539 as ::core::ffi::c_uint,
                     b"int uv_accept(uv_stream_t *, uv_stream_t *)\0" as *const u8
                         as *const ::core::ffi::c_char,
                 );
             }
         };
-        (*queued_fds).offset = (*queued_fds).offset.wrapping_sub(1);
-        if (*queued_fds).offset == 0 as ::core::ffi::c_uint {
-            uv__free(queued_fds as *mut ::core::ffi::c_void);
-            (*server).queued_fds = NULL;
+        if (*server).accepted_fd == -(1 as ::core::ffi::c_int) {
+            return UV_EAGAIN as ::core::ffi::c_int;
+        }
+        match (*client).type_0 as ::core::ffi::c_uint {
+            7 | 12 => {
+                err = uv__stream_open(
+                    client,
+                    (*server).accepted_fd,
+                    UV_HANDLE_READABLE as ::core::ffi::c_int
+                        | UV_HANDLE_WRITABLE as ::core::ffi::c_int,
+                );
+                if err != 0 {
+                    uv__close((*server).accepted_fd);
+                    current_block = 9336919489047625507;
+                } else {
+                    current_block = 17965632435239708295;
+                }
+            }
+            15 => {
+                err = uv_udp_open(
+                    client as *mut uv_udp_t,
+                    (*server).accepted_fd as uv_os_sock_t,
+                );
+                if err != 0 {
+                    uv__close((*server).accepted_fd);
+                    current_block = 9336919489047625507;
+                } else {
+                    current_block = 17965632435239708295;
+                }
+            }
+            _ => return UV_EINVAL as ::core::ffi::c_int,
+        }
+        match current_block {
+            17965632435239708295 => {
+                (*client).flags |= UV_HANDLE_BOUND as ::core::ffi::c_int as ::core::ffi::c_uint;
+            }
+            _ => {}
+        }
+        if !(*server).queued_fds.is_null() {
+            let mut queued_fds: *mut uv__stream_queued_fds_t =
+                ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
+            queued_fds = (*server).queued_fds as *mut uv__stream_queued_fds_t;
+            (*server).accepted_fd = *(&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int)
+                .offset(0 as ::core::ffi::c_int as isize);
+            '_c2rust_label_0: {
+                if (*queued_fds).offset > 0 as ::core::ffi::c_uint {
+                } else {
+                    __assert_fail(
+                        b"queued_fds->offset > 0\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        582 as ::core::ffi::c_uint,
+                        b"int uv_accept(uv_stream_t *, uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            (*queued_fds).offset = (*queued_fds).offset.wrapping_sub(1);
+            if (*queued_fds).offset == 0 as ::core::ffi::c_uint {
+                uv__free(queued_fds as *mut ::core::ffi::c_void);
+                (*server).queued_fds = NULL;
+            } else {
+                memmove(
+                    &raw mut (*queued_fds).fds as *mut ::core::ffi::c_int
+                        as *mut ::core::ffi::c_void,
+                    (&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int)
+                        .offset(1 as ::core::ffi::c_int as isize)
+                        as *const ::core::ffi::c_void,
+                    ((*queued_fds).offset as size_t)
+                        .wrapping_mul(::core::mem::size_of::<::core::ffi::c_int>() as size_t),
+                );
+            }
         } else {
-            memmove(
-                &raw mut (*queued_fds).fds as *mut ::core::ffi::c_int as *mut ::core::ffi::c_void,
-                (&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int)
-                    .offset(1 as ::core::ffi::c_int as isize)
-                    as *const ::core::ffi::c_void,
-                ((*queued_fds).offset as size_t)
-                    .wrapping_mul(::core::mem::size_of::<::core::ffi::c_int>() as size_t),
-            );
+            (*server).accepted_fd = -(1 as ::core::ffi::c_int);
+            if err == 0 as ::core::ffi::c_int {
+                uv__io_start(
+                    (*server).loop_0,
+                    &raw mut (*server).io_watcher,
+                    POLLIN as ::core::ffi::c_uint,
+                );
+            }
         }
-    } else {
-        (*server).accepted_fd = -(1 as ::core::ffi::c_int);
-        if err == 0 as ::core::ffi::c_int {
-            uv__io_start(
-                (*server).loop_0,
-                &raw mut (*server).io_watcher,
-                POLLIN as ::core::ffi::c_uint,
-            );
-        }
+        return err;
     }
-    return err;
 }
-pub(crate) unsafe fn uv_listen(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_listen(
     mut stream: *mut uv_stream_t,
     mut backlog: ::core::ffi::c_int,
     mut cb: uv_connection_cb,
 ) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if (*stream).flags
-        & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-            as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint
-    {
-        return UV_EINVAL as ::core::ffi::c_int;
-    }
-    match (*stream).type_0 as ::core::ffi::c_uint {
-        12 => {
-            err = uv__tcp_listen(stream as *mut uv_tcp_t, backlog, cb);
-        }
-        7 => {
-            err = uv__pipe_listen(stream as *mut uv_pipe_t, backlog, cb);
-        }
-        _ => {
-            err = UV_EINVAL as ::core::ffi::c_int;
-        }
-    }
-    if err == 0 as ::core::ffi::c_int {
-        if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint)
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if (*stream).flags
+            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint
         {
-            (*stream).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-            if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-                != 0 as ::core::ffi::c_uint
+            return UV_EINVAL as ::core::ffi::c_int;
+        }
+        match (*stream).type_0 as ::core::ffi::c_uint {
+            12 => {
+                err = uv__tcp_listen(stream as *mut uv_tcp_t, backlog, cb);
+            }
+            7 => {
+                err = uv__pipe_listen(stream as *mut uv_pipe_t, backlog, cb);
+            }
+            _ => {
+                err = UV_EINVAL as ::core::ffi::c_int;
+            }
+        }
+        if err == 0 as ::core::ffi::c_int {
+            if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint)
             {
-                (*(*stream).loop_0).active_handles =
-                    (*(*stream).loop_0).active_handles.wrapping_add(1);
+                (*stream).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+                if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                    != 0 as ::core::ffi::c_uint
+                {
+                    (*(*stream).loop_0).active_handles =
+                        (*(*stream).loop_0).active_handles.wrapping_add(1);
+                }
+            }
+        }
+        return err;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__drain(mut stream: *mut uv_stream_t) {
+    unsafe {
+        let mut req: *mut uv_shutdown_t = ::core::ptr::null_mut::<uv_shutdown_t>();
+        let mut err: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
+            } else {
+                __assert_fail(
+                    b"uv__queue_empty(&stream->write_queue)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    630 as ::core::ffi::c_uint,
+                    b"void uv__drain(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+            uv__io_stop(
+                (*stream).loop_0,
+                &raw mut (*stream).io_watcher,
+                POLLOUT as ::core::ffi::c_uint,
+            );
+            uv__stream_osx_interrupt_select(stream);
+        }
+        if (*stream).shutdown_req.is_null() {
+            return;
+        }
+        req = (*stream).shutdown_req;
+        '_c2rust_label_0: {
+            if !req.is_null() {
+            } else {
+                __assert_fail(
+                    b"req\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    640 as ::core::ffi::c_uint,
+                    b"void uv__drain(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            || (*stream).flags & UV_HANDLE_SHUT as ::core::ffi::c_int as ::core::ffi::c_uint == 0
+        {
+            (*stream).shutdown_req = ::core::ptr::null_mut::<uv_shutdown_t>();
+            '_c2rust_label_1: {
+                if (*(*stream).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
+                } else {
+                    __assert_fail(
+                        b"uv__has_active_reqs(stream->loop)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        645 as ::core::ffi::c_uint,
+                        b"void uv__drain(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            (*(*stream).loop_0).active_reqs.count =
+                (*(*stream).loop_0).active_reqs.count.wrapping_sub(1);
+            err = 0 as ::core::ffi::c_int;
+            if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            {
+                err = UV_ECANCELED as ::core::ffi::c_int;
+            } else if shutdown((*stream).io_watcher.fd, SHUT_WR as ::core::ffi::c_int) != 0 {
+                err = -*__errno_location();
+            } else {
+                (*stream).flags |= UV_HANDLE_SHUT as ::core::ffi::c_int as ::core::ffi::c_uint;
+            }
+            if (*req).cb.is_some() {
+                (*req).cb.expect("non-null function pointer")(req, err);
             }
         }
     }
-    return err;
 }
-unsafe extern "C" fn uv__drain(mut stream: *mut uv_stream_t) {
-    let mut req: *mut uv_shutdown_t = ::core::ptr::null_mut::<uv_shutdown_t>();
-    let mut err: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__writev(
+    mut fd: ::core::ffi::c_int,
+    mut vec: *mut iovec,
+    mut n: size_t,
+) -> ssize_t {
+    unsafe {
+        if n == 1 as size_t {
+            return write(fd, (*vec).iov_base, (*vec).iov_len);
         } else {
-            __assert_fail(
-                b"uv__queue_empty(&stream->write_queue)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                630 as ::core::ffi::c_uint,
-                b"void uv__drain(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
+            return writev(fd, vec, n as ::core::ffi::c_int);
+        };
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__write_req_size(mut req: *mut uv_write_t) -> size_t {
+    unsafe {
+        let mut size: size_t = 0;
+        '_c2rust_label: {
+            if !(*req).bufs.is_null() {
+            } else {
+                __assert_fail(
+                    b"req->bufs != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    673 as ::core::ffi::c_uint,
+                    b"size_t uv__write_req_size(uv_write_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        size = uv__count_bufs(
+            (*req).bufs.offset((*req).write_index as isize) as *const uv_buf_t,
+            (*req).nbufs.wrapping_sub((*req).write_index),
+        );
+        '_c2rust_label_0: {
+            if (*(*req).handle).write_queue_size >= size {
+            } else {
+                __assert_fail(
+                    b"req->handle->write_queue_size >= size\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    676 as ::core::ffi::c_uint,
+                    b"size_t uv__write_req_size(uv_write_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        return size;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__write_req_update(
+    mut stream: *mut uv_stream_t,
+    mut req: *mut uv_write_t,
+    mut n: size_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut buf: *mut uv_buf_t = ::core::ptr::null_mut::<uv_buf_t>();
+        let mut len: size_t = 0;
+        '_c2rust_label: {
+            if n <= (*stream).write_queue_size {
+            } else {
+                __assert_fail(
+                    b"n <= stream->write_queue_size\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    694 as ::core::ffi::c_uint,
+                    b"int uv__write_req_update(uv_stream_t *, uv_write_t *, size_t)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*stream).write_queue_size = (*stream).write_queue_size.wrapping_sub(n);
+        buf = (*req).bufs.offset((*req).write_index as isize);
+        loop {
+            len = if n < (*buf).len { n } else { (*buf).len };
+            (*buf).base = (*buf).base.offset(len as isize);
+            (*buf).len = (*buf).len.wrapping_sub(len);
+            buf = buf.offset(((*buf).len == 0 as size_t) as ::core::ffi::c_int as isize);
+            n = n.wrapping_sub(len);
+            if !(n > 0 as size_t) {
+                break;
+            }
         }
-    };
-    if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+        (*req).write_index =
+            buf.offset_from((*req).bufs) as ::core::ffi::c_long as ::core::ffi::c_uint;
+        return ((*req).write_index == (*req).nbufs) as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__write_req_finish(mut req: *mut uv_write_t) {
+    unsafe {
+        let mut stream: *mut uv_stream_t = (*req).handle;
+        uv__queue_remove(&raw mut (*req).queue);
+        if (*req).error == 0 as ::core::ffi::c_int {
+            if (*req).bufs != &raw mut (*req).bufsml as *mut uv_buf_t {
+                uv__free((*req).bufs as *mut ::core::ffi::c_void);
+            }
+            (*req).bufs = ::core::ptr::null_mut::<uv_buf_t>();
+        }
+        uv__queue_insert_tail(
+            &raw mut (*stream).write_completed_queue,
+            &raw mut (*req).queue,
+        );
+        uv__io_feed((*stream).loop_0, &raw mut (*stream).io_watcher);
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__handle_fd(mut handle: *mut uv_handle_t) -> ::core::ffi::c_int {
+    unsafe {
+        match (*handle).type_0 as ::core::ffi::c_uint {
+            7 | 12 => return (*(handle as *mut uv_stream_t)).io_watcher.fd,
+            15 => return (*(handle as *mut uv_udp_t)).io_watcher.fd,
+            _ => return -(1 as ::core::ffi::c_int),
+        };
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__try_write(
+    mut stream: *mut uv_stream_t,
+    mut bufs: *const uv_buf_t,
+    mut nbufs: ::core::ffi::c_uint,
+    mut send_handle: *mut uv_stream_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut iov: *mut iovec = ::core::ptr::null_mut::<iovec>();
+        let mut iovmax: ::core::ffi::c_int = 0;
+        let mut iovcnt: ::core::ffi::c_int = 0;
+        let mut n: ssize_t = 0;
+        iov = bufs as *mut iovec;
+        iovcnt = nbufs as ::core::ffi::c_int;
+        iovmax = uv__getiovmax();
+        if iovcnt > iovmax {
+            iovcnt = iovmax;
+        }
+        if !send_handle.is_null() {
+            let mut fd_to_send: ::core::ffi::c_int = 0;
+            let mut msg: msghdr = msghdr {
+                msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+                msg_namelen: 0,
+                msg_iov: ::core::ptr::null_mut::<iovec>(),
+                msg_iovlen: 0,
+                msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
+                msg_controllen: 0,
+                msg_flags: 0,
+            };
+            let mut cmsg: uv__cmsg = uv__cmsg {
+                hdr: cmsghdr {
+                    cmsg_len: 0,
+                    cmsg_level: 0,
+                    cmsg_type: 0,
+                    __cmsg_data: [],
+                },
+            };
+            if (*send_handle).flags
+                & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                    as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                return UV_EBADF as ::core::ffi::c_int;
+            }
+            fd_to_send = uv__handle_fd(send_handle as *mut uv_handle_t);
+            memset(
+                &raw mut cmsg as *mut ::core::ffi::c_void,
+                0 as ::core::ffi::c_int,
+                ::core::mem::size_of::<uv__cmsg>() as size_t,
+            );
+            '_c2rust_label: {
+                if fd_to_send >= 0 as ::core::ffi::c_int {
+                } else {
+                    __assert_fail(
+                        b"fd_to_send >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                            as *const u8 as *const ::core::ffi::c_char,
+                        791 as ::core::ffi::c_uint,
+                        b"int uv__try_write(uv_stream_t *, const uv_buf_t *, unsigned int, uv_stream_t *)\0"
+                            as *const u8 as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            msg.msg_name = NULL;
+            msg.msg_namelen = 0 as socklen_t;
+            msg.msg_iov = iov;
+            msg.msg_iovlen = iovcnt as size_t;
+            msg.msg_flags = 0 as ::core::ffi::c_int;
+            msg.msg_control = &raw mut cmsg.hdr as *mut ::core::ffi::c_void;
+            msg.msg_controllen = ((::core::mem::size_of::<::core::ffi::c_int>() as usize)
+                .wrapping_add(::core::mem::size_of::<size_t>() as usize)
+                .wrapping_sub(1 as usize)
+                & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
+            .wrapping_add(
+                (::core::mem::size_of::<cmsghdr>() as usize)
+                    .wrapping_add(::core::mem::size_of::<size_t>() as usize)
+                    .wrapping_sub(1 as usize)
+                    & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize),
+            ) as size_t;
+            cmsg.hdr.cmsg_level = SOL_SOCKET;
+            cmsg.hdr.cmsg_type = SCM_RIGHTS as ::core::ffi::c_int;
+            cmsg.hdr.cmsg_len = ((::core::mem::size_of::<cmsghdr>() as usize)
+                .wrapping_add(::core::mem::size_of::<size_t>() as usize)
+                .wrapping_sub(1 as usize)
+                & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
+            .wrapping_add(::core::mem::size_of::<::core::ffi::c_int>() as usize)
+                as size_t;
+            memcpy(
+                &raw mut cmsg.hdr.__cmsg_data as *mut ::core::ffi::c_uchar
+                    as *mut ::core::ffi::c_void,
+                &raw mut fd_to_send as *const ::core::ffi::c_void,
+                ::core::mem::size_of::<::core::ffi::c_int>() as size_t,
+            );
+            loop {
+                n = sendmsg(
+                    (*stream).io_watcher.fd,
+                    &raw mut msg,
+                    0 as ::core::ffi::c_int,
+                );
+                if !(n == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
+                    break;
+                }
+            }
+        } else {
+            loop {
+                n = uv__writev((*stream).io_watcher.fd, iov, iovcnt as size_t);
+                if !(n == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
+                    break;
+                }
+            }
+        }
+        if n >= 0 as ssize_t {
+            return n as ::core::ffi::c_int;
+        }
+        if *__errno_location() == EAGAIN
+            || *__errno_location() == EWOULDBLOCK
+            || *__errno_location() == ENOBUFS
+        {
+            return UV_EAGAIN as ::core::ffi::c_int;
+        }
+        return -*__errno_location();
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__write(mut stream: *mut uv_stream_t) {
+    unsafe {
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut req: *mut uv_write_t = ::core::ptr::null_mut::<uv_write_t>();
+        let mut n: ssize_t = 0;
+        let mut count: ::core::ffi::c_int = 0;
+        '_c2rust_label: {
+            if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    845 as ::core::ffi::c_uint,
+                    b"void uv__write(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        count = 32 as ::core::ffi::c_int;
+        loop {
+            if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
+                return;
+            }
+            q = uv__queue_head(&raw mut (*stream).write_queue);
+            req = (q as *mut ::core::ffi::c_char).offset(-(88 as ::core::ffi::c_ulong as isize))
+                as *mut uv_write_t;
+            '_c2rust_label_0: {
+                if (*req).handle == stream {
+                } else {
+                    __assert_fail(
+                        b"req->handle == stream\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        859 as ::core::ffi::c_uint,
+                        b"void uv__write(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            n = uv__try_write(
+                stream,
+                (*req).bufs.offset((*req).write_index as isize) as *mut uv_buf_t as *const uv_buf_t,
+                (*req).nbufs.wrapping_sub((*req).write_index),
+                (*req).send_handle,
+            ) as ssize_t;
+            if n >= 0 as ssize_t {
+                (*req).send_handle = ::core::ptr::null_mut::<uv_stream_t>();
+                if uv__write_req_update(stream, req, n as size_t) != 0 {
+                    uv__write_req_finish(req);
+                    let fresh0 = count;
+                    count = count - 1;
+                    if fresh0 > 0 as ::core::ffi::c_int {
+                        continue;
+                    }
+                    return;
+                }
+            } else if n != UV_EAGAIN as ::core::ffi::c_int as ssize_t {
+                break;
+            }
+            if (*stream).flags
+                & UV_HANDLE_BLOCKING_WRITES as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0
+            {
+                continue;
+            }
+            uv__io_start(
+                (*stream).loop_0,
+                &raw mut (*stream).io_watcher,
+                POLLOUT as ::core::ffi::c_uint,
+            );
+            uv__stream_osx_interrupt_select(stream);
+            return;
+        }
+        (*req).error = n as ::core::ffi::c_int;
+        uv__write_req_finish(req);
         uv__io_stop(
             (*stream).loop_0,
             &raw mut (*stream).io_watcher,
@@ -1246,175 +1683,243 @@ unsafe extern "C" fn uv__drain(mut stream: *mut uv_stream_t) {
         );
         uv__stream_osx_interrupt_select(stream);
     }
-    if (*stream).shutdown_req.is_null() {
-        return;
-    }
-    req = (*stream).shutdown_req;
-    '_c2rust_label_0: {
-        if !req.is_null() {
-        } else {
-            __assert_fail(
-                b"req\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                640 as ::core::ffi::c_uint,
-                b"void uv__drain(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
-        || (*stream).flags & UV_HANDLE_SHUT as ::core::ffi::c_int as ::core::ffi::c_uint == 0
-    {
-        (*stream).shutdown_req = ::core::ptr::null_mut::<uv_shutdown_t>();
-        '_c2rust_label_1: {
-            if (*(*stream).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
-            } else {
-                __assert_fail(
-                    b"uv__has_active_reqs(stream->loop)\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    645 as ::core::ffi::c_uint,
-                    b"void uv__drain(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__write_callbacks(mut stream: *mut uv_stream_t) {
+    unsafe {
+        let mut req: *mut uv_write_t = ::core::ptr::null_mut::<uv_write_t>();
+        let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
+        let mut pq: uv__queue = uv__queue {
+            next: ::core::ptr::null_mut::<uv__queue>(),
+            prev: ::core::ptr::null_mut::<uv__queue>(),
         };
-        (*(*stream).loop_0).active_reqs.count =
-            (*(*stream).loop_0).active_reqs.count.wrapping_sub(1);
-        err = 0 as ::core::ffi::c_int;
-        if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint != 0 {
-            err = UV_ECANCELED as ::core::ffi::c_int;
-        } else if shutdown((*stream).io_watcher.fd, SHUT_WR as ::core::ffi::c_int) != 0 {
-            err = -*__errno_location();
-        } else {
-            (*stream).flags |= UV_HANDLE_SHUT as ::core::ffi::c_int as ::core::ffi::c_uint;
+        if uv__queue_empty(&raw mut (*stream).write_completed_queue) != 0 {
+            return;
         }
-        if (*req).cb.is_some() {
-            (*req).cb.expect("non-null function pointer")(req, err);
+        uv__queue_move(&raw mut (*stream).write_completed_queue, &raw mut pq);
+        while uv__queue_empty(&raw mut pq) == 0 {
+            q = uv__queue_head(&raw mut pq);
+            req = (q as *mut ::core::ffi::c_char).offset(-(88 as ::core::ffi::c_ulong as isize))
+                as *mut uv_write_t;
+            uv__queue_remove(q);
+            '_c2rust_label: {
+                if (*(*stream).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
+                } else {
+                    __assert_fail(
+                        b"uv__has_active_reqs(stream->loop)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        915 as ::core::ffi::c_uint,
+                        b"void uv__write_callbacks(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            (*(*stream).loop_0).active_reqs.count =
+                (*(*stream).loop_0).active_reqs.count.wrapping_sub(1);
+            if !(*req).bufs.is_null() {
+                (*stream).write_queue_size = (*stream)
+                    .write_queue_size
+                    .wrapping_sub(uv__write_req_size(req));
+                if (*req).bufs != &raw mut (*req).bufsml as *mut uv_buf_t {
+                    uv__free((*req).bufs as *mut ::core::ffi::c_void);
+                }
+                (*req).bufs = ::core::ptr::null_mut::<uv_buf_t>();
+            }
+            if (*req).cb.is_some() {
+                (*req).cb.expect("non-null function pointer")(req, (*req).error);
+            }
         }
     }
 }
-unsafe extern "C" fn uv__writev(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__stream_eof(mut stream: *mut uv_stream_t, mut buf: *const uv_buf_t) {
+    unsafe {
+        (*stream).flags |= UV_HANDLE_READ_EOF as ::core::ffi::c_int as ::core::ffi::c_uint;
+        (*stream).flags &= !(UV_HANDLE_READING as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        uv__io_stop(
+            (*stream).loop_0,
+            &raw mut (*stream).io_watcher,
+            POLLIN as ::core::ffi::c_uint,
+        );
+        if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
+        {
+            (*stream).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*stream).loop_0).active_handles =
+                    (*(*stream).loop_0).active_handles.wrapping_sub(1);
+            }
+        }
+        uv__stream_osx_interrupt_select(stream);
+        (*stream).read_cb.expect("non-null function pointer")(
+            stream,
+            UV_EOF as ::core::ffi::c_int as ssize_t,
+            buf,
+        );
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__stream_queue_fd(
+    mut stream: *mut uv_stream_t,
     mut fd: ::core::ffi::c_int,
-    mut vec: *mut iovec,
-    mut n: size_t,
-) -> ssize_t {
-    if n == 1 as size_t {
-        return write(fd, (*vec).iov_base, (*vec).iov_len);
-    } else {
-        return writev(fd, vec, n as ::core::ffi::c_int);
-    };
-}
-unsafe extern "C" fn uv__write_req_size(mut req: *mut uv_write_t) -> size_t {
-    let mut size: size_t = 0;
-    '_c2rust_label: {
-        if !(*req).bufs.is_null() {
-        } else {
-            __assert_fail(
-                b"req->bufs != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                673 as ::core::ffi::c_uint,
-                b"size_t uv__write_req_size(uv_write_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    size = uv__count_bufs(
-        (*req).bufs.offset((*req).write_index as isize) as *const uv_buf_t,
-        (*req).nbufs.wrapping_sub((*req).write_index),
-    );
-    '_c2rust_label_0: {
-        if (*(*req).handle).write_queue_size >= size {
-        } else {
-            __assert_fail(
-                b"req->handle->write_queue_size >= size\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                676 as ::core::ffi::c_uint,
-                b"size_t uv__write_req_size(uv_write_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    return size;
-}
-unsafe extern "C" fn uv__write_req_update(
-    mut stream: *mut uv_stream_t,
-    mut req: *mut uv_write_t,
-    mut n: size_t,
 ) -> ::core::ffi::c_int {
-    let mut buf: *mut uv_buf_t = ::core::ptr::null_mut::<uv_buf_t>();
-    let mut len: size_t = 0;
-    '_c2rust_label: {
-        if n <= (*stream).write_queue_size {
-        } else {
-            __assert_fail(
-                b"n <= stream->write_queue_size\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                694 as ::core::ffi::c_uint,
-                b"int uv__write_req_update(uv_stream_t *, uv_write_t *, size_t)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
+    unsafe {
+        let mut queued_fds: *mut uv__stream_queued_fds_t =
+            ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
+        let mut queue_size: ::core::ffi::c_uint = 0;
+        queued_fds = (*stream).queued_fds as *mut uv__stream_queued_fds_t;
+        if queued_fds.is_null() {
+            queue_size = 8 as ::core::ffi::c_uint;
+            queued_fds = uv__malloc(
+                (queue_size.wrapping_sub(1 as ::core::ffi::c_uint) as size_t)
+                    .wrapping_mul(::core::mem::size_of::<::core::ffi::c_int>() as size_t)
+                    .wrapping_add(::core::mem::size_of::<uv__stream_queued_fds_t>() as size_t),
+            ) as *mut uv__stream_queued_fds_t;
+            if queued_fds.is_null() {
+                return UV_ENOMEM as ::core::ffi::c_int;
+            }
+            (*queued_fds).size = queue_size;
+            (*queued_fds).offset = 0 as ::core::ffi::c_uint;
+            (*stream).queued_fds = queued_fds as *mut ::core::ffi::c_void;
+        } else if (*queued_fds).size == (*queued_fds).offset {
+            queue_size = (*queued_fds).size.wrapping_add(8 as ::core::ffi::c_uint);
+            queued_fds = uv__realloc(
+                queued_fds as *mut ::core::ffi::c_void,
+                (queue_size.wrapping_sub(1 as ::core::ffi::c_uint) as size_t)
+                    .wrapping_mul(::core::mem::size_of::<::core::ffi::c_int>() as size_t)
+                    .wrapping_add(::core::mem::size_of::<uv__stream_queued_fds_t>() as size_t),
+            ) as *mut uv__stream_queued_fds_t;
+            if queued_fds.is_null() {
+                return UV_ENOMEM as ::core::ffi::c_int;
+            }
+            (*queued_fds).size = queue_size;
+            (*stream).queued_fds = queued_fds as *mut ::core::ffi::c_void;
         }
-    };
-    (*stream).write_queue_size = (*stream).write_queue_size.wrapping_sub(n);
-    buf = (*req).bufs.offset((*req).write_index as isize);
-    loop {
-        len = if n < (*buf).len { n } else { (*buf).len };
-        (*buf).base = (*buf).base.offset(len as isize);
-        (*buf).len = (*buf).len.wrapping_sub(len);
-        buf = buf.offset(((*buf).len == 0 as size_t) as ::core::ffi::c_int as isize);
-        n = n.wrapping_sub(len);
-        if !(n > 0 as size_t) {
-            break;
-        }
+        let fresh4 = (*queued_fds).offset;
+        (*queued_fds).offset = (*queued_fds).offset.wrapping_add(1);
+        *(&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int).offset(fresh4 as isize) = fd;
+        return 0 as ::core::ffi::c_int;
     }
-    (*req).write_index = buf.offset_from((*req).bufs) as ::core::ffi::c_long as ::core::ffi::c_uint;
-    return ((*req).write_index == (*req).nbufs) as ::core::ffi::c_int;
 }
-unsafe extern "C" fn uv__write_req_finish(mut req: *mut uv_write_t) {
-    let mut stream: *mut uv_stream_t = (*req).handle;
-    uv__queue_remove(&raw mut (*req).queue);
-    if (*req).error == 0 as ::core::ffi::c_int {
-        if (*req).bufs != &raw mut (*req).bufsml as *mut uv_buf_t {
-            uv__free((*req).bufs as *mut ::core::ffi::c_void);
-        }
-        (*req).bufs = ::core::ptr::null_mut::<uv_buf_t>();
-    }
-    uv__queue_insert_tail(
-        &raw mut (*stream).write_completed_queue,
-        &raw mut (*req).queue,
-    );
-    uv__io_feed((*stream).loop_0, &raw mut (*stream).io_watcher);
-}
-unsafe extern "C" fn uv__handle_fd(mut handle: *mut uv_handle_t) -> ::core::ffi::c_int {
-    match (*handle).type_0 as ::core::ffi::c_uint {
-        7 | 12 => return (*(handle as *mut uv_stream_t)).io_watcher.fd,
-        15 => return (*(handle as *mut uv_udp_t)).io_watcher.fd,
-        _ => return -(1 as ::core::ffi::c_int),
-    };
-}
-unsafe extern "C" fn uv__try_write(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__stream_recv_cmsg(
     mut stream: *mut uv_stream_t,
-    mut bufs: *const uv_buf_t,
-    mut nbufs: ::core::ffi::c_uint,
-    mut send_handle: *mut uv_stream_t,
+    mut msg: *mut msghdr,
 ) -> ::core::ffi::c_int {
-    let mut iov: *mut iovec = ::core::ptr::null_mut::<iovec>();
-    let mut iovmax: ::core::ffi::c_int = 0;
-    let mut iovcnt: ::core::ffi::c_int = 0;
-    let mut n: ssize_t = 0;
-    iov = bufs as *mut iovec;
-    iovcnt = nbufs as ::core::ffi::c_int;
-    iovmax = uv__getiovmax();
-    if iovcnt > iovmax {
-        iovcnt = iovmax;
+    unsafe {
+        let mut cmsg: *mut cmsghdr = ::core::ptr::null_mut::<cmsghdr>();
+        let mut fd: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        let mut i: size_t = 0;
+        let mut count: size_t = 0;
+        cmsg = if (*msg).msg_controllen >= ::core::mem::size_of::<cmsghdr>() as usize {
+            (*msg).msg_control as *mut cmsghdr
+        } else {
+            ::core::ptr::null_mut::<cmsghdr>()
+        };
+        while !cmsg.is_null() {
+            if (*cmsg).cmsg_type != SCM_RIGHTS as ::core::ffi::c_int {
+                fprintf(
+                    stderr,
+                    b"ignoring non-SCM_RIGHTS ancillary data: %d\n\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    (*cmsg).cmsg_type,
+                );
+            } else {
+                '_c2rust_label: {
+                    if (*cmsg).cmsg_len
+                        >= ((::core::mem::size_of::<cmsghdr>() as usize)
+                            .wrapping_add(::core::mem::size_of::<size_t>() as usize)
+                            .wrapping_sub(1 as usize)
+                            & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
+                        .wrapping_add(0 as usize)
+                    {
+                    } else {
+                        __assert_fail(
+                            b"cmsg->cmsg_len >= CMSG_LEN(0)\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                                as *const u8
+                                as *const ::core::ffi::c_char,
+                            994 as ::core::ffi::c_uint,
+                            b"int uv__stream_recv_cmsg(uv_stream_t *, struct msghdr *)\0"
+                                as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                count = (*cmsg).cmsg_len.wrapping_sub(
+                    ((::core::mem::size_of::<cmsghdr>() as size_t)
+                        .wrapping_add(::core::mem::size_of::<size_t>() as size_t)
+                        .wrapping_sub(1 as size_t)
+                        & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
+                    .wrapping_add(0 as size_t),
+                );
+                '_c2rust_label_0: {
+                    if count.wrapping_rem(::core::mem::size_of::<::core::ffi::c_int>() as size_t)
+                        == 0 as size_t
+                    {
+                    } else {
+                        __assert_fail(
+                            b"count % sizeof(fd) == 0\0" as *const u8 as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                                as *const u8
+                                as *const ::core::ffi::c_char,
+                            996 as ::core::ffi::c_uint,
+                            b"int uv__stream_recv_cmsg(uv_stream_t *, struct msghdr *)\0"
+                                as *const u8
+                                as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                count = (count as ::core::ffi::c_ulong)
+                    .wrapping_div(::core::mem::size_of::<::core::ffi::c_int>() as usize
+                        as ::core::ffi::c_ulong) as size_t as size_t;
+                i = 0 as size_t;
+                while i < count {
+                    memcpy(
+                        &raw mut fd as *mut ::core::ffi::c_void,
+                        (&raw mut (*cmsg).__cmsg_data as *mut ::core::ffi::c_uchar
+                            as *mut ::core::ffi::c_char)
+                            .offset(
+                                i.wrapping_mul(
+                                    ::core::mem::size_of::<::core::ffi::c_int>() as size_t
+                                ) as isize,
+                            ) as *const ::core::ffi::c_void,
+                        ::core::mem::size_of::<::core::ffi::c_int>() as size_t,
+                    );
+                    if (*stream).accepted_fd != -(1 as ::core::ffi::c_int) {
+                        err = uv__stream_queue_fd(stream, fd);
+                        if err != 0 as ::core::ffi::c_int {
+                            while i < count {
+                                uv__close(fd);
+                                i = i.wrapping_add(1);
+                            }
+                            return err;
+                        }
+                    } else {
+                        (*stream).accepted_fd = fd;
+                    }
+                    i = i.wrapping_add(1);
+                }
+            }
+            cmsg = __cmsg_nxthdr(msg, cmsg);
+        }
+        return 0 as ::core::ffi::c_int;
     }
-    if !send_handle.is_null() {
-        let mut fd_to_send: ::core::ffi::c_int = 0;
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__read(mut stream: *mut uv_stream_t) {
+    unsafe {
+        let mut buf: uv_buf_t = uv_buf_t {
+            base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+            len: 0,
+        };
+        let mut nread: ssize_t = 0;
         let mut msg: msghdr = msghdr {
             msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
             msg_namelen: 0,
@@ -1432,186 +1937,414 @@ unsafe extern "C" fn uv__try_write(
                 __cmsg_data: [],
             },
         };
-        if (*send_handle).flags
-            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-                as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            return UV_EBADF as ::core::ffi::c_int;
-        }
-        fd_to_send = uv__handle_fd(send_handle as *mut uv_handle_t);
-        memset(
-            &raw mut cmsg as *mut ::core::ffi::c_void,
-            0 as ::core::ffi::c_int,
-            ::core::mem::size_of::<uv__cmsg>() as size_t,
-        );
-        '_c2rust_label: {
-            if fd_to_send >= 0 as ::core::ffi::c_int {
-            } else {
-                __assert_fail(
-                    b"fd_to_send >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
-                        as *const u8 as *const ::core::ffi::c_char,
-                    791 as ::core::ffi::c_uint,
-                    b"int uv__try_write(uv_stream_t *, const uv_buf_t *, unsigned int, uv_stream_t *)\0"
-                        as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        msg.msg_name = NULL;
-        msg.msg_namelen = 0 as socklen_t;
-        msg.msg_iov = iov;
-        msg.msg_iovlen = iovcnt as size_t;
-        msg.msg_flags = 0 as ::core::ffi::c_int;
-        msg.msg_control = &raw mut cmsg.hdr as *mut ::core::ffi::c_void;
-        msg.msg_controllen = ((::core::mem::size_of::<::core::ffi::c_int>() as usize)
-            .wrapping_add(::core::mem::size_of::<size_t>() as usize)
-            .wrapping_sub(1 as usize)
-            & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
-        .wrapping_add(
-            (::core::mem::size_of::<cmsghdr>() as usize)
-                .wrapping_add(::core::mem::size_of::<size_t>() as usize)
-                .wrapping_sub(1 as usize)
-                & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize),
-        ) as size_t;
-        cmsg.hdr.cmsg_level = SOL_SOCKET;
-        cmsg.hdr.cmsg_type = SCM_RIGHTS as ::core::ffi::c_int;
-        cmsg.hdr.cmsg_len = ((::core::mem::size_of::<cmsghdr>() as usize)
-            .wrapping_add(::core::mem::size_of::<size_t>() as usize)
-            .wrapping_sub(1 as usize)
-            & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
-        .wrapping_add(::core::mem::size_of::<::core::ffi::c_int>() as usize)
-            as size_t;
-        memcpy(
-            &raw mut cmsg.hdr.__cmsg_data as *mut ::core::ffi::c_uchar as *mut ::core::ffi::c_void,
-            &raw mut fd_to_send as *const ::core::ffi::c_void,
-            ::core::mem::size_of::<::core::ffi::c_int>() as size_t,
-        );
-        loop {
-            n = sendmsg(
-                (*stream).io_watcher.fd,
-                &raw mut msg,
-                0 as ::core::ffi::c_int,
-            );
-            if !(n == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
-                break;
-            }
-        }
-    } else {
-        loop {
-            n = uv__writev((*stream).io_watcher.fd, iov, iovcnt as size_t);
-            if !(n == -(1 as ::core::ffi::c_int) as ssize_t && *__errno_location() == EINTR) {
-                break;
-            }
-        }
-    }
-    if n >= 0 as ssize_t {
-        return n as ::core::ffi::c_int;
-    }
-    if *__errno_location() == EAGAIN
-        || *__errno_location() == EWOULDBLOCK
-        || *__errno_location() == ENOBUFS
-    {
-        return UV_EAGAIN as ::core::ffi::c_int;
-    }
-    return -*__errno_location();
-}
-unsafe extern "C" fn uv__write(mut stream: *mut uv_stream_t) {
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut req: *mut uv_write_t = ::core::ptr::null_mut::<uv_write_t>();
-    let mut n: ssize_t = 0;
-    let mut count: ::core::ffi::c_int = 0;
-    '_c2rust_label: {
-        if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                845 as ::core::ffi::c_uint,
-                b"void uv__write(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    count = 32 as ::core::ffi::c_int;
-    loop {
-        if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
-            return;
-        }
-        q = uv__queue_head(&raw mut (*stream).write_queue);
-        req = (q as *mut ::core::ffi::c_char).offset(-(88 as ::core::ffi::c_ulong as isize))
-            as *mut uv_write_t;
-        '_c2rust_label_0: {
-            if (*req).handle == stream {
-            } else {
-                __assert_fail(
-                    b"req->handle == stream\0" as *const u8 as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    859 as ::core::ffi::c_uint,
-                    b"void uv__write(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        n = uv__try_write(
-            stream,
-            (*req).bufs.offset((*req).write_index as isize) as *mut uv_buf_t as *const uv_buf_t,
-            (*req).nbufs.wrapping_sub((*req).write_index),
-            (*req).send_handle,
-        ) as ssize_t;
-        if n >= 0 as ssize_t {
-            (*req).send_handle = ::core::ptr::null_mut::<uv_stream_t>();
-            if uv__write_req_update(stream, req, n as size_t) != 0 {
-                uv__write_req_finish(req);
-                let fresh0 = count;
+        let mut count: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        let mut is_ipc: ::core::ffi::c_int = 0;
+        (*stream).flags &= !(UV_HANDLE_READ_PARTIAL as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        count = 32 as ::core::ffi::c_int;
+        is_ipc = ((*stream).type_0 as ::core::ffi::c_uint
+            == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+            && (*(stream as *mut uv_pipe_t)).ipc != 0) as ::core::ffi::c_int;
+        while (*stream).read_cb.is_some()
+            && (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            && {
+                let fresh3 = count;
                 count = count - 1;
-                if fresh0 > 0 as ::core::ffi::c_int {
-                    continue;
+                fresh3 > 0 as ::core::ffi::c_int
+            }
+        {
+            '_c2rust_label: {
+                if (*stream).alloc_cb.is_some() {
+                } else {
+                    __assert_fail(
+                        b"stream->alloc_cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        1044 as ::core::ffi::c_uint,
+                        b"void uv__read(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
                 }
+            };
+            buf = uv_buf_init(
+                ::core::ptr::null_mut::<::core::ffi::c_char>(),
+                0 as ::core::ffi::c_uint,
+            );
+            (*stream).alloc_cb.expect("non-null function pointer")(
+                stream as *mut uv_handle_t,
+                (64 as ::core::ffi::c_int * 1024 as ::core::ffi::c_int) as size_t,
+                &raw mut buf,
+            );
+            if buf.base.is_null() || buf.len == 0 as size_t {
+                (*stream).read_cb.expect("non-null function pointer")(
+                    stream,
+                    UV_ENOBUFS as ::core::ffi::c_int as ssize_t,
+                    &raw mut buf,
+                );
                 return;
             }
-        } else if n != UV_EAGAIN as ::core::ffi::c_int as ssize_t {
-            break;
+            '_c2rust_label_0: {
+                if !buf.base.is_null() {
+                } else {
+                    __assert_fail(
+                        b"buf.base != NULL\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        1054 as ::core::ffi::c_uint,
+                        b"void uv__read(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            '_c2rust_label_1: {
+                if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
+                } else {
+                    __assert_fail(
+                        b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        1055 as ::core::ffi::c_uint,
+                        b"void uv__read(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            if is_ipc == 0 {
+                loop {
+                    nread = read(
+                        (*stream).io_watcher.fd,
+                        buf.base as *mut ::core::ffi::c_void,
+                        buf.len,
+                    );
+                    if !(nread < 0 as ssize_t && *__errno_location() == EINTR) {
+                        break;
+                    }
+                }
+            } else {
+                msg.msg_flags = 0 as ::core::ffi::c_int;
+                msg.msg_iov = &raw mut buf as *mut iovec;
+                msg.msg_iovlen = 1 as size_t;
+                msg.msg_name = NULL;
+                msg.msg_namelen = 0 as socklen_t;
+                msg.msg_controllen = ::core::mem::size_of::<uv__cmsg>() as usize as size_t;
+                msg.msg_control = &raw mut cmsg.hdr as *mut ::core::ffi::c_void;
+                loop {
+                    nread = uv__recvmsg(
+                        (*stream).io_watcher.fd,
+                        &raw mut msg,
+                        0 as ::core::ffi::c_int,
+                    );
+                    if !(nread < 0 as ssize_t && *__errno_location() == EINTR) {
+                        break;
+                    }
+                }
+            }
+            if nread < 0 as ssize_t {
+                if *__errno_location() == EAGAIN || *__errno_location() == EWOULDBLOCK {
+                    if (*stream).flags
+                        & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint
+                        != 0
+                    {
+                        uv__io_start(
+                            (*stream).loop_0,
+                            &raw mut (*stream).io_watcher,
+                            POLLIN as ::core::ffi::c_uint,
+                        );
+                        uv__stream_osx_interrupt_select(stream);
+                    }
+                    (*stream).read_cb.expect("non-null function pointer")(
+                        stream,
+                        0 as ssize_t,
+                        &raw mut buf,
+                    );
+                } else {
+                    (*stream).flags &= !(UV_HANDLE_READABLE as ::core::ffi::c_int
+                        | UV_HANDLE_WRITABLE as ::core::ffi::c_int)
+                        as ::core::ffi::c_uint;
+                    (*stream).read_cb.expect("non-null function pointer")(
+                        stream,
+                        -*__errno_location() as ssize_t,
+                        &raw mut buf,
+                    );
+                    if (*stream).flags
+                        & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint
+                        != 0
+                    {
+                        (*stream).flags &=
+                            !(UV_HANDLE_READING as ::core::ffi::c_int) as ::core::ffi::c_uint;
+                        uv__io_stop(
+                            (*stream).loop_0,
+                            &raw mut (*stream).io_watcher,
+                            POLLIN as ::core::ffi::c_uint,
+                        );
+                        if !((*stream).flags
+                            & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+                            == 0 as ::core::ffi::c_uint)
+                        {
+                            (*stream).flags &=
+                                !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+                            if (*stream).flags
+                                & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                                != 0 as ::core::ffi::c_uint
+                            {
+                                (*(*stream).loop_0).active_handles =
+                                    (*(*stream).loop_0).active_handles.wrapping_sub(1);
+                            }
+                        }
+                        uv__stream_osx_interrupt_select(stream);
+                    }
+                }
+                return;
+            } else if nread == 0 as ssize_t {
+                uv__stream_eof(stream, &raw mut buf);
+                return;
+            } else {
+                let mut buflen: ssize_t = buf.len as ssize_t;
+                if is_ipc != 0 {
+                    err = uv__stream_recv_cmsg(stream, &raw mut msg);
+                    if err != 0 as ::core::ffi::c_int {
+                        (*stream).read_cb.expect("non-null function pointer")(
+                            stream,
+                            err as ssize_t,
+                            &raw mut buf,
+                        );
+                        return;
+                    }
+                }
+                (*stream).read_cb.expect("non-null function pointer")(stream, nread, &raw mut buf);
+                if nread < buflen {
+                    (*stream).flags |=
+                        UV_HANDLE_READ_PARTIAL as ::core::ffi::c_int as ::core::ffi::c_uint;
+                    return;
+                }
+            }
         }
-        if (*stream).flags & UV_HANDLE_BLOCKING_WRITES as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0
-        {
-            continue;
-        }
-        uv__io_start(
-            (*stream).loop_0,
-            &raw mut (*stream).io_watcher,
-            POLLOUT as ::core::ffi::c_uint,
-        );
-        uv__stream_osx_interrupt_select(stream);
-        return;
     }
-    (*req).error = n as ::core::ffi::c_int;
-    uv__write_req_finish(req);
-    uv__io_stop(
-        (*stream).loop_0,
-        &raw mut (*stream).io_watcher,
-        POLLOUT as ::core::ffi::c_uint,
-    );
-    uv__stream_osx_interrupt_select(stream);
 }
-unsafe extern "C" fn uv__write_callbacks(mut stream: *mut uv_stream_t) {
-    let mut req: *mut uv_write_t = ::core::ptr::null_mut::<uv_write_t>();
-    let mut q: *mut uv__queue = ::core::ptr::null_mut::<uv__queue>();
-    let mut pq: uv__queue = uv__queue {
-        next: ::core::ptr::null_mut::<uv__queue>(),
-        prev: ::core::ptr::null_mut::<uv__queue>(),
-    };
-    if uv__queue_empty(&raw mut (*stream).write_completed_queue) != 0 {
-        return;
-    }
-    uv__queue_move(&raw mut (*stream).write_completed_queue, &raw mut pq);
-    while uv__queue_empty(&raw mut pq) == 0 {
-        q = uv__queue_head(&raw mut pq);
-        req = (q as *mut ::core::ffi::c_char).offset(-(88 as ::core::ffi::c_ulong as isize))
-            as *mut uv_write_t;
-        uv__queue_remove(q);
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_shutdown(
+    mut req: *mut uv_shutdown_t,
+    mut stream: *mut uv_stream_t,
+    mut cb: uv_shutdown_cb,
+) -> ::core::ffi::c_int {
+    unsafe {
         '_c2rust_label: {
+            if (*stream).type_0 as ::core::ffi::c_uint
+                == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"stream->type == UV_TCP || stream->type == UV_TTY || stream->type == UV_NAMED_PIPE\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    1158 as ::core::ffi::c_uint,
+                    b"int uv_shutdown(uv_shutdown_t *, uv_stream_t *, uv_shutdown_cb)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*stream).flags & UV_HANDLE_WRITABLE as ::core::ffi::c_int as ::core::ffi::c_uint == 0
+            || (*stream).flags & UV_HANDLE_SHUT as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            || !(*stream).shutdown_req.is_null()
+            || (*stream).flags
+                & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
+                    as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+        {
+            return UV_ENOTCONN as ::core::ffi::c_int;
+        }
+        '_c2rust_label_0: {
+            if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1167 as ::core::ffi::c_uint,
+                    b"int uv_shutdown(uv_shutdown_t *, uv_stream_t *, uv_shutdown_cb)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*req).type_0 = UV_SHUTDOWN;
+        (*(*stream).loop_0).active_reqs.count =
+            (*(*stream).loop_0).active_reqs.count.wrapping_add(1);
+        (*req).handle = stream;
+        (*req).cb = cb;
+        (*stream).shutdown_req = req;
+        (*stream).flags &= !(UV_HANDLE_WRITABLE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
+            uv__io_feed((*stream).loop_0, &raw mut (*stream).io_watcher);
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__stream_io(
+    mut loop_0: *mut uv_loop_t,
+    mut w: *mut uv__io_t,
+    mut events: ::core::ffi::c_uint,
+) {
+    unsafe {
+        let mut stream: *mut uv_stream_t = ::core::ptr::null_mut::<uv_stream_t>();
+        stream = (w as *mut ::core::ffi::c_char).offset(-(136 as ::core::ffi::c_ulong as isize))
+            as *mut uv_stream_t;
+        '_c2rust_label: {
+            if (*stream).type_0 as ::core::ffi::c_uint
+                == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"stream->type == UV_TCP || stream->type == UV_NAMED_PIPE || stream->type == UV_TTY\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    1191 as ::core::ffi::c_uint,
+                    b"void uv__stream_io(uv_loop_t *, uv__io_t *, unsigned int)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint == 0
+            {
+            } else {
+                __assert_fail(
+                    b"!(stream->flags & UV_HANDLE_CLOSING)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1192 as ::core::ffi::c_uint,
+                    b"void uv__stream_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if !(*stream).connect_req.is_null() {
+            uv__stream_connect(stream);
+            return;
+        }
+        '_c2rust_label_1: {
+            if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1199 as ::core::ffi::c_uint,
+                    b"void uv__stream_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if events & (POLLIN | POLLERR | POLLHUP) as ::core::ffi::c_uint != 0 {
+            uv__read(stream);
+        }
+        if (*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) {
+            return;
+        }
+        if events & POLLHUP as ::core::ffi::c_uint != 0
+            && (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
+            && (*stream).flags & UV_HANDLE_READ_PARTIAL as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0
+            && (*stream).flags & UV_HANDLE_READ_EOF as ::core::ffi::c_int as ::core::ffi::c_uint
+                == 0
+        {
+            let mut buf: uv_buf_t = uv_buf_t {
+                base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
+                len: 0 as size_t,
+            };
+            uv__stream_eof(stream, &raw mut buf);
+        }
+        if (*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) {
+            return;
+        }
+        if events & (POLLOUT | POLLERR | POLLHUP) as ::core::ffi::c_uint != 0 {
+            uv__write(stream);
+            uv__write_callbacks(stream);
+            if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
+                uv__drain(stream);
+            }
+        }
+    }
+}
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__stream_connect(mut stream: *mut uv_stream_t) {
+    unsafe {
+        let mut error: ::core::ffi::c_int = 0;
+        let mut req: *mut uv_connect_t = (*stream).connect_req;
+        let mut errorsize: socklen_t = ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t;
+        '_c2rust_label: {
+            if (*stream).type_0 as ::core::ffi::c_uint
+                == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"stream->type == UV_TCP || stream->type == UV_NAMED_PIPE\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1246 as ::core::ffi::c_uint,
+                    b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if !req.is_null() {
+            } else {
+                __assert_fail(
+                    b"req\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1247 as ::core::ffi::c_uint,
+                    b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*stream).delayed_error != 0 {
+            error = (*stream).delayed_error;
+            (*stream).delayed_error = 0 as ::core::ffi::c_int;
+        } else {
+            '_c2rust_label_1: {
+                if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
+                } else {
+                    __assert_fail(
+                        b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                        1258 as ::core::ffi::c_uint,
+                        b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
+                            as *const ::core::ffi::c_char,
+                    );
+                }
+            };
+            getsockopt(
+                (*stream).io_watcher.fd,
+                SOL_SOCKET,
+                SO_ERROR,
+                &raw mut error as *mut ::core::ffi::c_void,
+                &raw mut errorsize,
+            );
+            error = -error;
+        }
+        if error == -(115 as ::core::ffi::c_int) {
+            return;
+        }
+        (*stream).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
+        '_c2rust_label_2: {
             if (*(*stream).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
             } else {
                 __assert_fail(
@@ -1619,1080 +2352,532 @@ unsafe extern "C" fn uv__write_callbacks(mut stream: *mut uv_stream_t) {
                         as *const ::core::ffi::c_char,
                     b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
                         as *const ::core::ffi::c_char,
-                    915 as ::core::ffi::c_uint,
-                    b"void uv__write_callbacks(uv_stream_t *)\0" as *const u8
+                    1271 as ::core::ffi::c_uint,
+                    b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
                         as *const ::core::ffi::c_char,
                 );
             }
         };
         (*(*stream).loop_0).active_reqs.count =
             (*(*stream).loop_0).active_reqs.count.wrapping_sub(1);
-        if !(*req).bufs.is_null() {
-            (*stream).write_queue_size = (*stream)
-                .write_queue_size
-                .wrapping_sub(uv__write_req_size(req));
-            if (*req).bufs != &raw mut (*req).bufsml as *mut uv_buf_t {
-                uv__free((*req).bufs as *mut ::core::ffi::c_void);
-            }
-            (*req).bufs = ::core::ptr::null_mut::<uv_buf_t>();
-        }
-        if (*req).cb.is_some() {
-            (*req).cb.expect("non-null function pointer")(req, (*req).error);
-        }
-    }
-}
-unsafe extern "C" fn uv__stream_eof(mut stream: *mut uv_stream_t, mut buf: *const uv_buf_t) {
-    (*stream).flags |= UV_HANDLE_READ_EOF as ::core::ffi::c_int as ::core::ffi::c_uint;
-    (*stream).flags &= !(UV_HANDLE_READING as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    uv__io_stop(
-        (*stream).loop_0,
-        &raw mut (*stream).io_watcher,
-        POLLIN as ::core::ffi::c_uint,
-    );
-    if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*stream).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*stream).loop_0).active_handles = (*(*stream).loop_0).active_handles.wrapping_sub(1);
-        }
-    }
-    uv__stream_osx_interrupt_select(stream);
-    (*stream).read_cb.expect("non-null function pointer")(
-        stream,
-        UV_EOF as ::core::ffi::c_int as ssize_t,
-        buf,
-    );
-}
-unsafe extern "C" fn uv__stream_queue_fd(
-    mut stream: *mut uv_stream_t,
-    mut fd: ::core::ffi::c_int,
-) -> ::core::ffi::c_int {
-    let mut queued_fds: *mut uv__stream_queued_fds_t =
-        ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
-    let mut queue_size: ::core::ffi::c_uint = 0;
-    queued_fds = (*stream).queued_fds as *mut uv__stream_queued_fds_t;
-    if queued_fds.is_null() {
-        queue_size = 8 as ::core::ffi::c_uint;
-        queued_fds = uv__malloc(
-            (queue_size.wrapping_sub(1 as ::core::ffi::c_uint) as size_t)
-                .wrapping_mul(::core::mem::size_of::<::core::ffi::c_int>() as size_t)
-                .wrapping_add(::core::mem::size_of::<uv__stream_queued_fds_t>() as size_t),
-        ) as *mut uv__stream_queued_fds_t;
-        if queued_fds.is_null() {
-            return UV_ENOMEM as ::core::ffi::c_int;
-        }
-        (*queued_fds).size = queue_size;
-        (*queued_fds).offset = 0 as ::core::ffi::c_uint;
-        (*stream).queued_fds = queued_fds as *mut ::core::ffi::c_void;
-    } else if (*queued_fds).size == (*queued_fds).offset {
-        queue_size = (*queued_fds).size.wrapping_add(8 as ::core::ffi::c_uint);
-        queued_fds = uv__realloc(
-            queued_fds as *mut ::core::ffi::c_void,
-            (queue_size.wrapping_sub(1 as ::core::ffi::c_uint) as size_t)
-                .wrapping_mul(::core::mem::size_of::<::core::ffi::c_int>() as size_t)
-                .wrapping_add(::core::mem::size_of::<uv__stream_queued_fds_t>() as size_t),
-        ) as *mut uv__stream_queued_fds_t;
-        if queued_fds.is_null() {
-            return UV_ENOMEM as ::core::ffi::c_int;
-        }
-        (*queued_fds).size = queue_size;
-        (*stream).queued_fds = queued_fds as *mut ::core::ffi::c_void;
-    }
-    let fresh4 = (*queued_fds).offset;
-    (*queued_fds).offset = (*queued_fds).offset.wrapping_add(1);
-    *(&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int).offset(fresh4 as isize) = fd;
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__stream_recv_cmsg(
-    mut stream: *mut uv_stream_t,
-    mut msg: *mut msghdr,
-) -> ::core::ffi::c_int {
-    let mut cmsg: *mut cmsghdr = ::core::ptr::null_mut::<cmsghdr>();
-    let mut fd: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    let mut i: size_t = 0;
-    let mut count: size_t = 0;
-    cmsg = if (*msg).msg_controllen >= ::core::mem::size_of::<cmsghdr>() as usize {
-        (*msg).msg_control as *mut cmsghdr
-    } else {
-        ::core::ptr::null_mut::<cmsghdr>()
-    };
-    while !cmsg.is_null() {
-        if (*cmsg).cmsg_type != SCM_RIGHTS as ::core::ffi::c_int {
-            fprintf(
-                stderr,
-                b"ignoring non-SCM_RIGHTS ancillary data: %d\n\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                (*cmsg).cmsg_type,
-            );
-        } else {
-            '_c2rust_label: {
-                if (*cmsg).cmsg_len
-                    >= ((::core::mem::size_of::<cmsghdr>() as usize)
-                        .wrapping_add(::core::mem::size_of::<size_t>() as usize)
-                        .wrapping_sub(1 as usize)
-                        & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
-                    .wrapping_add(0 as usize)
-                {
-                } else {
-                    __assert_fail(
-                        b"cmsg->cmsg_len >= CMSG_LEN(0)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        994 as ::core::ffi::c_uint,
-                        b"int uv__stream_recv_cmsg(uv_stream_t *, struct msghdr *)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            count = (*cmsg).cmsg_len.wrapping_sub(
-                ((::core::mem::size_of::<cmsghdr>() as size_t)
-                    .wrapping_add(::core::mem::size_of::<size_t>() as size_t)
-                    .wrapping_sub(1 as size_t)
-                    & !(::core::mem::size_of::<size_t>() as usize).wrapping_sub(1 as usize))
-                .wrapping_add(0 as size_t),
-            );
-            '_c2rust_label_0: {
-                if count.wrapping_rem(::core::mem::size_of::<::core::ffi::c_int>() as size_t)
-                    == 0 as size_t
-                {
-                } else {
-                    __assert_fail(
-                        b"count % sizeof(fd) == 0\0" as *const u8 as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        996 as ::core::ffi::c_uint,
-                        b"int uv__stream_recv_cmsg(uv_stream_t *, struct msghdr *)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            count = (count as ::core::ffi::c_ulong)
-                .wrapping_div(
-                    ::core::mem::size_of::<::core::ffi::c_int>() as usize as ::core::ffi::c_ulong
-                ) as size_t as size_t;
-            i = 0 as size_t;
-            while i < count {
-                memcpy(
-                    &raw mut fd as *mut ::core::ffi::c_void,
-                    (&raw mut (*cmsg).__cmsg_data as *mut ::core::ffi::c_uchar
-                        as *mut ::core::ffi::c_char)
-                        .offset(
-                            i.wrapping_mul(::core::mem::size_of::<::core::ffi::c_int>() as size_t)
-                                as isize,
-                        ) as *const ::core::ffi::c_void,
-                    ::core::mem::size_of::<::core::ffi::c_int>() as size_t,
-                );
-                if (*stream).accepted_fd != -(1 as ::core::ffi::c_int) {
-                    err = uv__stream_queue_fd(stream, fd);
-                    if err != 0 as ::core::ffi::c_int {
-                        while i < count {
-                            uv__close(fd);
-                            i = i.wrapping_add(1);
-                        }
-                        return err;
-                    }
-                } else {
-                    (*stream).accepted_fd = fd;
-                }
-                i = i.wrapping_add(1);
-            }
-        }
-        cmsg = __cmsg_nxthdr(msg, cmsg);
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__read(mut stream: *mut uv_stream_t) {
-    let mut buf: uv_buf_t = uv_buf_t {
-        base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-        len: 0,
-    };
-    let mut nread: ssize_t = 0;
-    let mut msg: msghdr = msghdr {
-        msg_name: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        msg_namelen: 0,
-        msg_iov: ::core::ptr::null_mut::<iovec>(),
-        msg_iovlen: 0,
-        msg_control: ::core::ptr::null_mut::<::core::ffi::c_void>(),
-        msg_controllen: 0,
-        msg_flags: 0,
-    };
-    let mut cmsg: uv__cmsg = uv__cmsg {
-        hdr: cmsghdr {
-            cmsg_len: 0,
-            cmsg_level: 0,
-            cmsg_type: 0,
-            __cmsg_data: [],
-        },
-    };
-    let mut count: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    let mut is_ipc: ::core::ffi::c_int = 0;
-    (*stream).flags &= !(UV_HANDLE_READ_PARTIAL as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    count = 32 as ::core::ffi::c_int;
-    is_ipc = ((*stream).type_0 as ::core::ffi::c_uint
-        == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-        && (*(stream as *mut uv_pipe_t)).ipc != 0) as ::core::ffi::c_int;
-    while (*stream).read_cb.is_some()
-        && (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
-        && {
-            let fresh3 = count;
-            count = count - 1;
-            fresh3 > 0 as ::core::ffi::c_int
-        }
-    {
-        '_c2rust_label: {
-            if (*stream).alloc_cb.is_some() {
-            } else {
-                __assert_fail(
-                    b"stream->alloc_cb != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    1044 as ::core::ffi::c_uint,
-                    b"void uv__read(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        buf = uv_buf_init(
-            ::core::ptr::null_mut::<::core::ffi::c_char>(),
-            0 as ::core::ffi::c_uint,
-        );
-        (*stream).alloc_cb.expect("non-null function pointer")(
-            stream as *mut uv_handle_t,
-            (64 as ::core::ffi::c_int * 1024 as ::core::ffi::c_int) as size_t,
-            &raw mut buf,
-        );
-        if buf.base.is_null() || buf.len == 0 as size_t {
-            (*stream).read_cb.expect("non-null function pointer")(
-                stream,
-                UV_ENOBUFS as ::core::ffi::c_int as ssize_t,
-                &raw mut buf,
-            );
-            return;
-        }
-        '_c2rust_label_0: {
-            if !buf.base.is_null() {
-            } else {
-                __assert_fail(
-                    b"buf.base != NULL\0" as *const u8 as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    1054 as ::core::ffi::c_uint,
-                    b"void uv__read(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        '_c2rust_label_1: {
-            if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
-            } else {
-                __assert_fail(
-                    b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    1055 as ::core::ffi::c_uint,
-                    b"void uv__read(uv_stream_t *)\0" as *const u8 as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        if is_ipc == 0 {
-            loop {
-                nread = read(
-                    (*stream).io_watcher.fd,
-                    buf.base as *mut ::core::ffi::c_void,
-                    buf.len,
-                );
-                if !(nread < 0 as ssize_t && *__errno_location() == EINTR) {
-                    break;
-                }
-            }
-        } else {
-            msg.msg_flags = 0 as ::core::ffi::c_int;
-            msg.msg_iov = &raw mut buf as *mut iovec;
-            msg.msg_iovlen = 1 as size_t;
-            msg.msg_name = NULL;
-            msg.msg_namelen = 0 as socklen_t;
-            msg.msg_controllen = ::core::mem::size_of::<uv__cmsg>() as usize as size_t;
-            msg.msg_control = &raw mut cmsg.hdr as *mut ::core::ffi::c_void;
-            loop {
-                nread = uv__recvmsg(
-                    (*stream).io_watcher.fd,
-                    &raw mut msg,
-                    0 as ::core::ffi::c_int,
-                );
-                if !(nread < 0 as ssize_t && *__errno_location() == EINTR) {
-                    break;
-                }
-            }
-        }
-        if nread < 0 as ssize_t {
-            if *__errno_location() == EAGAIN || *__errno_location() == EWOULDBLOCK {
-                if (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint
-                    != 0
-                {
-                    uv__io_start(
-                        (*stream).loop_0,
-                        &raw mut (*stream).io_watcher,
-                        POLLIN as ::core::ffi::c_uint,
-                    );
-                    uv__stream_osx_interrupt_select(stream);
-                }
-                (*stream).read_cb.expect("non-null function pointer")(
-                    stream,
-                    0 as ssize_t,
-                    &raw mut buf,
-                );
-            } else {
-                (*stream).flags &= !(UV_HANDLE_READABLE as ::core::ffi::c_int
-                    | UV_HANDLE_WRITABLE as ::core::ffi::c_int)
-                    as ::core::ffi::c_uint;
-                (*stream).read_cb.expect("non-null function pointer")(
-                    stream,
-                    -*__errno_location() as ssize_t,
-                    &raw mut buf,
-                );
-                if (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint
-                    != 0
-                {
-                    (*stream).flags &=
-                        !(UV_HANDLE_READING as ::core::ffi::c_int) as ::core::ffi::c_uint;
-                    uv__io_stop(
-                        (*stream).loop_0,
-                        &raw mut (*stream).io_watcher,
-                        POLLIN as ::core::ffi::c_uint,
-                    );
-                    if !((*stream).flags
-                        & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-                        == 0 as ::core::ffi::c_uint)
-                    {
-                        (*stream).flags &=
-                            !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-                        if (*stream).flags
-                            & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-                            != 0 as ::core::ffi::c_uint
-                        {
-                            (*(*stream).loop_0).active_handles =
-                                (*(*stream).loop_0).active_handles.wrapping_sub(1);
-                        }
-                    }
-                    uv__stream_osx_interrupt_select(stream);
-                }
-            }
-            return;
-        } else if nread == 0 as ssize_t {
-            uv__stream_eof(stream, &raw mut buf);
-            return;
-        } else {
-            let mut buflen: ssize_t = buf.len as ssize_t;
-            if is_ipc != 0 {
-                err = uv__stream_recv_cmsg(stream, &raw mut msg);
-                if err != 0 as ::core::ffi::c_int {
-                    (*stream).read_cb.expect("non-null function pointer")(
-                        stream,
-                        err as ssize_t,
-                        &raw mut buf,
-                    );
-                    return;
-                }
-            }
-            (*stream).read_cb.expect("non-null function pointer")(stream, nread, &raw mut buf);
-            if nread < buflen {
-                (*stream).flags |=
-                    UV_HANDLE_READ_PARTIAL as ::core::ffi::c_int as ::core::ffi::c_uint;
-                return;
-            }
-        }
-    }
-}
-pub(crate) unsafe fn uv_shutdown(
-    mut req: *mut uv_shutdown_t,
-    mut stream: *mut uv_stream_t,
-    mut cb: uv_shutdown_cb,
-) -> ::core::ffi::c_int {
-    '_c2rust_label: {
-        if (*stream).type_0 as ::core::ffi::c_uint
-            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-        {
-        } else {
-            __assert_fail(
-                b"stream->type == UV_TCP || stream->type == UV_TTY || stream->type == UV_NAMED_PIPE\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                1158 as ::core::ffi::c_uint,
-                b"int uv_shutdown(uv_shutdown_t *, uv_stream_t *, uv_shutdown_cb)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*stream).flags & UV_HANDLE_WRITABLE as ::core::ffi::c_int as ::core::ffi::c_uint == 0
-        || (*stream).flags & UV_HANDLE_SHUT as ::core::ffi::c_int as ::core::ffi::c_uint != 0
-        || !(*stream).shutdown_req.is_null()
-        || (*stream).flags
-            & (UV_HANDLE_CLOSING as ::core::ffi::c_int | UV_HANDLE_CLOSED as ::core::ffi::c_int)
-                as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-    {
-        return UV_ENOTCONN as ::core::ffi::c_int;
-    }
-    '_c2rust_label_0: {
-        if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1167 as ::core::ffi::c_uint,
-                b"int uv_shutdown(uv_shutdown_t *, uv_stream_t *, uv_shutdown_cb)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*req).type_0 = UV_SHUTDOWN;
-    (*(*stream).loop_0).active_reqs.count = (*(*stream).loop_0).active_reqs.count.wrapping_add(1);
-    (*req).handle = stream;
-    (*req).cb = cb;
-    (*stream).shutdown_req = req;
-    (*stream).flags &= !(UV_HANDLE_WRITABLE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
-        uv__io_feed((*stream).loop_0, &raw mut (*stream).io_watcher);
-    }
-    return 0 as ::core::ffi::c_int;
-}
-unsafe extern "C" fn uv__stream_io(
-    mut loop_0: *mut uv_loop_t,
-    mut w: *mut uv__io_t,
-    mut events: ::core::ffi::c_uint,
-) {
-    let mut stream: *mut uv_stream_t = ::core::ptr::null_mut::<uv_stream_t>();
-    stream = (w as *mut ::core::ffi::c_char).offset(-(136 as ::core::ffi::c_ulong as isize))
-        as *mut uv_stream_t;
-    '_c2rust_label: {
-        if (*stream).type_0 as ::core::ffi::c_uint
-            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint
-        {
-        } else {
-            __assert_fail(
-                b"stream->type == UV_TCP || stream->type == UV_NAMED_PIPE || stream->type == UV_TTY\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                1191 as ::core::ffi::c_uint,
-                b"void uv__stream_io(uv_loop_t *, uv__io_t *, unsigned int)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if (*stream).flags & UV_HANDLE_CLOSING as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
-        } else {
-            __assert_fail(
-                b"!(stream->flags & UV_HANDLE_CLOSING)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1192 as ::core::ffi::c_uint,
-                b"void uv__stream_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if !(*stream).connect_req.is_null() {
-        uv__stream_connect(stream);
-        return;
-    }
-    '_c2rust_label_1: {
-        if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1199 as ::core::ffi::c_uint,
-                b"void uv__stream_io(uv_loop_t *, uv__io_t *, unsigned int)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if events & (POLLIN | POLLERR | POLLHUP) as ::core::ffi::c_uint != 0 {
-        uv__read(stream);
-    }
-    if (*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) {
-        return;
-    }
-    if events & POLLHUP as ::core::ffi::c_uint != 0
-        && (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint != 0
-        && (*stream).flags & UV_HANDLE_READ_PARTIAL as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0
-        && (*stream).flags & UV_HANDLE_READ_EOF as ::core::ffi::c_int as ::core::ffi::c_uint == 0
-    {
-        let mut buf: uv_buf_t = uv_buf_t {
-            base: ::core::ptr::null_mut::<::core::ffi::c_char>(),
-            len: 0 as size_t,
-        };
-        uv__stream_eof(stream, &raw mut buf);
-    }
-    if (*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) {
-        return;
-    }
-    if events & (POLLOUT | POLLERR | POLLHUP) as ::core::ffi::c_uint != 0 {
-        uv__write(stream);
-        uv__write_callbacks(stream);
-        if uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
-            uv__drain(stream);
-        }
-    }
-}
-unsafe extern "C" fn uv__stream_connect(mut stream: *mut uv_stream_t) {
-    let mut error: ::core::ffi::c_int = 0;
-    let mut req: *mut uv_connect_t = (*stream).connect_req;
-    let mut errorsize: socklen_t = ::core::mem::size_of::<::core::ffi::c_int>() as socklen_t;
-    '_c2rust_label: {
-        if (*stream).type_0 as ::core::ffi::c_uint
-            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-        {
-        } else {
-            __assert_fail(
-                b"stream->type == UV_TCP || stream->type == UV_NAMED_PIPE\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1246 as ::core::ffi::c_uint,
-                b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if !req.is_null() {
-        } else {
-            __assert_fail(
-                b"req\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1247 as ::core::ffi::c_uint,
-                b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*stream).delayed_error != 0 {
-        error = (*stream).delayed_error;
-        (*stream).delayed_error = 0 as ::core::ffi::c_int;
-    } else {
-        '_c2rust_label_1: {
-            if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
-            } else {
-                __assert_fail(
-                    b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                    1258 as ::core::ffi::c_uint,
-                    b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
-                        as *const ::core::ffi::c_char,
-                );
-            }
-        };
-        getsockopt(
-            (*stream).io_watcher.fd,
-            SOL_SOCKET,
-            SO_ERROR,
-            &raw mut error as *mut ::core::ffi::c_void,
-            &raw mut errorsize,
-        );
-        error = -error;
-    }
-    if error == -(115 as ::core::ffi::c_int) {
-        return;
-    }
-    (*stream).connect_req = ::core::ptr::null_mut::<uv_connect_t>();
-    '_c2rust_label_2: {
-        if (*(*stream).loop_0).active_reqs.count > 0 as ::core::ffi::c_uint {
-        } else {
-            __assert_fail(
-                b"uv__has_active_reqs(stream->loop)\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1271 as ::core::ffi::c_uint,
-                b"void uv__stream_connect(uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*(*stream).loop_0).active_reqs.count = (*(*stream).loop_0).active_reqs.count.wrapping_sub(1);
-    if error < 0 as ::core::ffi::c_int || uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
-        uv__io_stop(
-            (*stream).loop_0,
-            &raw mut (*stream).io_watcher,
-            POLLOUT as ::core::ffi::c_uint,
-        );
-    }
-    if (*req).cb.is_some() {
-        (*req).cb.expect("non-null function pointer")(req, error);
-    }
-    if (*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) {
-        return;
-    }
-    if error < 0 as ::core::ffi::c_int {
-        uv__stream_flush_write_queue(stream, UV_ECANCELED as ::core::ffi::c_int);
-        uv__write_callbacks(stream);
-    }
-}
-unsafe extern "C" fn uv__check_before_write(
-    mut stream: *mut uv_stream_t,
-    mut nbufs: ::core::ffi::c_uint,
-    mut send_handle: *mut uv_stream_t,
-) -> ::core::ffi::c_int {
-    '_c2rust_label: {
-        if nbufs > 0 as ::core::ffi::c_uint {
-        } else {
-            __assert_fail(
-                b"nbufs > 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1293 as ::core::ffi::c_uint,
-                b"int uv__check_before_write(uv_stream_t *, unsigned int, uv_stream_t *)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_0: {
-        if ((*stream).type_0 as ::core::ffi::c_uint
-            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint)
-            && !(b"uv_write (unix) does not yet support other types of streams\0" as *const u8
-                as *const ::core::ffi::c_char)
-                .is_null()
-        {
-        } else {
-            __assert_fail(
-                b"(stream->type == UV_TCP || stream->type == UV_NAMED_PIPE || stream->type == UV_TTY) && \"uv_write (unix) does not yet support other types of streams\"\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                1297 as ::core::ffi::c_uint,
-                b"int uv__check_before_write(uv_stream_t *, unsigned int, uv_stream_t *)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    if (*stream).io_watcher.fd < 0 as ::core::ffi::c_int {
-        return UV_EBADF as ::core::ffi::c_int;
-    }
-    if (*stream).flags & UV_HANDLE_WRITABLE as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
-        return UV_EPIPE as ::core::ffi::c_int;
-    }
-    if !send_handle.is_null() {
-        if (*stream).type_0 as ::core::ffi::c_uint
-            != UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*(stream as *mut uv_pipe_t)).ipc == 0
-        {
-            return UV_EINVAL as ::core::ffi::c_int;
-        }
-        if uv__handle_fd(send_handle as *mut uv_handle_t) < 0 as ::core::ffi::c_int {
-            return UV_EBADF as ::core::ffi::c_int;
-        }
-    }
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_write2(
-    mut req: *mut uv_write_t,
-    mut stream: *mut uv_stream_t,
-    mut bufs: *const uv_buf_t,
-    mut nbufs: ::core::ffi::c_uint,
-    mut send_handle: *mut uv_stream_t,
-    mut cb: uv_write_cb,
-) -> ::core::ffi::c_int {
-    let mut empty_queue: ::core::ffi::c_int = 0;
-    let mut err: ::core::ffi::c_int = 0;
-    err = uv__check_before_write(stream, nbufs, send_handle);
-    if err < 0 as ::core::ffi::c_int {
-        return err;
-    }
-    empty_queue = ((*stream).write_queue_size == 0 as size_t) as ::core::ffi::c_int;
-    (*req).type_0 = UV_WRITE;
-    (*(*stream).loop_0).active_reqs.count = (*(*stream).loop_0).active_reqs.count.wrapping_add(1);
-    (*req).cb = cb;
-    (*req).handle = stream;
-    (*req).error = 0 as ::core::ffi::c_int;
-    (*req).send_handle = send_handle;
-    uv__queue_init(&raw mut (*req).queue);
-    (*req).bufs = &raw mut (*req).bufsml as *mut uv_buf_t;
-    if nbufs as usize
-        > (::core::mem::size_of::<[uv_buf_t; 4]>() as usize)
-            .wrapping_div(::core::mem::size_of::<uv_buf_t>() as usize)
-    {
-        (*req).bufs = uv__malloc(
-            (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
-        ) as *mut uv_buf_t;
-    }
-    if (*req).bufs.is_null() {
-        return UV_ENOMEM as ::core::ffi::c_int;
-    }
-    memcpy(
-        (*req).bufs as *mut ::core::ffi::c_void,
-        bufs as *const ::core::ffi::c_void,
-        (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
-    );
-    (*req).nbufs = nbufs;
-    (*req).write_index = 0 as ::core::ffi::c_uint;
-    (*stream).write_queue_size = (*stream)
-        .write_queue_size
-        .wrapping_add(uv__count_bufs(bufs, nbufs));
-    uv__queue_insert_tail(&raw mut (*stream).write_queue, &raw mut (*req).queue);
-    if (*stream).connect_req.is_null() {
-        if empty_queue != 0 {
-            uv__write(stream);
-        } else {
-            '_c2rust_label: {
-                if (*stream).flags
-                    & UV_HANDLE_BLOCKING_WRITES as ::core::ffi::c_int as ::core::ffi::c_uint
-                    == 0
-                {
-                } else {
-                    __assert_fail(
-                        b"!(stream->flags & UV_HANDLE_BLOCKING_WRITES)\0" as *const u8
-                            as *const ::core::ffi::c_char,
-                        b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
-                            as *const u8 as *const ::core::ffi::c_char,
-                        1388 as ::core::ffi::c_uint,
-                        b"int uv_write2(uv_write_t *, uv_stream_t *, const uv_buf_t *, unsigned int, uv_stream_t *, uv_write_cb)\0"
-                            as *const u8 as *const ::core::ffi::c_char,
-                    );
-                }
-            };
-            uv__io_start(
+        if error < 0 as ::core::ffi::c_int || uv__queue_empty(&raw mut (*stream).write_queue) != 0 {
+            uv__io_stop(
                 (*stream).loop_0,
                 &raw mut (*stream).io_watcher,
                 POLLOUT as ::core::ffi::c_uint,
             );
-            uv__stream_osx_interrupt_select(stream);
+        }
+        if (*req).cb.is_some() {
+            (*req).cb.expect("non-null function pointer")(req, error);
+        }
+        if (*stream).io_watcher.fd == -(1 as ::core::ffi::c_int) {
+            return;
+        }
+        if error < 0 as ::core::ffi::c_int {
+            uv__stream_flush_write_queue(stream, UV_ECANCELED as ::core::ffi::c_int);
+            uv__write_callbacks(stream);
         }
     }
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_write(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+extern "C" fn uv__check_before_write(
+    mut stream: *mut uv_stream_t,
+    mut nbufs: ::core::ffi::c_uint,
+    mut send_handle: *mut uv_stream_t,
+) -> ::core::ffi::c_int {
+    unsafe {
+        '_c2rust_label: {
+            if nbufs > 0 as ::core::ffi::c_uint {
+            } else {
+                __assert_fail(
+                    b"nbufs > 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1293 as ::core::ffi::c_uint,
+                    b"int uv__check_before_write(uv_stream_t *, unsigned int, uv_stream_t *)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_0: {
+            if ((*stream).type_0 as ::core::ffi::c_uint
+                == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint)
+                && !(b"uv_write (unix) does not yet support other types of streams\0" as *const u8
+                    as *const ::core::ffi::c_char)
+                    .is_null()
+            {
+            } else {
+                __assert_fail(
+                    b"(stream->type == UV_TCP || stream->type == UV_NAMED_PIPE || stream->type == UV_TTY) && \"uv_write (unix) does not yet support other types of streams\"\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    1297 as ::core::ffi::c_uint,
+                    b"int uv__check_before_write(uv_stream_t *, unsigned int, uv_stream_t *)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        if (*stream).io_watcher.fd < 0 as ::core::ffi::c_int {
+            return UV_EBADF as ::core::ffi::c_int;
+        }
+        if (*stream).flags & UV_HANDLE_WRITABLE as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+            return UV_EPIPE as ::core::ffi::c_int;
+        }
+        if !send_handle.is_null() {
+            if (*stream).type_0 as ::core::ffi::c_uint
+                != UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*(stream as *mut uv_pipe_t)).ipc == 0
+            {
+                return UV_EINVAL as ::core::ffi::c_int;
+            }
+            if uv__handle_fd(send_handle as *mut uv_handle_t) < 0 as ::core::ffi::c_int {
+                return UV_EBADF as ::core::ffi::c_int;
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_write2(
+    mut req: *mut uv_write_t,
+    mut stream: *mut uv_stream_t,
+    mut bufs: *const uv_buf_t,
+    mut nbufs: ::core::ffi::c_uint,
+    mut send_handle: *mut uv_stream_t,
+    mut cb: uv_write_cb,
+) -> ::core::ffi::c_int {
+    unsafe {
+        let mut empty_queue: ::core::ffi::c_int = 0;
+        let mut err: ::core::ffi::c_int = 0;
+        err = uv__check_before_write(stream, nbufs, send_handle);
+        if err < 0 as ::core::ffi::c_int {
+            return err;
+        }
+        empty_queue = ((*stream).write_queue_size == 0 as size_t) as ::core::ffi::c_int;
+        (*req).type_0 = UV_WRITE;
+        (*(*stream).loop_0).active_reqs.count =
+            (*(*stream).loop_0).active_reqs.count.wrapping_add(1);
+        (*req).cb = cb;
+        (*req).handle = stream;
+        (*req).error = 0 as ::core::ffi::c_int;
+        (*req).send_handle = send_handle;
+        uv__queue_init(&raw mut (*req).queue);
+        (*req).bufs = &raw mut (*req).bufsml as *mut uv_buf_t;
+        if nbufs as usize
+            > (::core::mem::size_of::<[uv_buf_t; 4]>() as usize)
+                .wrapping_div(::core::mem::size_of::<uv_buf_t>() as usize)
+        {
+            (*req).bufs = uv__malloc(
+                (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
+            ) as *mut uv_buf_t;
+        }
+        if (*req).bufs.is_null() {
+            return UV_ENOMEM as ::core::ffi::c_int;
+        }
+        memcpy(
+            (*req).bufs as *mut ::core::ffi::c_void,
+            bufs as *const ::core::ffi::c_void,
+            (nbufs as size_t).wrapping_mul(::core::mem::size_of::<uv_buf_t>() as size_t),
+        );
+        (*req).nbufs = nbufs;
+        (*req).write_index = 0 as ::core::ffi::c_uint;
+        (*stream).write_queue_size = (*stream)
+            .write_queue_size
+            .wrapping_add(uv__count_bufs(bufs, nbufs));
+        uv__queue_insert_tail(&raw mut (*stream).write_queue, &raw mut (*req).queue);
+        if (*stream).connect_req.is_null() {
+            if empty_queue != 0 {
+                uv__write(stream);
+            } else {
+                '_c2rust_label: {
+                    if (*stream).flags
+                        & UV_HANDLE_BLOCKING_WRITES as ::core::ffi::c_int as ::core::ffi::c_uint
+                        == 0
+                    {
+                    } else {
+                        __assert_fail(
+                            b"!(stream->flags & UV_HANDLE_BLOCKING_WRITES)\0" as *const u8
+                                as *const ::core::ffi::c_char,
+                            b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                                as *const u8 as *const ::core::ffi::c_char,
+                            1388 as ::core::ffi::c_uint,
+                            b"int uv_write2(uv_write_t *, uv_stream_t *, const uv_buf_t *, unsigned int, uv_stream_t *, uv_write_cb)\0"
+                                as *const u8 as *const ::core::ffi::c_char,
+                        );
+                    }
+                };
+                uv__io_start(
+                    (*stream).loop_0,
+                    &raw mut (*stream).io_watcher,
+                    POLLOUT as ::core::ffi::c_uint,
+                );
+                uv__stream_osx_interrupt_select(stream);
+            }
+        }
+        return 0 as ::core::ffi::c_int;
+    }
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_write(
     mut req: *mut uv_write_t,
     mut handle: *mut uv_stream_t,
     mut bufs: *const uv_buf_t,
     mut nbufs: ::core::ffi::c_uint,
     mut cb: uv_write_cb,
 ) -> ::core::ffi::c_int {
-    return uv_write2(
-        req,
-        handle,
-        bufs,
-        nbufs,
-        ::core::ptr::null_mut::<uv_stream_t>(),
-        cb,
-    );
+    unsafe {
+        return uv_write2(
+            req,
+            handle,
+            bufs,
+            nbufs,
+            ::core::ptr::null_mut::<uv_stream_t>(),
+            cb,
+        );
+    }
 }
-pub(crate) unsafe fn uv_try_write(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_try_write(
     mut stream: *mut uv_stream_t,
     mut bufs: *const uv_buf_t,
     mut nbufs: ::core::ffi::c_uint,
 ) -> ::core::ffi::c_int {
-    return uv_try_write2(stream, bufs, nbufs, ::core::ptr::null_mut::<uv_stream_t>());
+    unsafe {
+        return uv_try_write2(stream, bufs, nbufs, ::core::ptr::null_mut::<uv_stream_t>());
+    }
 }
-pub(crate) unsafe fn uv_try_write2(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_try_write2(
     mut stream: *mut uv_stream_t,
     mut bufs: *const uv_buf_t,
     mut nbufs: ::core::ffi::c_uint,
     mut send_handle: *mut uv_stream_t,
 ) -> ::core::ffi::c_int {
-    let mut err: ::core::ffi::c_int = 0;
-    if !(*stream).connect_req.is_null() || (*stream).write_queue_size != 0 as size_t {
-        return UV_EAGAIN as ::core::ffi::c_int;
+    unsafe {
+        let mut err: ::core::ffi::c_int = 0;
+        if !(*stream).connect_req.is_null() || (*stream).write_queue_size != 0 as size_t {
+            return UV_EAGAIN as ::core::ffi::c_int;
+        }
+        err = uv__check_before_write(stream, nbufs, ::core::ptr::null_mut::<uv_stream_t>());
+        if err < 0 as ::core::ffi::c_int {
+            return err;
+        }
+        return uv__try_write(stream, bufs, nbufs, send_handle);
     }
-    err = uv__check_before_write(stream, nbufs, ::core::ptr::null_mut::<uv_stream_t>());
-    if err < 0 as ::core::ffi::c_int {
-        return err;
-    }
-    return uv__try_write(stream, bufs, nbufs, send_handle);
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__read_start(
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__read_start(
     mut stream: *mut uv_stream_t,
     mut alloc_cb: uv_alloc_cb,
     mut read_cb: uv_read_cb,
 ) -> ::core::ffi::c_int {
-    '_c2rust_label: {
-        if (*stream).type_0 as ::core::ffi::c_uint
-            == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
-            || (*stream).type_0 as ::core::ffi::c_uint
-                == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint
+    unsafe {
+        '_c2rust_label: {
+            if (*stream).type_0 as ::core::ffi::c_uint
+                == UV_TCP as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_NAMED_PIPE as ::core::ffi::c_int as ::core::ffi::c_uint
+                || (*stream).type_0 as ::core::ffi::c_uint
+                    == UV_TTY as ::core::ffi::c_int as ::core::ffi::c_uint
+            {
+            } else {
+                __assert_fail(
+                    b"stream->type == UV_TCP || stream->type == UV_NAMED_PIPE || stream->type == UV_TTY\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                    1438 as ::core::ffi::c_uint,
+                    b"int uv__read_start(uv_stream_t *, uv_alloc_cb, uv_read_cb)\0"
+                        as *const u8 as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*stream).flags |= UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint;
+        (*stream).flags &= !(UV_HANDLE_READ_EOF as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        '_c2rust_label_0: {
+            if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
+            } else {
+                __assert_fail(
+                    b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1446 as ::core::ffi::c_uint,
+                    b"int uv__read_start(uv_stream_t *, uv_alloc_cb, uv_read_cb)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        '_c2rust_label_1: {
+            if alloc_cb.is_some() {
+            } else {
+                __assert_fail(
+                    b"alloc_cb\0" as *const u8 as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1447 as ::core::ffi::c_uint,
+                    b"int uv__read_start(uv_stream_t *, uv_alloc_cb, uv_read_cb)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+        (*stream).read_cb = read_cb;
+        (*stream).alloc_cb = alloc_cb;
+        uv__io_start(
+            (*stream).loop_0,
+            &raw mut (*stream).io_watcher,
+            POLLIN as ::core::ffi::c_uint,
+        );
+        if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0 as ::core::ffi::c_uint)
         {
-        } else {
-            __assert_fail(
-                b"stream->type == UV_TCP || stream->type == UV_NAMED_PIPE || stream->type == UV_TTY\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-                1438 as ::core::ffi::c_uint,
-                b"int uv__read_start(uv_stream_t *, uv_alloc_cb, uv_read_cb)\0"
-                    as *const u8 as *const ::core::ffi::c_char,
-            );
+            (*stream).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
+            if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*stream).loop_0).active_handles =
+                    (*(*stream).loop_0).active_handles.wrapping_add(1);
+            }
         }
-    };
-    (*stream).flags |= UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint;
-    (*stream).flags &= !(UV_HANDLE_READ_EOF as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    '_c2rust_label_0: {
-        if (*stream).io_watcher.fd >= 0 as ::core::ffi::c_int {
-        } else {
-            __assert_fail(
-                b"uv__stream_fd(stream) >= 0\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1446 as ::core::ffi::c_uint,
-                b"int uv__read_start(uv_stream_t *, uv_alloc_cb, uv_read_cb)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    '_c2rust_label_1: {
-        if alloc_cb.is_some() {
-        } else {
-            __assert_fail(
-                b"alloc_cb\0" as *const u8 as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1447 as ::core::ffi::c_uint,
-                b"int uv__read_start(uv_stream_t *, uv_alloc_cb, uv_read_cb)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
-        }
-    };
-    (*stream).read_cb = read_cb;
-    (*stream).alloc_cb = alloc_cb;
-    uv__io_start(
-        (*stream).loop_0,
-        &raw mut (*stream).io_watcher,
-        POLLIN as ::core::ffi::c_uint,
-    );
-    if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        != 0 as ::core::ffi::c_uint)
-    {
-        (*stream).flags |= UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint;
-        if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*stream).loop_0).active_handles = (*(*stream).loop_0).active_handles.wrapping_add(1);
-        }
-    }
-    uv__stream_osx_interrupt_select(stream);
-    return 0 as ::core::ffi::c_int;
-}
-pub(crate) unsafe fn uv_read_stop(mut stream: *mut uv_stream_t) -> ::core::ffi::c_int {
-    if (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+        uv__stream_osx_interrupt_select(stream);
         return 0 as ::core::ffi::c_int;
     }
-    (*stream).flags &= !(UV_HANDLE_READING as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    uv__io_stop(
-        (*stream).loop_0,
-        &raw mut (*stream).io_watcher,
-        POLLIN as ::core::ffi::c_uint,
-    );
-    if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*stream).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
-        {
-            (*(*stream).loop_0).active_handles = (*(*stream).loop_0).active_handles.wrapping_sub(1);
+}
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_read_stop(mut stream: *mut uv_stream_t) -> ::core::ffi::c_int {
+    unsafe {
+        if (*stream).flags & UV_HANDLE_READING as ::core::ffi::c_int as ::core::ffi::c_uint == 0 {
+            return 0 as ::core::ffi::c_int;
         }
+        (*stream).flags &= !(UV_HANDLE_READING as ::core::ffi::c_int) as ::core::ffi::c_uint;
+        uv__io_stop(
+            (*stream).loop_0,
+            &raw mut (*stream).io_watcher,
+            POLLIN as ::core::ffi::c_uint,
+        );
+        if !((*stream).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
+        {
+            (*stream).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if (*stream).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*stream).loop_0).active_handles =
+                    (*(*stream).loop_0).active_handles.wrapping_sub(1);
+            }
+        }
+        uv__stream_osx_interrupt_select(stream);
+        (*stream).read_cb = None;
+        (*stream).alloc_cb = None;
+        return 0 as ::core::ffi::c_int;
     }
-    uv__stream_osx_interrupt_select(stream);
-    (*stream).read_cb = None;
-    (*stream).alloc_cb = None;
-    return 0 as ::core::ffi::c_int;
 }
-pub(crate) unsafe fn uv_is_readable(mut stream: *const uv_stream_t) -> ::core::ffi::c_int {
-    return ((*stream).flags & UV_HANDLE_READABLE as ::core::ffi::c_int as ::core::ffi::c_uint != 0)
-        as ::core::ffi::c_int;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_is_readable(mut stream: *const uv_stream_t) -> ::core::ffi::c_int {
+    unsafe {
+        return ((*stream).flags & UV_HANDLE_READABLE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0) as ::core::ffi::c_int;
+    }
 }
-pub(crate) unsafe fn uv_is_writable(mut stream: *const uv_stream_t) -> ::core::ffi::c_int {
-    return ((*stream).flags & UV_HANDLE_WRITABLE as ::core::ffi::c_int as ::core::ffi::c_uint != 0)
-        as ::core::ffi::c_int;
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_is_writable(mut stream: *const uv_stream_t) -> ::core::ffi::c_int {
+    unsafe {
+        return ((*stream).flags & UV_HANDLE_WRITABLE as ::core::ffi::c_int as ::core::ffi::c_uint
+            != 0) as ::core::ffi::c_int;
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn uv__stream_close(mut handle: *mut uv_stream_t) {
-    let mut i: ::core::ffi::c_uint = 0;
-    let mut queued_fds: *mut uv__stream_queued_fds_t =
-        ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
-    uv__io_close((*handle).loop_0, &raw mut (*handle).io_watcher);
-    uv_read_stop(handle);
-    if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
-        == 0 as ::core::ffi::c_uint)
-    {
-        (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-        if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
-            != 0 as ::core::ffi::c_uint
+// SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
+pub extern "C" fn uv__stream_close(mut handle: *mut uv_stream_t) {
+    unsafe {
+        let mut i: ::core::ffi::c_uint = 0;
+        let mut queued_fds: *mut uv__stream_queued_fds_t =
+            ::core::ptr::null_mut::<uv__stream_queued_fds_t>();
+        uv__io_close((*handle).loop_0, &raw mut (*handle).io_watcher);
+        uv_read_stop(handle);
+        if !((*handle).flags & UV_HANDLE_ACTIVE as ::core::ffi::c_int as ::core::ffi::c_uint
+            == 0 as ::core::ffi::c_uint)
         {
-            (*(*handle).loop_0).active_handles = (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            (*handle).flags &= !(UV_HANDLE_ACTIVE as ::core::ffi::c_int) as ::core::ffi::c_uint;
+            if (*handle).flags & UV_HANDLE_REF as ::core::ffi::c_int as ::core::ffi::c_uint
+                != 0 as ::core::ffi::c_uint
+            {
+                (*(*handle).loop_0).active_handles =
+                    (*(*handle).loop_0).active_handles.wrapping_sub(1);
+            }
         }
-    }
-    (*handle).flags &= !(UV_HANDLE_READABLE as ::core::ffi::c_int
-        | UV_HANDLE_WRITABLE as ::core::ffi::c_int) as ::core::ffi::c_uint;
-    if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
-        if (*handle).io_watcher.fd > STDERR_FILENO {
-            uv__close((*handle).io_watcher.fd);
+        (*handle).flags &= !(UV_HANDLE_READABLE as ::core::ffi::c_int
+            | UV_HANDLE_WRITABLE as ::core::ffi::c_int)
+            as ::core::ffi::c_uint;
+        if (*handle).io_watcher.fd != -(1 as ::core::ffi::c_int) {
+            if (*handle).io_watcher.fd > STDERR_FILENO {
+                uv__close((*handle).io_watcher.fd);
+            }
+            (*handle).io_watcher.fd = -(1 as ::core::ffi::c_int);
         }
-        (*handle).io_watcher.fd = -(1 as ::core::ffi::c_int);
-    }
-    if (*handle).accepted_fd != -(1 as ::core::ffi::c_int) {
-        uv__close((*handle).accepted_fd);
-        (*handle).accepted_fd = -(1 as ::core::ffi::c_int);
-    }
-    if !(*handle).queued_fds.is_null() {
-        queued_fds = (*handle).queued_fds as *mut uv__stream_queued_fds_t;
-        i = 0 as ::core::ffi::c_uint;
-        while i < (*queued_fds).offset {
-            uv__close(*(&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int).offset(i as isize));
-            i = i.wrapping_add(1);
+        if (*handle).accepted_fd != -(1 as ::core::ffi::c_int) {
+            uv__close((*handle).accepted_fd);
+            (*handle).accepted_fd = -(1 as ::core::ffi::c_int);
         }
-        uv__free((*handle).queued_fds);
-        (*handle).queued_fds = NULL;
-    }
-    '_c2rust_label: {
-        if uv__io_active(
-            &raw mut (*handle).io_watcher,
-            (0x1 as ::core::ffi::c_int | 0x4 as ::core::ffi::c_int) as ::core::ffi::c_uint,
-        ) == 0
-        {
-        } else {
-            __assert_fail(
-                b"!uv__io_active(&handle->io_watcher, POLLIN | POLLOUT)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
-                    as *const ::core::ffi::c_char,
-                1553 as ::core::ffi::c_uint,
-                b"void uv__stream_close(uv_stream_t *)\0" as *const u8
-                    as *const ::core::ffi::c_char,
-            );
+        if !(*handle).queued_fds.is_null() {
+            queued_fds = (*handle).queued_fds as *mut uv__stream_queued_fds_t;
+            i = 0 as ::core::ffi::c_uint;
+            while i < (*queued_fds).offset {
+                uv__close(
+                    *(&raw mut (*queued_fds).fds as *mut ::core::ffi::c_int).offset(i as isize),
+                );
+                i = i.wrapping_add(1);
+            }
+            uv__free((*handle).queued_fds);
+            (*handle).queued_fds = NULL;
         }
-    };
+        '_c2rust_label: {
+            if uv__io_active(
+                &raw mut (*handle).io_watcher,
+                (0x1 as ::core::ffi::c_int | 0x4 as ::core::ffi::c_int) as ::core::ffi::c_uint,
+            ) == 0
+            {
+            } else {
+                __assert_fail(
+                    b"!uv__io_active(&handle->io_watcher, POLLIN | POLLOUT)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    b"/home/yans/safelibs/port-libuv/original/src/unix/stream.c\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                    1553 as ::core::ffi::c_uint,
+                    b"void uv__stream_close(uv_stream_t *)\0" as *const u8
+                        as *const ::core::ffi::c_char,
+                );
+            }
+        };
+    }
 }
-pub(crate) unsafe fn uv_stream_set_blocking(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn uv_stream_set_blocking(
     mut handle: *mut uv_stream_t,
     mut blocking: ::core::ffi::c_int,
 ) -> ::core::ffi::c_int {
-    return uv__nonblock_ioctl(
-        (*handle).io_watcher.fd,
-        (blocking == 0) as ::core::ffi::c_int,
-    );
+    unsafe {
+        return uv__nonblock_ioctl(
+            (*handle).io_watcher.fd,
+            (blocking == 0) as ::core::ffi::c_int,
+        );
+    }
 }
 
-pub(crate) unsafe fn accept(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn accept(
     server: *mut crate::abi::linux_x86_64::uv_stream_t,
     client: *mut crate::abi::linux_x86_64::uv_stream_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_accept(server.cast(), client.cast()) }
+    unsafe { unsafe { uv_accept(server.cast(), client.cast()) } }
 }
 
-pub(crate) unsafe fn is_readable(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn is_readable(
     handle: *const crate::abi::linux_x86_64::uv_stream_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_is_readable(handle.cast()) }
+    unsafe { unsafe { uv_is_readable(handle.cast()) } }
 }
 
-pub(crate) unsafe fn is_writable(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn is_writable(
     handle: *const crate::abi::linux_x86_64::uv_stream_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_is_writable(handle.cast()) }
+    unsafe { unsafe { uv_is_writable(handle.cast()) } }
 }
 
-pub(crate) unsafe fn listen(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn listen(
     stream: *mut crate::abi::linux_x86_64::uv_stream_t,
     backlog: ::std::os::raw::c_int,
     cb: crate::abi::linux_x86_64::uv_connection_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_listen(
-            stream.cast(),
-            backlog,
-            std::mem::transmute::<_, uv_connection_cb>(cb),
-        )
+        unsafe {
+            uv_listen(
+                stream.cast(),
+                backlog,
+                std::mem::transmute::<_, uv_connection_cb>(cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn read_start(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn read_start(
     stream: *mut crate::abi::linux_x86_64::uv_stream_t,
     alloc_cb: crate::abi::linux_x86_64::uv_alloc_cb,
     read_cb: crate::abi::linux_x86_64::uv_read_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        crate::upstream_support::uv_common::uv_read_start(
-            stream.cast(),
-            std::mem::transmute::<_, crate::upstream_support::uv_common::uv_alloc_cb>(alloc_cb),
-            std::mem::transmute::<_, crate::upstream_support::uv_common::uv_read_cb>(read_cb),
-        )
+        unsafe {
+            crate::upstream_support::uv_common::uv_read_start(
+                stream.cast(),
+                std::mem::transmute::<_, crate::upstream_support::uv_common::uv_alloc_cb>(alloc_cb),
+                std::mem::transmute::<_, crate::upstream_support::uv_common::uv_read_cb>(read_cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn read_stop(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn read_stop(
     stream: *mut crate::abi::linux_x86_64::uv_stream_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_read_stop(stream.cast()) }
+    unsafe { unsafe { uv_read_stop(stream.cast()) } }
 }
 
-pub(crate) unsafe fn shutdown_stream(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn shutdown_stream(
     req: *mut crate::abi::linux_x86_64::uv_shutdown_t,
     handle: *mut crate::abi::linux_x86_64::uv_stream_t,
     cb: crate::abi::linux_x86_64::uv_shutdown_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_shutdown(
-            req.cast(),
-            handle.cast(),
-            std::mem::transmute::<_, uv_shutdown_cb>(cb),
-        )
+        unsafe {
+            uv_shutdown(
+                req.cast(),
+                handle.cast(),
+                std::mem::transmute::<_, uv_shutdown_cb>(cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn set_blocking(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn set_blocking(
     handle: *mut crate::abi::linux_x86_64::uv_stream_t,
     blocking: ::std::os::raw::c_int,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_stream_set_blocking(handle.cast(), blocking) }
+    unsafe { unsafe { uv_stream_set_blocking(handle.cast(), blocking) } }
 }
 
-pub(crate) unsafe fn try_write(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn try_write(
     handle: *mut crate::abi::linux_x86_64::uv_stream_t,
     bufs: *const crate::abi::linux_x86_64::uv_buf_t,
     nbufs: ::std::os::raw::c_uint,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_try_write(handle.cast(), bufs.cast(), nbufs) }
+    unsafe { unsafe { uv_try_write(handle.cast(), bufs.cast(), nbufs) } }
 }
 
-pub(crate) unsafe fn try_write2(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn try_write2(
     handle: *mut crate::abi::linux_x86_64::uv_stream_t,
     bufs: *const crate::abi::linux_x86_64::uv_buf_t,
     nbufs: ::std::os::raw::c_uint,
     send_handle: *mut crate::abi::linux_x86_64::uv_stream_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { uv_try_write2(handle.cast(), bufs.cast(), nbufs, send_handle.cast()) }
+    unsafe { unsafe { uv_try_write2(handle.cast(), bufs.cast(), nbufs, send_handle.cast()) } }
 }
 
-pub(crate) unsafe fn write_stream(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn write_stream(
     req: *mut crate::abi::linux_x86_64::uv_write_t,
     handle: *mut crate::abi::linux_x86_64::uv_stream_t,
     bufs: *const crate::abi::linux_x86_64::uv_buf_t,
@@ -2700,17 +2885,20 @@ pub(crate) unsafe fn write_stream(
     cb: crate::abi::linux_x86_64::uv_write_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_write(
-            req.cast(),
-            handle.cast(),
-            bufs.cast(),
-            nbufs,
-            std::mem::transmute::<_, uv_write_cb>(cb),
-        )
+        unsafe {
+            uv_write(
+                req.cast(),
+                handle.cast(),
+                bufs.cast(),
+                nbufs,
+                std::mem::transmute::<_, uv_write_cb>(cb),
+            )
+        }
     }
 }
 
-pub(crate) unsafe fn write2(
+// SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
+pub(crate) fn write2(
     req: *mut crate::abi::linux_x86_64::uv_write_t,
     handle: *mut crate::abi::linux_x86_64::uv_stream_t,
     bufs: *const crate::abi::linux_x86_64::uv_buf_t,
@@ -2719,13 +2907,15 @@ pub(crate) unsafe fn write2(
     cb: crate::abi::linux_x86_64::uv_write_cb,
 ) -> ::std::os::raw::c_int {
     unsafe {
-        uv_write2(
-            req.cast(),
-            handle.cast(),
-            bufs.cast(),
-            nbufs,
-            send_handle.cast(),
-            std::mem::transmute::<_, uv_write_cb>(cb),
-        )
+        unsafe {
+            uv_write2(
+                req.cast(),
+                handle.cast(),
+                bufs.cast(),
+                nbufs,
+                send_handle.cast(),
+                std::mem::transmute::<_, uv_write_cb>(cb),
+            )
+        }
     }
 }
