@@ -1251,6 +1251,18 @@ pub union epoll_data {
     pub u32_0: uint32_t,
     pub u64_0: uint64_t,
 }
+
+#[inline]
+// SAFETY(syscall_ffi): accesses packed epoll_event fd payloads through raw pointers.
+unsafe fn epoll_event_get_fd(event: *const epoll_event) -> ::core::ffi::c_int {
+    unsafe { ::core::ptr::addr_of!((*event).data.fd).read_unaligned() }
+}
+
+#[inline]
+// SAFETY(syscall_ffi): accesses packed epoll_event fd payloads through raw pointers.
+unsafe fn epoll_event_set_fd(event: *mut epoll_event, fd: ::core::ffi::c_int) {
+    unsafe { ::core::ptr::addr_of_mut!((*event).data.fd).write_unaligned(fd) };
+}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct uv__io_uring_sqe {
@@ -2274,7 +2286,7 @@ extern "C" fn uv__iou_init(
                                 ::core::mem::size_of::<epoll_event>() as size_t,
                             );
                             e.events = POLLIN as uint32_t;
-                            e.data.fd = ringfd;
+                            epoll_event_set_fd(&raw mut e, ringfd);
                             if epoll_ctl(epollfd, EPOLL_CTL_ADD, ringfd, &raw mut e) != 0 {
                                 current_block = 18074796990203347541;
                             } else {
@@ -2441,8 +2453,11 @@ pub extern "C" fn uv__platform_invalidate_fd(
         if !inv.is_null() {
             i = 0 as ::core::ffi::c_int;
             while i < (*inv).nfds {
-                if (*(*inv).events.offset(i as isize)).data.fd == fd {
-                    (*(*inv).events.offset(i as isize)).data.fd = -(1 as ::core::ffi::c_int);
+                if epoll_event_get_fd((*inv).events.offset(i as isize)) == fd {
+                    epoll_event_set_fd(
+                        (*inv).events.offset(i as isize),
+                        -(1 as ::core::ffi::c_int),
+                    );
                 }
                 i += 1;
             }
@@ -2486,7 +2501,7 @@ pub extern "C" fn uv__io_check_fd(
             ::core::mem::size_of::<epoll_event>() as size_t,
         );
         e.events = POLLIN as uint32_t;
-        e.data.fd = -(1 as ::core::ffi::c_int);
+        epoll_event_set_fd(&raw mut e, -(1 as ::core::ffi::c_int));
         rc = 0 as ::core::ffi::c_int;
         if epoll_ctl((*loop_0).backend_fd, EPOLL_CTL_ADD, fd, &raw mut e) != 0 {
             if *__errno_location() != EEXIST {
@@ -3278,7 +3293,7 @@ pub extern "C" fn uv__io_poll(mut loop_0: *mut uv_loop_t, mut timeout: ::core::f
             }
             (*w).events = (*w).pevents;
             e.events = (*w).pevents as uint32_t;
-            e.data.fd = (*w).fd;
+            epoll_event_set_fd(&raw mut e, (*w).fd);
             uv__epoll_ctl_prep(epollfd, ctl, &raw mut prep, op, (*w).fd, &raw mut e);
         }
         inv.events = &raw mut events as *mut epoll_event;
@@ -3358,7 +3373,7 @@ pub extern "C" fn uv__io_poll(mut loop_0: *mut uv_loop_t, mut timeout: ::core::f
                 i = 0 as ::core::ffi::c_int;
                 while i < nfds {
                     pe = (&raw mut events as *mut epoll_event).offset(i as isize);
-                    fd = (*pe).data.fd;
+                    fd = epoll_event_get_fd(pe);
                     if !(fd == -(1 as ::core::ffi::c_int)) {
                         if fd == (*iou).ringfd {
                             uv__poll_io_uring(loop_0, iou);
