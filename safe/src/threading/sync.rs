@@ -1,6 +1,15 @@
 use crate::abi::linux_x86_64 as abi;
 use crate::core::time;
-use libc::{self, c_int, c_uint};
+use libc::{self, c_char, c_int, c_uint};
+use std::ptr;
+use std::sync::OnceLock;
+
+#[repr(C)]
+struct CustomSemaphore {
+    mutex: abi::uv_mutex_t,
+    cond: abi::uv_cond_t,
+    value: c_uint,
+}
 
 #[inline]
 fn uv_err(err: c_int) -> c_int {
@@ -18,6 +27,159 @@ fn abort_now() -> ! {
         unsafe {
             libc::abort();
         }
+    }
+}
+
+#[cfg(target_env = "gnu")]
+// SAFETY(syscall_ffi): glibc exposes this version query through its stable C ABI.
+unsafe extern "C" {
+    // SAFETY(syscall_ffi): glibc exports the version string through a stable process-global pointer.
+    fn gnu_get_libc_version() -> *const c_char;
+}
+
+// SAFETY(syscall_ffi): glibc version probing and semaphore fallback selection use stable libc ABI entry points.
+fn platform_needs_custom_semaphore() -> bool {
+    static NEEDS_CUSTOM_SEMAPHORE: OnceLock<bool> = OnceLock::new();
+
+    *NEEDS_CUSTOM_SEMAPHORE.get_or_init(|| {
+        #[cfg(target_env = "gnu")]
+        {
+            let version_ptr = unsafe { gnu_get_libc_version() };
+            if version_ptr.is_null() {
+                return false;
+            }
+
+            let version = unsafe { std::ffi::CStr::from_ptr(version_ptr) }.to_bytes();
+            let mut parts = version.split(|byte| *byte == b'.');
+            let major = parts
+                .next()
+                .and_then(|part| std::str::from_utf8(part).ok())
+                .and_then(|part| part.parse::<u32>().ok());
+            let minor = parts
+                .next()
+                .and_then(|part| std::str::from_utf8(part).ok())
+                .and_then(|part| part.parse::<u32>().ok());
+
+            match (major, minor) {
+                (Some(2), Some(minor)) => minor < 21,
+                _ => false,
+            }
+        }
+        #[cfg(not(target_env = "gnu"))]
+        {
+            false
+        }
+    })
+}
+
+#[inline]
+fn custom_sem_storage(sem: *mut abi::uv_sem_t) -> *mut *mut CustomSemaphore {
+    sem.cast()
+}
+
+// SAFETY(syscall_ffi): the custom semaphore stores a heap pointer inside uv_sem_t storage on affected glibc versions.
+fn custom_sem_init_raw(sem: *mut abi::uv_sem_t, value: c_uint) -> c_int {
+    if std::mem::size_of::<abi::uv_sem_t>() < std::mem::size_of::<*mut CustomSemaphore>() {
+        return abi::uv_errno_t_UV_ENOSYS;
+    }
+
+    let mut state = Box::new(CustomSemaphore {
+        mutex: unsafe { std::mem::zeroed() },
+        cond: unsafe { std::mem::zeroed() },
+        value,
+    });
+
+    let rc = mutex_init_raw(ptr::addr_of_mut!(state.mutex), false);
+    if rc != 0 {
+        return rc;
+    }
+
+    let rc = cond_init_raw(ptr::addr_of_mut!(state.cond));
+    if rc != 0 {
+        mutex_destroy_raw(ptr::addr_of_mut!(state.mutex));
+        return rc;
+    }
+
+    let raw = Box::into_raw(state);
+    unsafe {
+        ptr::write_bytes(sem.cast::<u8>(), 0, std::mem::size_of::<abi::uv_sem_t>());
+        custom_sem_storage(sem).write(raw);
+    }
+    0
+}
+
+// SAFETY(syscall_ffi): the custom semaphore fallback reconstructs the boxed state from uv_sem_t storage for teardown.
+fn custom_sem_destroy_raw(sem: *mut abi::uv_sem_t) {
+    unsafe {
+        let state = custom_sem_storage(sem).read();
+        if state.is_null() {
+            return;
+        }
+
+        cond_destroy_raw(ptr::addr_of_mut!((*state).cond));
+        mutex_destroy_raw(ptr::addr_of_mut!((*state).mutex));
+        drop(Box::from_raw(state));
+        custom_sem_storage(sem).write(ptr::null_mut());
+    }
+}
+
+// SAFETY(syscall_ffi): the custom semaphore fallback mutates state referenced through uv_sem_t pointer storage.
+fn custom_sem_post_raw(sem: *mut abi::uv_sem_t) {
+    unsafe {
+        let state = custom_sem_storage(sem).read();
+        if state.is_null() {
+            abort_now();
+        }
+
+        mutex_lock_raw(ptr::addr_of_mut!((*state).mutex));
+        (*state).value = (*state).value.wrapping_add(1);
+        if (*state).value == 1 {
+            cond_signal_raw(ptr::addr_of_mut!((*state).cond));
+        }
+        mutex_unlock_raw(ptr::addr_of_mut!((*state).mutex));
+    }
+}
+
+// SAFETY(syscall_ffi): the custom semaphore fallback waits on the boxed mutex and condvar stored behind uv_sem_t.
+fn custom_sem_wait_raw(sem: *mut abi::uv_sem_t) {
+    unsafe {
+        let state = custom_sem_storage(sem).read();
+        if state.is_null() {
+            abort_now();
+        }
+
+        mutex_lock_raw(ptr::addr_of_mut!((*state).mutex));
+        while (*state).value == 0 {
+            cond_wait_raw(
+                ptr::addr_of_mut!((*state).cond),
+                ptr::addr_of_mut!((*state).mutex),
+            );
+        }
+        (*state).value -= 1;
+        mutex_unlock_raw(ptr::addr_of_mut!((*state).mutex));
+    }
+}
+
+// SAFETY(syscall_ffi): the custom semaphore fallback performs a non-blocking check against boxed state stored behind uv_sem_t.
+fn custom_sem_trywait_raw(sem: *mut abi::uv_sem_t) -> c_int {
+    unsafe {
+        let state = custom_sem_storage(sem).read();
+        if state.is_null() {
+            abort_now();
+        }
+
+        if mutex_trylock_raw(ptr::addr_of_mut!((*state).mutex)) != 0 {
+            return abi::uv_errno_t_UV_EAGAIN;
+        }
+
+        if (*state).value == 0 {
+            mutex_unlock_raw(ptr::addr_of_mut!((*state).mutex));
+            return abi::uv_errno_t_UV_EAGAIN;
+        }
+
+        (*state).value -= 1;
+        mutex_unlock_raw(ptr::addr_of_mut!((*state).mutex));
+        0
     }
 }
 
@@ -194,6 +356,9 @@ pub(crate) fn sem_init_raw(sem: *mut abi::uv_sem_t, value: c_uint) -> c_int {
         if sem.is_null() {
             return abi::uv_errno_t_UV_EINVAL;
         }
+        if platform_needs_custom_semaphore() {
+            return custom_sem_init_raw(sem, value);
+        }
         if unsafe { libc::sem_init(sem.cast(), 0, value) } != 0 {
             return -unsafe { *libc::__errno_location() };
         }
@@ -207,6 +372,10 @@ pub(crate) fn sem_destroy_raw(sem: *mut abi::uv_sem_t) {
         if sem.is_null() {
             return;
         }
+        if platform_needs_custom_semaphore() {
+            custom_sem_destroy_raw(sem);
+            return;
+        }
         unsafe {
             assert_zero(libc::sem_destroy(sem.cast()));
         }
@@ -216,6 +385,10 @@ pub(crate) fn sem_destroy_raw(sem: *mut abi::uv_sem_t) {
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 pub(crate) fn sem_post_raw(sem: *mut abi::uv_sem_t) {
     unsafe {
+        if platform_needs_custom_semaphore() {
+            custom_sem_post_raw(sem);
+            return;
+        }
         unsafe {
             assert_zero(libc::sem_post(sem.cast()));
         }
@@ -225,6 +398,10 @@ pub(crate) fn sem_post_raw(sem: *mut abi::uv_sem_t) {
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 pub(crate) fn sem_wait_raw(sem: *mut abi::uv_sem_t) {
     unsafe {
+        if platform_needs_custom_semaphore() {
+            custom_sem_wait_raw(sem);
+            return;
+        }
         loop {
             if unsafe { libc::sem_wait(sem.cast()) } == 0 {
                 return;
@@ -240,6 +417,9 @@ pub(crate) fn sem_wait_raw(sem: *mut abi::uv_sem_t) {
 // SAFETY(syscall_ffi): crosses raw libc, kernel, or translated upstream FFI boundaries that Rust cannot model safely.
 pub(crate) fn sem_trywait_raw(sem: *mut abi::uv_sem_t) -> c_int {
     unsafe {
+        if platform_needs_custom_semaphore() {
+            return custom_sem_trywait_raw(sem);
+        }
         loop {
             if unsafe { libc::sem_trywait(sem.cast()) } == 0 {
                 return 0;

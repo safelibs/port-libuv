@@ -306,16 +306,24 @@ pub(crate) fn send(handle_ptr: *mut abi::uv_async_t) -> c_int {
     }
 }
 
+// SAFETY(syscall_ffi): close and fork paths observe the async handle's raw atomic fields while coordinating with other threads.
 fn spin_until_idle(handle_ptr: *mut abi::uv_async_t) {
     let pending = pending_atomic(handle_ptr);
     let busy = busy_atomic(handle_ptr);
     pending.store(1, Ordering::Release);
 
     loop {
-        if busy.load(Ordering::Acquire) == 0 {
-            return;
+        // Match libuv's bounded spin before yielding so close/fork paths do not
+        // monopolize a CPU when another thread is inside uv_async_send().
+        for _ in 0..997 {
+            if busy.load(Ordering::Acquire) == 0 {
+                return;
+            }
+            std::hint::spin_loop();
         }
-        std::hint::spin_loop();
+        unsafe {
+            libc::sched_yield();
+        }
     }
 }
 
