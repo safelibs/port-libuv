@@ -4993,11 +4993,7 @@ pub const __LONG_MAX__: ::core::ffi::c_long = 9223372036854775807 as ::core::ffi
 #[no_mangle]
 // SAFETY(ffi_callback): bridges the libuv C ABI through raw pointers and callback types.
 pub extern "C" fn uv__kernel_version() -> ::core::ffi::c_uint {
-    unsafe {
-        // Keep the backend on epoll only for this port; io_uring-dependent call sites
-        // treat this value as a feature gate and fall back cleanly.
-        0
-    }
+    unsafe { 0 }
 }
 
 #[no_mangle]
