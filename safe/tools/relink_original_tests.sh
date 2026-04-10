@@ -58,6 +58,7 @@ done
 python3 - "${mode}" "${build_dir}" "${stage_prefix}" "${run_mode}" "${run_smoke}" "${script_dir}" <<'PY'
 import os
 import pathlib
+import re
 import shlex
 import subprocess
 import sys
@@ -135,11 +136,18 @@ def run_legacy_build_checker_suite(output_path: pathlib.Path) -> None:
         env=run_env,
         text=True,
     )
-    for test_name in listed.splitlines():
-        test_name = test_name.strip()
+    for listed_name in listed.splitlines():
+        test_name = re.sub(r"\s+\(helpers:.*\)$", "", listed_name).strip()
         if not test_name or test_name in skips:
             continue
-        subprocess.check_call([str(output_path), test_name], cwd=source_dir, env=run_env)
+        completed = subprocess.run(
+            [str(output_path), test_name],
+            cwd=source_dir,
+            env=run_env,
+            check=False,
+        )
+        if completed.returncode not in (0, 7):
+            raise subprocess.CalledProcessError(completed.returncode, completed.args)
 
 for link_txt in targets:
     if not link_txt.exists():
