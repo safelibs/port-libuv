@@ -30,7 +30,7 @@
     },
     {
       "id": "knot-resolver",
-      "software_name": "Knot Resolver",
+      "software_name": "Knot Resolver (kresd)",
       "coverage": ["runtime"],
       "probe_path": "probes/knot-resolver.sh",
       "expected_link_targets": [
