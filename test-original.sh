@@ -3,14 +3,43 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 docker_image="${LIBUV_TEST_ORIGINAL_IMAGE:-ubuntu:24.04}"
+docker_env=()
+
+fail() {
+  printf 'ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+if [[ -n "${LIBUV_SAFE_DEB_DIR:-}" ]]; then
+  if [[ "${LIBUV_SAFE_DEB_DIR}" = /* ]]; then
+    safe_deb_dir_host="$(realpath "${LIBUV_SAFE_DEB_DIR}")"
+  else
+    safe_deb_dir_host="$(realpath "${repo_root}/${LIBUV_SAFE_DEB_DIR}")"
+  fi
+
+  [[ -d "${safe_deb_dir_host}" ]] || fail "LIBUV_SAFE_DEB_DIR does not exist: ${LIBUV_SAFE_DEB_DIR}"
+  case "${safe_deb_dir_host}" in
+    "${repo_root}"/*) ;;
+    *) fail "LIBUV_SAFE_DEB_DIR must resolve inside ${repo_root}: ${safe_deb_dir_host}" ;;
+  esac
+
+  safe_deb_dir_repo_rel="${safe_deb_dir_host#${repo_root}/}"
+  [[ -f "${safe_deb_dir_host}/artifacts.env" ]] || fail "missing artifacts manifest: ${safe_deb_dir_host}/artifacts.env"
+  docker_env+=( -e "LIBUV_SAFE_DEB_DIR_REPO_REL=${safe_deb_dir_repo_rel}" )
+fi
 
 docker run --rm -i \
   --mount "type=bind,src=${repo_root},target=/work,readonly" \
+  "${docker_env[@]}" \
   "${docker_image}" \
   bash -s -- <<'EOF'
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
+safe_package_mode=0
+expected_libuv_path=""
+expected_libuv_realpath=""
+libuv_ldd_env=()
 
 note() {
   printf '\n==> %s\n' "$*"
@@ -21,13 +50,72 @@ fail() {
   exit 1
 }
 
-assert_uses_original_libuv() {
+resolve_target_libuv() {
   local target="$1"
-  local resolved
+  env "${libuv_ldd_env[@]}" ldd "${target}" | awk '/libuv\.so\.1/ { print $3; exit }'
+}
 
-  resolved="$(env LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" ldd "${target}" | awk '/libuv\.so\.1/ { print $3; exit }')"
+load_expected_safe_libuv() {
+  expected_libuv_path="$(dpkg -L libuv1t64 | awk '/\/libuv\.so\.1$/ { print; exit }')"
+  [ -n "${expected_libuv_path}" ] || fail "could not find installed libuv.so.1 in libuv1t64"
+  expected_libuv_realpath="$(realpath "${expected_libuv_path}")"
+  dpkg -S "${expected_libuv_realpath}" 2>/dev/null | grep -q '^libuv1t64:' || \
+    fail "installed libuv realpath is not owned by libuv1t64: ${expected_libuv_realpath}"
+}
+
+assert_uses_expected_libuv() {
+  local target="$1"
+  local resolved resolved_realpath
+
+  resolved="$(resolve_target_libuv "${target}")"
   [ -n "${resolved}" ] || fail "could not resolve libuv for ${target}"
-  [ "${resolved}" = "/opt/libuv-original/lib/libuv.so.1" ] || fail "${target} resolved libuv to ${resolved}"
+  resolved_realpath="$(realpath "${resolved}")"
+  [ "${resolved_realpath}" = "${expected_libuv_realpath}" ] || \
+    fail "${target} resolved libuv to ${resolved} (realpath ${resolved_realpath}), expected ${expected_libuv_path}"
+  if (( safe_package_mode )); then
+    dpkg -S "${resolved}" 2>/dev/null | grep -q '^libuv1t64:' || \
+      dpkg -S "${resolved_realpath}" 2>/dev/null | grep -q '^libuv1t64:' || \
+      fail "${target} resolved libuv to non-package-managed path ${resolved}"
+  fi
+}
+
+configure_libuv_mode() {
+  if [[ -n "${LIBUV_SAFE_DEB_DIR_REPO_REL:-}" ]]; then
+    local manifest
+
+    safe_package_mode=1
+    manifest="/work/${LIBUV_SAFE_DEB_DIR_REPO_REL}/artifacts.env"
+    [ -f "${manifest}" ] || fail "missing artifacts manifest in container: ${manifest}"
+    # shellcheck disable=SC1090
+    . "${manifest}"
+
+    [ -n "${LIBUV_SAFE_RUNTIME_DEB_REPO_REL:-}" ] || fail "LIBUV_SAFE_RUNTIME_DEB_REPO_REL missing from ${manifest}"
+    [ -n "${LIBUV_SAFE_DEV_DEB_REPO_REL:-}" ] || fail "LIBUV_SAFE_DEV_DEB_REPO_REL missing from ${manifest}"
+    [ -f "/work/${LIBUV_SAFE_RUNTIME_DEB_REPO_REL}" ] || fail "runtime package missing: /work/${LIBUV_SAFE_RUNTIME_DEB_REPO_REL}"
+    [ -f "/work/${LIBUV_SAFE_DEV_DEB_REPO_REL}" ] || fail "development package missing: /work/${LIBUV_SAFE_DEV_DEB_REPO_REL}"
+
+    note "Installing locally built safe libuv packages"
+    dpkg -i "/work/${LIBUV_SAFE_RUNTIME_DEB_REPO_REL}" "/work/${LIBUV_SAFE_DEV_DEB_REPO_REL}"
+    load_expected_safe_libuv
+    note "Expecting dependents to resolve ${expected_libuv_path}"
+    return
+  fi
+
+  note "Building the original libuv"
+  cmake -S /work/original -B /tmp/libuv-build \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_INSTALL_PREFIX=/opt/libuv-original
+  cmake --build /tmp/libuv-build -j"$(nproc)"
+  cmake --install /tmp/libuv-build
+
+  export LD_LIBRARY_PATH="/opt/libuv-original/lib"
+  export CPPFLAGS="-I/opt/libuv-original/include"
+  export LDFLAGS="-L/opt/libuv-original/lib -Wl,-rpath,/opt/libuv-original/lib"
+  libuv_ldd_env=( "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" )
+  expected_libuv_path="/opt/libuv-original/lib/libuv.so.1"
+  expected_libuv_realpath="$(realpath "${expected_libuv_path}")"
+  note "Expecting dependents to resolve ${expected_libuv_path}"
 }
 
 python_module_file() {
@@ -146,21 +234,11 @@ if actual != expected:
     raise SystemExit(f"dependents.json mismatch; missing={missing} extra={extra}")
 PY
 
-note "Building the original libuv"
-cmake -S /work/original -B /tmp/libuv-build \
-  -DBUILD_TESTING=OFF \
-  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-  -DCMAKE_INSTALL_PREFIX=/opt/libuv-original
-cmake --build /tmp/libuv-build -j"$(nproc)"
-cmake --install /tmp/libuv-build
-
-export LD_LIBRARY_PATH="/opt/libuv-original/lib"
-export CPPFLAGS="-I/opt/libuv-original/include"
-export LDFLAGS="-L/opt/libuv-original/lib -Wl,-rpath,/opt/libuv-original/lib"
+configure_libuv_mode
 
 test_nodejs() {
   note "Testing Node.js"
-  assert_uses_original_libuv /usr/bin/node
+  assert_uses_expected_libuv /usr/bin/node
   node <<'NODE'
 const fs = require("fs");
 const net = require("net");
@@ -193,14 +271,14 @@ NODE
 
 test_neovim() {
   note "Testing Neovim"
-  assert_uses_original_libuv /usr/bin/nvim
+  assert_uses_expected_libuv /usr/bin/nvim
   nvim --headless --clean \
     '+lua local uv=vim.uv or vim.loop; assert(uv); local fired=false; local timer=uv.new_timer(); timer:start(10,0,function() fired=true; timer:stop(); timer:close(); vim.schedule(function() assert(fired); vim.cmd("qall!") end) end)'
 }
 
 test_bind9() {
   note "Testing BIND 9"
-  assert_uses_original_libuv /usr/sbin/named
+  assert_uses_expected_libuv /usr/sbin/named
   (
     set -euo pipefail
     local dir
@@ -245,7 +323,7 @@ ZONE
 
 test_knot_resolver() {
   note "Testing Knot Resolver"
-  assert_uses_original_libuv /usr/sbin/kresd
+  assert_uses_expected_libuv /usr/sbin/kresd
   (
     set -euo pipefail
     local dir
@@ -272,7 +350,7 @@ CFG
 
 test_ttyd() {
   note "Testing ttyd"
-  assert_uses_original_libuv /usr/bin/ttyd
+  assert_uses_expected_libuv /usr/bin/ttyd
   (
     set -euo pipefail
     local dir
@@ -294,7 +372,7 @@ test_lua_luv() {
   local lua_luv_so
   note "Testing luv for Lua"
   lua_luv_so="/usr/lib/x86_64-linux-gnu/lua/5.4/luv.so"
-  assert_uses_original_libuv "${lua_luv_so}"
+  assert_uses_expected_libuv "${lua_luv_so}"
   lua5.4 - <<'LUA'
 local uv = require("luv")
 local fired = false
@@ -311,7 +389,7 @@ LUA
 
 test_luv_ocaml() {
   note "Testing Luv for OCaml"
-  assert_uses_original_libuv /usr/lib/ocaml/stublibs/dllluv_c_stubs.so
+  assert_uses_expected_libuv /usr/lib/ocaml/stublibs/dllluv_c_stubs.so
   cat >/tmp/luv_timer.ml <<'ML'
 let () =
   let fired = ref false in
@@ -339,7 +417,7 @@ test_uvloop() {
   local uvloop_so
   note "Testing uvloop"
   uvloop_so="$(python_module_file uvloop.loop)"
-  assert_uses_original_libuv "${uvloop_so}"
+  assert_uses_expected_libuv "${uvloop_so}"
   python3 - <<'PY'
 import asyncio
 import uvloop
@@ -364,7 +442,7 @@ test_r_fs() {
   local fs_so
   note "Testing R fs package"
   fs_so="$(r_package_shared_object fs)"
-  assert_uses_original_libuv "${fs_so}"
+  assert_uses_expected_libuv "${fs_so}"
   Rscript -e 'tmp <- tempfile(); fs::dir_create(tmp); f <- fs::path(tmp, "file.txt"); fs::file_create(f); stopifnot(fs::file_exists(f))'
 }
 
@@ -372,7 +450,7 @@ test_r_httpuv() {
   local httpuv_so
   note "Testing R httpuv package"
   httpuv_so="$(r_package_shared_object httpuv)"
-  assert_uses_original_libuv "${httpuv_so}"
+  assert_uses_expected_libuv "${httpuv_so}"
   Rscript - <<'RS'
 port <- 8123L
 outfile <- tempfile()
@@ -393,14 +471,14 @@ RS
 
 test_moarvm() {
   note "Testing MoarVM"
-  assert_uses_original_libuv /usr/bin/moar
+  assert_uses_expected_libuv /usr/bin/moar
   raku -e 'my $p = Promise.in(0.1).then({ say q[ok] }); await $p;' >/tmp/moar.out
   grep -qx 'ok' /tmp/moar.out
 }
 
 test_h2o() {
   note "Testing H2O libuv library"
-  assert_uses_original_libuv /usr/lib/x86_64-linux-gnu/libh2o.so
+  assert_uses_expected_libuv /usr/lib/x86_64-linux-gnu/libh2o.so
   (
     set -euo pipefail
     local dir
@@ -437,7 +515,7 @@ CFG
 
 test_libraft() {
   note "Testing libraft"
-  assert_uses_original_libuv /usr/bin/raft-benchmark
+  assert_uses_expected_libuv /usr/bin/raft-benchmark
   mkdir -p /tmp/raft-submit
   raft-benchmark submit -d /tmp/raft-submit -s 65536 >/tmp/raft-submit.out
   grep -q '"submit:' /tmp/raft-submit.out
@@ -445,7 +523,7 @@ test_libraft() {
 
 test_dqlite() {
   note "Testing dqlite"
-  assert_uses_original_libuv /usr/lib/x86_64-linux-gnu/libdqlite.so
+  assert_uses_expected_libuv /usr/lib/x86_64-linux-gnu/libdqlite.so
   cat >/tmp/dqlite_smoke.c <<'C'
 #include <dqlite.h>
 #include <stdio.h>
@@ -482,7 +560,7 @@ C
 
 test_libstorj() {
   note "Testing libstorj"
-  assert_uses_original_libuv /usr/lib/x86_64-linux-gnu/libstorj.so
+  assert_uses_expected_libuv /usr/lib/x86_64-linux-gnu/libstorj.so
   (
     set -euo pipefail
     local dir
@@ -596,15 +674,18 @@ test_gevent() {
     gevent_src="$(find . -maxdepth 1 -type d -name 'python-gevent-*' | head -n 1)"
     [ -n "${gevent_src}" ] || fail "could not extract python-gevent source"
     cd "${gevent_src}"
-    GEVENTSETUP_EMBED_CARES=0 \
-    GEVENTSETUP_EMBED_LIBEV=0 \
-    GEVENTSETUP_EMBED_LIBUV=0 \
-    CPPFLAGS="${CPPFLAGS}" \
-    LDFLAGS="${LDFLAGS}" \
-      python3 setup.py build_ext -i >/tmp/gevent-build.log 2>&1
+    gevent_build_env=(
+      GEVENTSETUP_EMBED_CARES=0
+      GEVENTSETUP_EMBED_LIBEV=0
+      GEVENTSETUP_EMBED_LIBUV=0
+    )
+    if (( !safe_package_mode )); then
+      gevent_build_env+=( "CPPFLAGS=${CPPFLAGS}" "LDFLAGS=${LDFLAGS}" )
+    fi
+    env "${gevent_build_env[@]}" python3 setup.py build_ext -i >/tmp/gevent-build.log 2>&1
     gevent_libuv_so="$(find src/gevent/libuv -maxdepth 1 -name '_corecffi*.so' | head -n 1)"
     [ -n "${gevent_libuv_so}" ] || fail "gevent libuv backend was not built"
-    assert_uses_original_libuv "${gevent_libuv_so}"
+    assert_uses_expected_libuv "${gevent_libuv_so}"
     PYTHONPATH="${PWD}/src" GEVENT_LOOP=libuv-cffi python3 - <<'PY'
 import gevent
 from gevent import sleep, spawn_later

@@ -1,0 +1,5 @@
+usr/include usr/
+usr/lib/libuv.a usr/lib/x86_64-linux-gnu/
+usr/lib/pkgconfig/libuv.pc usr/lib/x86_64-linux-gnu/pkgconfig/
+usr/lib/pkgconfig/libuv-static.pc usr/lib/x86_64-linux-gnu/pkgconfig/
+usr/lib/libuv.so usr/lib/x86_64-linux-gnu/

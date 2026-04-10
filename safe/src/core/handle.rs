@@ -131,6 +131,7 @@ pub(crate) unsafe fn handle_init(
         return abi::uv_errno_t_UV_EINVAL;
     }
 
+    let data = unsafe { (*handle).data };
     let state = unsafe { &*loop_state(loop_) };
     let mut inner = state.inner.lock().unwrap();
     if !super::find_handle_record(&inner, handle).is_null() {
@@ -159,6 +160,7 @@ pub(crate) unsafe fn handle_init(
         (*handle).next_closing = std::ptr::null_mut();
         (*handle).flags = UV_HANDLE_REF;
         (*handle).u.fd = 0;
+        (*handle).data = data;
         queue::insert_tail(
             std::ptr::addr_of_mut!((*loop_).handle_queue),
             std::ptr::addr_of_mut!((*handle).handle_queue),

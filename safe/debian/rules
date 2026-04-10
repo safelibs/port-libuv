@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+include /usr/share/dpkg/default.mk
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+DEB_BUILD_MAINT_OPTIONS=hardening=+all
+
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+export CARGO_TARGET_DIR = $(CURDIR)/target
+
+export SOVER=1
+export SONAME=libuv.so.$(SOVER)
+export SOPKG=libuv$(SOVER)
+
+# tell glibc to disable dns requests for the tests
+export RES_OPTIONS = attempts:0
+
+$(info "Note: Increasing timeout of time sensitive tests")
+export UV_TEST_TIMEOUT_MULTIPLIER = 2
+
+%:
+	dh $@ --without autoreconf
+
+override_dh_auto_configure:
+
+override_dh_auto_build:
+	cargo build --release
+
+override_dh_auto_install:
+	rm -rf debian/tmp
+	LIBUV_STAGE_INSTALL_PREFIX=/usr \
+	LIBUV_STAGE_LIBDIR='$${exec_prefix}/lib/$(DEB_HOST_MULTIARCH)' \
+	LIBUV_STAGE_INCLUDEDIR='$${prefix}/include' \
+	./tools/stage_install.sh debian/tmp/usr
+
+override_dh_auto_clean:
+	rm -rf debian/.debhelper debian/debhelper-build-stamp debian/files \
+	  debian/libuv1-dev debian/libuv1t64 debian/tmp
+
+override_dh_auto_test:
+	:

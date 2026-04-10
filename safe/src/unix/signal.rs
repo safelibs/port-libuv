@@ -390,11 +390,13 @@ unsafe extern "C" fn signal_event(
 }
 
 unsafe fn init_handle(loop_: *mut abi::uv_loop_t, handle: *mut abi::uv_signal_t) {
+    let data = unsafe { (*handle).data };
     unsafe {
         std::ptr::write_bytes(handle, 0, 1);
         (*handle).loop_ = loop_;
         (*handle).type_ = abi::uv_handle_type_UV_SIGNAL;
         (*handle).flags = UV_HANDLE_REF;
+        (*handle).data = data;
         queue::init(std::ptr::addr_of_mut!((*handle).handle_queue));
         queue::insert_tail(
             std::ptr::addr_of_mut!((*loop_).handle_queue),

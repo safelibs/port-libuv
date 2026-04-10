@@ -107,6 +107,7 @@ unsafe fn handle_stop(handle: *mut abi::uv_handle_t) {
 }
 
 unsafe fn init_handle(loop_: *mut abi::uv_loop_t, handle: *mut abi::uv_process_t) {
+    let data = unsafe { (*handle).data };
     unsafe {
         std::ptr::write_bytes(handle, 0, 1);
         (*handle).loop_ = loop_;
@@ -114,6 +115,7 @@ unsafe fn init_handle(loop_: *mut abi::uv_loop_t, handle: *mut abi::uv_process_t
         (*handle).close_cb = None;
         (*handle).next_closing = std::ptr::null_mut();
         (*handle).flags = UV_HANDLE_REF;
+        (*handle).data = data;
         queue::init(std::ptr::addr_of_mut!((*handle).handle_queue));
         queue::init(std::ptr::addr_of_mut!((*handle).queue));
         queue::insert_tail(

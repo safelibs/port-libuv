@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  echo "usage: $0 <stage-prefix>" >&2
+if [[ $# -lt 1 || $# -gt 4 ]]; then
+  echo "usage: $0 <stage-prefix> [install-prefix] [libdir] [includedir]" >&2
   exit 64
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 safe_root="$(cd "${script_dir}/.." && pwd)"
 stage_prefix="$1"
+install_prefix="${2:-${LIBUV_STAGE_INSTALL_PREFIX:-${stage_prefix}}}"
 artifact_dir="${safe_root}/target/release"
 shared_src="${artifact_dir}/libuv.so"
 static_src="${artifact_dir}/libuv.a"
+libdir="${3:-${LIBUV_STAGE_LIBDIR:-\${exec_prefix}/lib}}"
+includedir="${4:-${LIBUV_STAGE_INCLUDEDIR:-\${prefix}/include}}"
 
 if [[ ! -f "${shared_src}" || ! -f "${static_src}" ]]; then
   echo "cargo build --release must succeed before staging artifacts" >&2
@@ -27,7 +30,7 @@ ln -sfn "libuv.so.1" "${stage_prefix}/lib/libuv.so"
 
 repo_root="$(cd "${safe_root}/.." && pwd)"
 
-python3 - "${repo_root}" "${safe_root}" "${stage_prefix}" <<'PY'
+python3 - "${repo_root}" "${safe_root}" "${stage_prefix}" "${install_prefix}" "${libdir}" "${includedir}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -35,14 +38,17 @@ from pathlib import Path
 repo_root = Path(sys.argv[1])
 safe_root = Path(sys.argv[2])
 stage_prefix = Path(sys.argv[3])
+install_prefix = sys.argv[4]
+libdir = sys.argv[5]
+includedir = sys.argv[6]
 baseline = json.loads((safe_root / "tools/abi-baseline.json").read_text())
 linux = baseline["linux_x86_64"]
 version = linux["pkg_config"]["version"]
 libs = " ".join(linux["pkg_config"]["libs"])
 substitutions = {
-    "@prefix@": str(stage_prefix),
-    "@libdir@": "${exec_prefix}/lib",
-    "@includedir@": "${prefix}/include",
+    "@prefix@": str(install_prefix),
+    "@libdir@": libdir,
+    "@includedir@": includedir,
     "@PACKAGE_VERSION@": version,
     "@LIBS@": libs,
 }

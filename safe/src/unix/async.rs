@@ -143,12 +143,14 @@ unsafe fn start_backend(loop_: *mut abi::uv_loop_t) -> c_int {
 }
 
 fn init_handle(loop_: *mut abi::uv_loop_t, handle_ptr: *mut abi::uv_async_t) {
+    let data = unsafe { (*handle_ptr).data };
     unsafe {
         std::ptr::write_bytes(handle_ptr, 0, 1);
         (*handle_ptr).loop_ = loop_;
         (*handle_ptr).type_ = abi::uv_handle_type_UV_ASYNC;
         (*handle_ptr).close_cb = None;
         (*handle_ptr).flags = UV_HANDLE_REF;
+        (*handle_ptr).data = data;
         (*handle_ptr).next_closing = std::ptr::null_mut();
         queue::init(std::ptr::addr_of_mut!((*handle_ptr).handle_queue));
         queue::insert_tail(
