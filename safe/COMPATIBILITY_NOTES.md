@@ -1,5 +1,9 @@
 Linux compatibility notes for the Rust port:
 
+- Workflow artifact contract: consume the checked-in `original/build-checker*`, `safe/tests/harness/**`, and `safe/tests/upstream/**` trees in place. `safe/tools/stage_install.sh` creates the staged install, `safe/tools/verify_stage_install.sh` checks the link/pkg-config/header contract, and `safe/tools/verify_runner_inventory.sh` keeps the `435 / 435 / 55` vs `440 / 440 / 55` runner split fixed.
+- Focused harness contract: `safe/tools/build_upstream_harness.sh` owns the selected-test inventory. The checked-in `safe/tests/harness/phase-test-list.h` and `safe/tests/harness/uv-safe-run-tests.c` are fallback templates for `LIBUV_SAFE_NO_PYTHON=1`, and only `impl-01-baseline-and-artifact-policy` through `impl-03-io-fs-resolver-parity` may edit the focused-harness sources.
+- Regression contract: `safe/tests/regressions/manifest.json` together with `safe/tools/run_regressions.sh` is the sole executable inventory for flat files under `safe/tests/regressions/`.
+- Review contract: final reviewers validate `HEAD` plus first-parent commit subjects bounded by `.plan/workflow-run-base.txt`; this workflow does not require or assert a repo-wide clean worktree.
 - The Linux backend remains pinned to epoll for this release candidate. The translated `io_uring` support code is present only to preserve symbol and source compatibility where upstream exposes related internals, but runtime feature gating keeps the backend disabled.
 - This is intentional for the final parity sweep. Re-enabling `io_uring` late would reintroduce correctness and privilege-drop risk around `CVE-2024-22017` without improving the verifier contract for Ubuntu 24.04.
 - Public headers, exported symbols, Debian packaging, and the staged/shared/static link contracts remain aligned with the upstream libuv baseline.

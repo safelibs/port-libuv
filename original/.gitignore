@@ -78,3 +78,10 @@ cmake-build-debug/
 libuv-*.tar.*
 /dist.libuv.org/
 /libuv-release-tool/
+
+# local debugger and safe relink scratch
+/.gdb_history
+/build-checker/.safe-relink/
+/build-checker-review/.safe-relink/
+/build-checker-verify/.safe-relink/
+/build-checker-audit/.safe-relink/

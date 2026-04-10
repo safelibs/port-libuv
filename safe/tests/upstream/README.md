@@ -1,9 +1,11 @@
 # Upstream Test Tree Port
 
-This directory carries a direct copy of the current workspace `original/test/**`
-tree under [`test/`](/home/yans/safelibs/port-libuv/safe/tests/upstream/test),
+This directory carries the checked-in copy of the current workspace
+`original/test/**` tree under [`test/`](/home/yans/safelibs/port-libuv/safe/tests/upstream/test),
 plus Linux CMake glue that links the copied upstream runners against the staged
-Rust `libuv` install instead of rebuilding the original C library.
+Rust `libuv` install instead of rebuilding the original C library. Keep this
+tree in place; later phases consume it directly instead of rediscovering or
+regenerating an alternative copy.
 
 The harness preserves the upstream runner layout used by the checked-in
 `original/build-checker*` trees:
@@ -19,6 +21,12 @@ Behavior preserved from the workspace copy:
 - CTest keeps serialized execution with `RUN_SERIAL`.
 - The test environment sets `UV_TEST_TIMEOUT_MULTIPLIER=2`.
 - The test environment sets `RES_OPTIONS=attempts:0`.
+
+Contract notes:
+
+- `safe/tools/stage_install.sh`, this CMake glue, and `safe/tools/run_upstream_tests.sh` are the supported build/test entrypoints for the copied upstream tree.
+- `check-02` compares the staged runner lists against the existing `original/build-checker-review/**` inventories instead of rebuilding those authoritative runner trees.
+- Final reviewers validate staged outputs plus `HEAD` and first-parent commit subjects; they do not rely on a repo-wide clean worktree gate.
 
 Typical flow:
 

@@ -229,6 +229,7 @@ phases:
       - safe/include/**
       - safe/tools/stage_install.sh
       - safe/tools/build_upstream_harness.sh
+      - safe/tests/harness/CMakeLists.txt
       - safe/tools/run_upstream_tests.sh
       - safe/tools/audit_unsafe.py
       - safe/tests/harness/**
@@ -328,6 +329,7 @@ phases:
       - safe/include/**
       - safe/tools/stage_install.sh
       - safe/tools/build_upstream_harness.sh
+      - safe/tests/harness/CMakeLists.txt
       - safe/tools/run_upstream_tests.sh
       - safe/tools/audit_unsafe.py
       - safe/tests/harness/**
@@ -428,6 +430,9 @@ phases:
       - safe/build.rs
       - safe/src/**
       - safe/include/**
+      - safe/tools/build_upstream_harness.sh
+      - safe/tests/harness/CMakeLists.txt
+      - safe/tests/harness/**
       - safe/tools/stage_install.sh
       - safe/tools/verify_exports.sh
       - safe/tools/verify_sizes.sh
@@ -539,6 +544,9 @@ phases:
       - safe/build.rs
       - safe/src/**
       - safe/include/**
+      - safe/tools/build_upstream_harness.sh
+      - safe/tests/harness/CMakeLists.txt
+      - safe/tests/harness/**
       - safe/tools/cc-linker.sh
       - safe/tools/abi-baseline.json
       - safe/tools/verify_exports.sh
@@ -587,6 +595,7 @@ phases:
       - safe/tools/build_deb.sh
       - safe/tools/relink_original_tests.sh
       - safe/tools/update_bindings.sh
+      - safe/tools/run_dependents_suite.sh
       - safe/tests/upstream/**
       - safe/tests/regressions/**
       - safe/debian/**
@@ -595,6 +604,10 @@ phases:
       - safe/tools/build_dependents_image.sh
       - safe/tools/verify_dependents_image_contract.sh
       - safe/docker/Dockerfile.dependents
+      - safe/docker/run-dependent-probes.sh
+      - safe/tests/dependents/manifest.json
+      - safe/tests/dependents/common.sh
+      - safe/tests/dependents/**
       - original/include/**
       - original/debian/libuv1t64.symbols
       - original/build-checker/**
@@ -637,9 +650,12 @@ phases:
       - safe/tests/regressions/**
       - safe/debian/**
       - safe/dist/artifacts.env
+      - safe/tools/verify_deb_payload_contract.py
       - safe/tools/build_dependents_image.sh
       - safe/tools/verify_dependents_image_contract.sh
       - safe/tools/run_dependents_suite.sh
+      - safe/docker/Dockerfile.dependents
+      - safe/docker/run-dependent-probes.sh
       - safe/tests/dependents/manifest.json
       - safe/tests/dependents/common.sh
       - safe/tests/dependents/**
@@ -676,6 +692,7 @@ phases:
       - safe/include/**
       - safe/tools/stage_install.sh
       - safe/tools/build_upstream_harness.sh
+      - safe/tests/harness/CMakeLists.txt
       - safe/tools/run_upstream_tests.sh
       - safe/tools/verify_exports.sh
       - safe/tools/verify_sizes.sh
@@ -707,8 +724,6 @@ phases:
       - original/build-checker-audit/**
       - original/test/**
       - test-original.sh
-      - findings from check-11-package-payload-and-image-contract
-      - findings from check-12-dependent-image-smoke
   - order: 20
     id: check-13-dependent-functional-matrix
     type: check
@@ -765,8 +780,6 @@ phases:
       - original/build-checker-audit/**
       - original/test/**
       - test-original.sh
-      - findings from check-11-package-payload-and-image-contract
-      - findings from check-12-dependent-image-smoke
   - order: 21
     id: check-14-final-safety-release-review
     type: check
@@ -824,5 +837,3 @@ phases:
       - original/build-checker-audit/**
       - original/test/**
       - test-original.sh
-      - findings from check-11-package-payload-and-image-contract
-      - findings from check-12-dependent-image-smoke
