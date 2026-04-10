@@ -4821,6 +4821,39 @@ pub(crate) unsafe fn metrics_idle_time(loop_: *mut crate::abi::linux_x86_64::uv_
     unsafe { crate::upstream_support::uv_common::uv_metrics_idle_time(loop_.cast()) }
 }
 
+pub(crate) unsafe fn metrics_info(
+    loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
+    metrics: *mut crate::abi::linux_x86_64::uv_metrics_t,
+) -> ::std::os::raw::c_int {
+    unsafe { crate::upstream_support::uv_common::uv_metrics_info(loop_.cast(), metrics.cast()) }
+}
+
+pub(crate) unsafe fn record_work_queue_events(
+    loop_: *mut crate::abi::linux_x86_64::uv_loop_t,
+    count: u64,
+) {
+    if loop_.is_null() || count == 0 {
+        return;
+    }
+
+    let fields = unsafe {
+        (*loop_)
+            .internal_fields
+            .cast::<crate::upstream_support::uv_common::uv__loop_internal_fields_t>()
+    };
+    if fields.is_null() {
+        return;
+    }
+
+    unsafe {
+        let metrics = &mut (*fields).loop_metrics.metrics;
+        metrics.events = metrics.events.wrapping_add(count);
+        if (*fields).current_timeout == 0 {
+            metrics.events_waiting = metrics.events_waiting.wrapping_add(count);
+        }
+    }
+}
+
 pub(crate) unsafe fn now(loop_: *const crate::abi::linux_x86_64::uv_loop_t) -> u64 {
     unsafe { crate::upstream_support::uv_common::uv_now(loop_.cast()) }
 }

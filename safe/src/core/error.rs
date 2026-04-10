@@ -71,7 +71,13 @@ const ENTRIES: &[ErrorEntry] = &[
     },
 ];
 
+#[inline]
+fn canonicalize(err: c_int) -> c_int {
+    if err > 0 { -err } else { err }
+}
+
 fn lookup(err: c_int) -> Option<&'static ErrorEntry> {
+    let err = canonicalize(err);
     ENTRIES.iter().find(|entry| entry.code == err)
 }
 
@@ -97,7 +103,7 @@ unsafe fn alloc_unknown(prefix: &[u8], err: c_int) -> *const c_char {
     let text = if prefix == b"name" {
         format!("Unknown system error {err}")
     } else {
-        format!("Unknown system error {err}")
+        "Unknown error".to_owned()
     };
     let bytes = text.as_bytes();
     let raw = unsafe { allocator::malloc_bytes(bytes.len() + 1) }.cast::<u8>();
@@ -134,11 +140,12 @@ pub(crate) unsafe fn err_name_r(err: c_int, buf: *mut c_char, buflen: usize) -> 
 pub(crate) unsafe fn strerror(err: c_int) -> *const c_char {
     match lookup(err) {
         Some(entry) => entry.message.as_ptr().cast(),
-        None => unsafe { alloc_unknown(b"message", err) },
+        None => unsafe { alloc_unknown(b"message", canonicalize(err)) },
     }
 }
 
 pub(crate) unsafe fn strerror_r(err: c_int, buf: *mut c_char, buflen: usize) -> *mut c_char {
+    let err = canonicalize(err);
     match lookup(err) {
         Some(entry) => unsafe { copy_to_buffer(entry.message, buf, buflen) },
         None => {

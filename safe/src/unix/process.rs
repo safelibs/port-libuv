@@ -1,5 +1,5 @@
 use crate::abi::linux_x86_64 as abi;
-use crate::core::{queue, UV_HANDLE_ACTIVE, UV_HANDLE_REF, UV_LOOP_REAP_CHILDREN};
+use crate::core::{queue, UV_HANDLE_ACTIVE, UV_HANDLE_INTERNAL, UV_HANDLE_REF};
 use crate::threading::sync;
 use crate::upstream_support;
 use libc::{self, c_void};
@@ -9,6 +9,8 @@ use std::os::raw::{c_char, c_int};
 unsafe extern "C" {
     static mut environ: *mut *mut c_char;
 }
+
+unsafe extern "C" fn child_watcher_cb(_handle: *mut abi::uv_signal_t, _signum: c_int) {}
 
 #[inline]
 fn uv_err(err: c_int) -> c_int {
@@ -207,7 +209,18 @@ unsafe fn open_parent_spawn_stream(
     pair[1] = -1;
 
     let stream = unsafe { (*container).data.stream };
-    let rc = unsafe { crate::unix::pipe::uv_pipe_open(stream.cast(), pair[0]) };
+    let mut stream_flags = 0;
+    if (flags & abi::uv_stdio_flags_UV_WRITABLE_PIPE) != 0 {
+        stream_flags |= crate::upstream_support::unix_core::UV_HANDLE_READABLE as c_int;
+    }
+    if (flags & abi::uv_stdio_flags_UV_READABLE_PIPE) != 0 {
+        stream_flags |= crate::upstream_support::unix_core::UV_HANDLE_WRITABLE as c_int;
+    }
+
+    let rc = unsafe {
+        crate::upstream_support::unix_core::uv__nonblock_ioctl(pair[0], 1);
+        crate::unix::stream::uv__stream_open(stream.cast(), pair[0], stream_flags)
+    };
     if rc == 0 {
         pair[0] = -1;
     }
@@ -477,8 +490,16 @@ pub(crate) unsafe fn loop_init(loop_: *mut abi::uv_loop_t) -> c_int {
         return abi::uv_errno_t_UV_EINVAL;
     }
 
+    let rc = unsafe { crate::unix::signal::init(loop_, std::ptr::addr_of_mut!((*loop_).child_watcher)) };
+    if rc != 0 {
+        return rc;
+    }
+
     unsafe {
-        std::ptr::write_bytes(std::ptr::addr_of_mut!((*loop_).child_watcher), 0, 1);
+        crate::upstream_support::uv_common::uv_unref(
+            std::ptr::addr_of_mut!((*loop_).child_watcher).cast(),
+        );
+        (*loop_).child_watcher.flags |= UV_HANDLE_INTERNAL;
     }
 
     0
@@ -519,6 +540,7 @@ pub(crate) unsafe fn process_reap(loop_: *mut abi::uv_loop_t) {
             if err != libc::ECHILD {
                 continue;
             }
+            continue;
         }
 
         exited.push((process, status));
@@ -549,11 +571,6 @@ pub(crate) unsafe fn process_reap(loop_: *mut abi::uv_loop_t) {
         }
     }
 
-    if unsafe { queue::is_empty(std::ptr::addr_of!((*loop_).process_handles)) } {
-        unsafe {
-            (*loop_).flags &= !UV_LOOP_REAP_CHILDREN;
-        }
-    }
 }
 
 pub(crate) unsafe fn close(handle: *mut abi::uv_process_t) {
@@ -569,9 +586,7 @@ pub(crate) unsafe fn close(handle: *mut abi::uv_process_t) {
 
     let loop_ = unsafe { (*handle).loop_ };
     if !loop_.is_null() && unsafe { queue::is_empty(std::ptr::addr_of!((*loop_).process_handles)) } {
-        unsafe {
-            (*loop_).flags &= !UV_LOOP_REAP_CHILDREN;
-        }
+        let _ = unsafe { crate::unix::signal::stop(std::ptr::addr_of_mut!((*loop_).child_watcher)) };
     }
 }
 
@@ -633,6 +648,18 @@ pub(crate) unsafe fn spawn(
         }
     }
 
+    let rc = unsafe {
+        crate::unix::signal::start_regular(
+            std::ptr::addr_of_mut!((*loop_).child_watcher),
+            Some(child_watcher_cb),
+            libc::SIGCHLD,
+        )
+    };
+    if rc != 0 {
+        unsafe { cleanup_spawn_pipes((*options).stdio, requested_stdio, &mut pipes) };
+        return rc;
+    }
+
     let mut error_pipe = [-1; 2];
     if unsafe { libc::pipe2(error_pipe.as_mut_ptr(), libc::O_CLOEXEC) } != 0 {
         let err = uv_err(last_errno());
@@ -678,7 +705,6 @@ pub(crate) unsafe fn spawn(
                 std::ptr::addr_of_mut!((*loop_).process_handles),
                 std::ptr::addr_of_mut!((*handle).queue),
             );
-            (*loop_).flags |= UV_LOOP_REAP_CHILDREN;
             handle_start(handle.cast());
         }
     }

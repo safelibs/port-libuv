@@ -997,7 +997,7 @@ pub unsafe extern "C" fn uv_metrics_info(
     loop_: *mut abi::uv_loop_t,
     metrics: *mut abi::uv_metrics_t,
 ) -> ::std::os::raw::c_int {
-    unsafe { crate::core::metrics::metrics_info(loop_, metrics) }
+    unsafe { unix::epoll::metrics_info(loop_, metrics) }
 }
 
 #[unsafe(no_mangle)]

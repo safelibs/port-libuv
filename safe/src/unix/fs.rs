@@ -840,7 +840,13 @@ unsafe fn run_write_all(req: *mut abi::uv_fs_t) -> isize {
 unsafe fn execute_fs(req: *mut abi::uv_fs_t) {
     let result = match unsafe { (*req).fs_type } {
         abi::uv_fs_type_UV_FS_OPEN => {
-            let rc = unsafe { libc::open((*req).path, (*req).flags, (*req).mode as libc::mode_t) };
+            let rc = unsafe {
+                libc::open(
+                    (*req).path,
+                    (*req).flags | libc::O_CLOEXEC,
+                    (*req).mode as libc::mode_t,
+                )
+            };
             if rc >= 0 {
                 unsafe {
                     (*req).file = rc;

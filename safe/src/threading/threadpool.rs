@@ -1,5 +1,5 @@
 use crate::abi::linux_x86_64 as abi;
-use crate::core::{allocator, metrics, queue};
+use crate::core::{allocator, queue};
 use crate::threading::sync;
 use crate::unix_async;
 use libc::{self, c_char, c_int};
@@ -444,7 +444,7 @@ unsafe fn drain_loop_queue(loop_: *mut abi::uv_loop_t) {
 
     if nevents > 1 {
         unsafe {
-            metrics::record_event(loop_, nevents - 1);
+            crate::unix::epoll::record_work_queue_events(loop_, nevents - 1);
         }
     }
 }

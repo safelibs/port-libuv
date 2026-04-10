@@ -14,32 +14,17 @@ trap 'rm -rf "${tmp_build}"' EXIT
 
 "${script_dir}/build_upstream_harness.sh" --stage "${stage_prefix}" --build "${tmp_build}"
 
-python3 - "${tmp_build}" <<'PY'
+python3 - "${safe_root}" "${tmp_build}" <<'PY'
+import json
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-build_dir = Path(sys.argv[1])
-expected = {
-    "uv_shutdown_t": 80,
-    "uv_write_t": 192,
-    "uv_connect_t": 96,
-    "uv_udp_send_t": 320,
-    "uv_tcp_t": 248,
-    "uv_pipe_t": 264,
-    "uv_tty_t": 312,
-    "uv_prepare_t": 120,
-    "uv_check_t": 120,
-    "uv_idle_t": 120,
-    "uv_async_t": 128,
-    "uv_timer_t": 152,
-    "uv_fs_poll_t": 104,
-    "uv_fs_event_t": 136,
-    "uv_process_t": 136,
-    "uv_poll_t": 160,
-    "uv_loop_t": 848,
-}
+safe_root = Path(sys.argv[1])
+build_dir = Path(sys.argv[2])
+baseline = json.loads((safe_root / "tools/abi-baseline.json").read_text())
+expected = baseline["linux_x86_64"]["sizes_benchmark_bytes"]
 
 pattern = re.compile(r"^(uv_[A-Za-z0-9_]+): (\d+) bytes$")
 
