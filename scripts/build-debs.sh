@@ -31,7 +31,7 @@ from pathlib import Path
 cargo_config = Path(".cargo/config.toml")
 text = cargo_config.read_text()
 old = '/home/yans/safelibs/port-libuv/safe/tools/cc-linker.sh'
-new = 'tools/cc-linker.sh'
+new = 'safe/tools/cc-linker.sh'
 if old in text:
     cargo_config.write_text(text.replace(old, new))
 
