@@ -1,11 +1,8 @@
-/Testing/
-/test_file_*
-
-# dpkg-buildpackage and related root-level package artifacts
-/*.buildinfo
-/*.changes
-/*.deb
-/*.ddeb
-/*.dsc
-/*.tar.*
-/*.upload
+/.work/
+/build/
+/dist/
+*.deb
+*.ddeb
+*.buildinfo
+*.changes
+*.log
