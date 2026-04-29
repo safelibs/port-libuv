@@ -22,7 +22,7 @@ if [[ -n "${output}" && "$(basename "${output}")" == "libuv.so" ]]; then
     if [[ "${args[i]}" == -Wl,--version-script=* ]]; then
       rust_version_script="${args[i]#-Wl,--version-script=}"
       merged_version_script="$(mktemp)"
-      python3 - "/home/yans/safelibs/port-libuv/safe/tools/abi-baseline.json" >"${merged_version_script}" <<'PY'
+      python3 - "$(dirname "$0")/abi-baseline.json" >"${merged_version_script}" <<'PY'
 import json
 import sys
 
