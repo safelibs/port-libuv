@@ -21,6 +21,28 @@ fi
 rm -rf -- "$dist_dir"
 mkdir -p -- "$dist_dir"
 
+# libuv-specific setup: rewrite hardcoded /home/yans/safelibs/port-libuv
+# paths in .cargo/config.toml and safe/tools/cc-linker.sh so the build
+# works on any CI runner. Idempotent: replacements only fire if the
+# old absolute path is still present.
+python3 - <<'PY'
+from pathlib import Path
+
+cargo_config = Path(".cargo/config.toml")
+text = cargo_config.read_text()
+old = '/home/yans/safelibs/port-libuv/safe/tools/cc-linker.sh'
+new = 'tools/cc-linker.sh'
+if old in text:
+    cargo_config.write_text(text.replace(old, new))
+
+cc_linker = Path("safe/tools/cc-linker.sh")
+text = cc_linker.read_text()
+old = '/home/yans/safelibs/port-libuv/safe/tools/abi-baseline.json'
+new = '"$(dirname "$0")/abi-baseline.json"'
+if old in text:
+    cc_linker.write_text(text.replace(f'"{old}"', new))
+PY
+
 cd "$repo_root/safe"
 
 upstream_version="$(dpkg-parsechangelog -S Version | sed -E 's/\+safelibs[0-9]+$//')"
