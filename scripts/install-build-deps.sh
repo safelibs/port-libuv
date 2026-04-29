@@ -24,11 +24,11 @@ sudo apt-get install -y --no-install-recommends \
 # Install rustup into $HOME so we don't pick up the runner's preinstalled
 # (older) system rust.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-  | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+  | sh -s -- -y --profile minimal --default-toolchain 1.94.0 --no-modify-path
 
 # shellcheck source=/dev/null
 . "$HOME/.cargo/env"
-rustup default stable
+rustup default 1.94.0
 rustc --version
 cargo --version
 
