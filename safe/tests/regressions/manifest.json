@@ -18,6 +18,33 @@
       "compile_flags": [],
       "link_flags": [],
       "args": []
+    },
+    {
+      "id": "validator_timer_ordering_close",
+      "path": "validator_timer_ordering_close.c",
+      "runner": "c",
+      "phase_owner": "impl-10-validator-core-loop-threading-fixes",
+      "compile_flags": [],
+      "link_flags": [],
+      "args": []
+    },
+    {
+      "id": "validator_threadpool_queue_work",
+      "path": "validator_threadpool_queue_work.c",
+      "runner": "c",
+      "phase_owner": "impl-10-validator-core-loop-threading-fixes",
+      "compile_flags": [],
+      "link_flags": [],
+      "args": []
+    },
+    {
+      "id": "validator_random_sync_async",
+      "path": "validator_random_sync_async.c",
+      "runner": "c",
+      "phase_owner": "impl-10-validator-core-loop-threading-fixes",
+      "compile_flags": [],
+      "link_flags": [],
+      "args": []
     }
   ]
 }

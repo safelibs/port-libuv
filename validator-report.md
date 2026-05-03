@@ -246,3 +246,128 @@ files added under `safe/tests/regressions/` in this phase, and
 | usage-nodejs-fs-access-existing-and-missing   | usage | impl-11-validator-fs-dns-process-fixes   | open   |
 | usage-nodejs-fs-copyfile-unlink-chain         | usage | impl-11-validator-fs-dns-process-fixes   | open   |
 | usage-nodejs-fs-cp-recursive                  | usage | impl-11-validator-fs-dns-process-fixes   | open   |
+
+## phase-10 — core loop, timer, async, threading, and random fixes
+
+Owner phase: `impl-10-validator-core-loop-threading-fixes`.
+
+### Failure ownership review
+
+A re-review of `validator/artifacts/libuv-safe/phase-09/results/libuv/` against
+this phase's scope (timers, event loop, async, threadpool, random, worker
+scheduling) confirms that none of the open failures are owned by phase-10:
+
+- `event-loop-timer.sh` (the cloned validator's only timer-shaped source case)
+  passes both at phase-08 and phase-09.
+- No usage testcase fails on `setTimeout`/`setInterval`/`setImmediate`,
+  microtask/timer ordering, `worker_threads`, `crypto.randomBytes`,
+  `randomFill`, `randomUUID`, `scrypt`, or any other surface routed through
+  `uv_timer_*`, `uv_async_*`, `uv_queue_work`/`uv_cancel`, or `uv_random`.
+- All three remaining failures are `fs.*`-shaped and continue to fault on the
+  `errno -2 → "ENOENT"` mapping, owned by
+  `impl-11-validator-fs-dns-process-fixes`.
+
+No source defect lands in this phase. Per the phase plan, minimal C
+regressions are still added so the timer/threadpool/random surfaces are
+locked behind direct ABI probes that will fail loudly under any future
+regression in `safe/src/core/timer.rs`, `safe/src/threading/threadpool.rs`,
+or `safe/src/threading/random.rs`.
+
+### New regressions added
+
+Each is registered in `safe/tests/regressions/manifest.json` with
+`phase_owner: "impl-10-validator-core-loop-threading-fixes"`.
+
+| regression_id                       | path                                       | exercises |
+| ----------------------------------- | ------------------------------------------ | --------- |
+| `validator_timer_ordering_close`    | `validator_timer_ordering_close.c`         | `uv_timer_init`, `uv_timer_start` (one-shot + repeat), `uv_timer_stop` (pre-run and inside callback), `uv_timer_get_repeat`, `uv_close` ordering, `UV_RUN_DEFAULT` drain, `uv_loop_alive`/`uv_loop_close`. |
+| `validator_threadpool_queue_work`   | `validator_threadpool_queue_work.c`        | `uv_queue_work` batch, `uv_cancel` mixed with in-flight work, exactly-one after-work callback per request, `UV_ECANCELED` reporting, loop drain afterwards. |
+| `validator_random_sync_async`       | `validator_random_sync_async.c`            | Synchronous `uv_random` (loop=NULL, cb=NULL), async `uv_random` with completion callback on the owning loop, rejection of unknown flag bits with `UV_EINVAL`. |
+
+All three pass under `safe/tools/run_regressions.sh --up-to-phase
+impl-10-validator-core-loop-threading-fixes` against the staged install at
+`/tmp/libuv-safe-validator-stage`.
+
+### Commands run
+
+```bash
+# 1. Build the safe library and stage it for the regression sweep.
+cargo build --manifest-path safe/Cargo.toml --release
+bash safe/tools/stage_install.sh /tmp/libuv-safe-validator-stage
+bash safe/tools/verify_stage_install.sh /tmp/libuv-safe-validator-stage
+
+# 2. Run regression probes up to and including this phase.
+bash safe/tools/run_regressions.sh \
+  --stage /tmp/libuv-safe-validator-stage \
+  --up-to-phase impl-10-validator-core-loop-threading-fixes
+
+# 3. Rebuild Debian packages from the staged sources.
+bash safe/tools/build_deb.sh
+
+# 4. Stage the same locally built override .debs in the phase-10 layout.
+mkdir -p validator/artifacts/libuv-safe/phase-10/local-debs/libuv
+cp safe/dist/libuv1t64_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-10/local-debs/libuv/
+cp safe/dist/libuv1-dev_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-10/local-debs/libuv/
+
+# 5. Strict matrix in original mode against locally built overrides.
+( cd validator && bash test.sh \
+    --config repositories.yml \
+    --tests-root tests \
+    --artifact-root artifacts/libuv-safe/phase-10 \
+    --mode original \
+    --override-deb-root artifacts/libuv-safe/phase-10/local-debs \
+    --library libuv \
+    --record-casts )
+```
+
+### phase-10 run summary
+
+From `validator/artifacts/libuv-safe/phase-10/results/libuv/summary.json`:
+
+| Field         | Value      |
+| ------------- | ---------- |
+| schema_version| 2          |
+| library       | libuv      |
+| mode          | original   |
+| cases         | 175        |
+| source_cases  | 5          |
+| usage_cases   | 170        |
+| passed        | 172        |
+| failed        | 3          |
+| casts         | 175        |
+
+All 175 non-summary result JSONs under
+`validator/artifacts/libuv-safe/phase-10/results/libuv/` carry
+`"override_debs_installed": true`. No testcase escaped the override matrix.
+
+### phase-10 failures
+
+Identical set to phase-08 / phase-09; same fs/error-name owner phase. No
+phase-10 regression matches a current validator failure.
+
+| testcase_id                                   | kind  | owner_phase                              | status | regression_file | changed_sources |
+| --------------------------------------------- | ----- | ---------------------------------------- | ------ | --------------- | --------------- |
+| usage-nodejs-fs-access-existing-and-missing   | usage | impl-11-validator-fs-dns-process-fixes   | open   | (none — owned by phase-11) | (none in phase-10) |
+| usage-nodejs-fs-copyfile-unlink-chain         | usage | impl-11-validator-fs-dns-process-fixes   | open   | (none — owned by phase-11) | (none in phase-10) |
+| usage-nodejs-fs-cp-recursive                  | usage | impl-11-validator-fs-dns-process-fixes   | open   | (none — owned by phase-11) | (none in phase-10) |
+
+### Files changed in phase-10
+
+- `safe/tests/regressions/validator_timer_ordering_close.c` (new).
+- `safe/tests/regressions/validator_threadpool_queue_work.c` (new).
+- `safe/tests/regressions/validator_random_sync_async.c` (new).
+- `safe/tests/regressions/manifest.json` (registers the three new probes).
+- `validator-report.md` (this section).
+- No source files under `safe/src/core/`, `safe/src/threading/`, or
+  `safe/src/unix/` modified — no phase-10-owned validator failure required a
+  source fix.
+
+### Remaining failures after phase-10
+
+| testcase_id                                   | kind  | owner_phase                              | status |
+| --------------------------------------------- | ----- | ---------------------------------------- | ------ |
+| usage-nodejs-fs-access-existing-and-missing   | usage | impl-11-validator-fs-dns-process-fixes   | open   |
+| usage-nodejs-fs-copyfile-unlink-chain         | usage | impl-11-validator-fs-dns-process-fixes   | open   |
+| usage-nodejs-fs-cp-recursive                  | usage | impl-11-validator-fs-dns-process-fixes   | open   |
