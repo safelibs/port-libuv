@@ -371,3 +371,141 @@ phase-10 regression matches a current validator failure.
 | usage-nodejs-fs-access-existing-and-missing   | usage | impl-11-validator-fs-dns-process-fixes   | open   |
 | usage-nodejs-fs-copyfile-unlink-chain         | usage | impl-11-validator-fs-dns-process-fixes   | open   |
 | usage-nodejs-fs-cp-recursive                  | usage | impl-11-validator-fs-dns-process-fixes   | open   |
+
+## phase-11 — filesystem, DNS, and process fixes
+
+Owner phase: `impl-11-validator-fs-dns-process-fixes`.
+
+### Failure ownership and root cause
+
+All three open failures from phases 08–10 are filesystem-shaped and route
+through the `errno → libuv error name` translation surface, which lives in
+`safe/src/core/error.rs` and is reached from the exported
+`uv_err_name`, `uv_err_name_r`, `uv_strerror`, and `uv_strerror_r` symbols
+in `safe/src/exports/generated.rs`. Node.js' `fs.*` error formatter calls
+`uv_err_name(err)` on libuv-returned codes; when the table only carries a
+handful of entries, every other code surfaces as `Unknown system error <n>`
+and the `code` property leaks through as that string instead of `'ENOENT'`,
+`'EACCES'`, etc.
+
+The defect: `safe/src/core/error.rs` only enumerated 11 `UV_E*` codes plus
+`UV__EOF`. The upstream `UV_ERRNO_MAP` carries 84 entries — including
+`UV_ENOENT` (`-2`) — and a synchronous `uv_fs_access` on a missing path
+returns exactly `-2`, so the unknown-code path was always taken for the
+three failing testcases.
+
+### Source fix
+
+`safe/src/core/error.rs`:
+
+- Backfilled the `ENTRIES` table with every entry from upstream's
+  `UV_ERRNO_MAP` (including `ENOENT`, `EACCES`, `EEXIST`, `ENOTDIR`,
+  `EISDIR`, `ELOOP`, `ENAMETOOLONG`, `EXDEV`, the `EAI_*` resolver codes,
+  `UNKNOWN`, and the late additions `ENXIO`, `EMLINK`, `EHOSTDOWN`,
+  `EREMOTEIO`, `ENOTTY`, `EFTYPE`, `EILSEQ`, `ESOCKTNOSUPPORT`, `ENODATA`,
+  `EUNATCH`).
+- Aligned the unknown-code formatting between `uv_err_name`,
+  `uv_err_name_r`, `uv_strerror`, and `uv_strerror_r`: all four now emit
+  `Unknown system error %d` with the raw (unmodified) error code, matching
+  upstream's `uv__unknown_err_code` and the `default:` arms of
+  `uv_err_name_r` / `uv_strerror_r` in `original/src/uv-common.c`.
+- Removed the previous inconsistency where `strerror` canonicalised the
+  code before formatting and emitted `Unknown error` with no numeric
+  suffix.
+
+No async dispatch, request layout, or `uv_fs_req_cleanup` behaviour was
+touched — the defect was confined to the static name/message table and the
+unknown-code formatter.
+
+### New regression added
+
+| regression_id                       | path                                       | exercises |
+| ----------------------------------- | ------------------------------------------ | --------- |
+| `validator_fs_enoent_error_names`   | `validator_fs_enoent_error_names.c`        | Synchronous `uv_fs_access` on a missing path returns `UV_ENOENT` and populates `req.result`; second `uv_fs_access` reuses the same stack-allocated request after `uv_fs_req_cleanup`; `uv_err_name` / `uv_err_name_r` map `UV_ENOENT`, `UV_EACCES`, `UV_EEXIST`, `UV_ENOTDIR`, `UV_EISDIR`, `UV_ELOOP`, `UV_ENAMETOOLONG`, `UV_ENOTEMPTY`, `UV_EBADF`, `UV_EXDEV`, `UV_EAI_NONAME`; `uv_strerror` / `uv_strerror_r` carry the upstream messages for the same codes; unknown codes (`-99999`) format as `Unknown system error -99999`. |
+
+Registered in `safe/tests/regressions/manifest.json` with
+`phase_owner: "impl-11-validator-fs-dns-process-fixes"`.
+
+The probe passes under `safe/tools/run_regressions.sh --up-to-phase
+impl-11-validator-fs-dns-process-fixes` against the staged install at
+`/tmp/libuv-safe-validator-stage`. (Without the source fix, it fails on
+`uv_err_name(UV_ENOENT) = Unknown system error -2; want ENOENT`.)
+
+### Commands run
+
+```bash
+# 1. Build the safe library and stage it for the regression sweep.
+cargo build --manifest-path safe/Cargo.toml --release
+bash safe/tools/stage_install.sh /tmp/libuv-safe-validator-stage
+bash safe/tools/verify_stage_install.sh /tmp/libuv-safe-validator-stage
+
+# 2. Run regression probes up to and including this phase.
+bash safe/tools/run_regressions.sh \
+  --stage /tmp/libuv-safe-validator-stage \
+  --up-to-phase impl-11-validator-fs-dns-process-fixes
+
+# 3. Rebuild Debian packages from the patched sources.
+bash safe/tools/build_deb.sh
+
+# 4. Stage the rebuilt override .debs in the phase-11 layout.
+mkdir -p validator/artifacts/libuv-safe/phase-11/local-debs/libuv
+cp safe/dist/libuv1t64_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-11/local-debs/libuv/
+cp safe/dist/libuv1-dev_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-11/local-debs/libuv/
+
+# 5. Strict matrix in original mode against locally built overrides.
+( cd validator && bash test.sh \
+    --config repositories.yml \
+    --tests-root tests \
+    --artifact-root artifacts/libuv-safe/phase-11 \
+    --mode original \
+    --override-deb-root artifacts/libuv-safe/phase-11/local-debs \
+    --library libuv \
+    --record-casts )
+```
+
+### phase-11 run summary
+
+From `validator/artifacts/libuv-safe/phase-11/results/libuv/summary.json`:
+
+| Field         | Value      |
+| ------------- | ---------- |
+| schema_version| 2          |
+| library       | libuv      |
+| mode          | original   |
+| cases         | 175        |
+| source_cases  | 5          |
+| usage_cases   | 170        |
+| passed        | 175        |
+| failed        | 0          |
+| casts         | 175        |
+
+All 175 non-summary result JSONs under
+`validator/artifacts/libuv-safe/phase-11/results/libuv/` carry
+`"override_debs_installed": true`. No testcase escaped the override matrix.
+
+### phase-11 closures
+
+| testcase_id                                   | kind  | owner_phase                              | status | regression_file                       | changed_sources              |
+| --------------------------------------------- | ----- | ---------------------------------------- | ------ | ------------------------------------- | ---------------------------- |
+| usage-nodejs-fs-access-existing-and-missing   | usage | impl-11-validator-fs-dns-process-fixes   | passed | validator_fs_enoent_error_names.c     | safe/src/core/error.rs       |
+| usage-nodejs-fs-copyfile-unlink-chain         | usage | impl-11-validator-fs-dns-process-fixes   | passed | validator_fs_enoent_error_names.c     | safe/src/core/error.rs       |
+| usage-nodejs-fs-cp-recursive                  | usage | impl-11-validator-fs-dns-process-fixes   | passed | validator_fs_enoent_error_names.c     | safe/src/core/error.rs       |
+
+### Files changed in phase-11
+
+- `safe/src/core/error.rs` (full UV_ERRNO_MAP table + unified unknown-code
+  formatter).
+- `safe/tests/regressions/validator_fs_enoent_error_names.c` (new probe).
+- `safe/tests/regressions/manifest.json` (registers the new probe).
+- `validator-report.md` (this section).
+
+No filesystem, DNS, or process source files under `safe/src/unix/`
+required a fix in this phase — none of the open validator failures matched
+those surfaces. The mapping table was the sole defect.
+
+### Remaining failures after phase-11
+
+None. All three open failures from the phase-08 baseline are now passing
+under the strict original-mode override matrix.
