@@ -1,4 +1,4 @@
-# libuv-safe validator baseline (phase-08)
+# libuv-safe validator baseline (phase-08, phase-09)
 
 ## Validator source
 
@@ -153,3 +153,96 @@ validator suite. No skip policy is proposed.
 Subsequent phases are expected to clear these by repairing libuv-safe's errno
 → libuv error-name translation. Updates to this report happen in those
 phases.
+
+## phase-09 — packaging, ABI, headers, and validator setup
+
+Owner phase: `impl-09-validator-packaging-abi-fixes`.
+
+### Failure ownership review
+
+The phase-08 baseline triage assigned all three failures to
+`impl-11-validator-fs-dns-process-fixes`. A re-review of the per-case logs
+under `validator/artifacts/libuv-safe/phase-08/logs/libuv/` confirms that none
+of the failures match the categories owned by this phase:
+
+- No `dpkg` install failures for `libuv1t64` or `libuv1-dev` — every failing
+  log shows `Setting up libuv1t64:amd64 (1.48.0-1.1build1+safelibs1) ...` and
+  `Setting up libuv1-dev:amd64 (1.48.0-1.1build1+safelibs1) ...` succeeding
+  before the testcase runs.
+- No missing `uv.h` / `uv/*.h` headers and no `gcc ... -luv` link failures.
+- No `pkg-config` / `libuv.pc` metadata failures.
+- No reports of `nodejs` or validator C probes loading Ubuntu's stock libuv
+  instead of the local override packages — `override_debs_installed: true`
+  for all 175 result JSONs.
+- No missing or mismatched exported symbols.
+
+All three failing testcases are Node.js-driven `fs.*` probes that fail on the
+`errno -2 → "ENOENT"` mapping, which is owned by
+`impl-11-validator-fs-dns-process-fixes`. No source fixes, packaging changes,
+ABI changes, or new regression probes are added in this phase.
+
+### Commands run
+
+```bash
+# 1. Stage the same locally built override .debs in the phase-09 layout.
+mkdir -p validator/artifacts/libuv-safe/phase-09/local-debs/libuv
+cp safe/dist/libuv1t64_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-09/local-debs/libuv/
+cp safe/dist/libuv1-dev_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-09/local-debs/libuv/
+
+# 2. Strict matrix in original mode against locally built overrides.
+( cd validator && bash test.sh \
+    --config repositories.yml \
+    --tests-root tests \
+    --artifact-root artifacts/libuv-safe/phase-09 \
+    --mode original \
+    --override-deb-root artifacts/libuv-safe/phase-09/local-debs \
+    --library libuv \
+    --record-casts )
+```
+
+### phase-09 run summary
+
+From `validator/artifacts/libuv-safe/phase-09/results/libuv/summary.json`:
+
+| Field         | Value      |
+| ------------- | ---------- |
+| schema_version| 2          |
+| library       | libuv      |
+| mode          | original   |
+| cases         | 175        |
+| source_cases  | 5          |
+| usage_cases   | 170        |
+| passed        | 172        |
+| failed        | 3          |
+| casts         | 175        |
+
+All 175 non-summary result JSONs under
+`validator/artifacts/libuv-safe/phase-09/results/libuv/` carry
+`"override_debs_installed": true`. No testcase escaped the override matrix.
+
+### phase-09 failures
+
+Identical set to phase-08; same owner phase, same root cause. No regression
+files added under `safe/tests/regressions/` in this phase, and
+`safe/tests/regressions/manifest.json` is unchanged.
+
+| testcase_id                                   | kind  | owner_phase                              | status | regression_file | changed_sources |
+| --------------------------------------------- | ----- | ---------------------------------------- | ------ | --------------- | --------------- |
+| usage-nodejs-fs-access-existing-and-missing   | usage | impl-11-validator-fs-dns-process-fixes   | open   | (none — owned by phase-11) | (none in phase-09) |
+| usage-nodejs-fs-copyfile-unlink-chain         | usage | impl-11-validator-fs-dns-process-fixes   | open   | (none — owned by phase-11) | (none in phase-09) |
+| usage-nodejs-fs-cp-recursive                  | usage | impl-11-validator-fs-dns-process-fixes   | open   | (none — owned by phase-11) | (none in phase-09) |
+
+### Files changed in phase-09
+
+- `validator-report.md` (this section).
+- No source, packaging, build, or regression files modified.
+
+### Remaining failures after phase-09
+
+| testcase_id                                   | kind  | owner_phase                              | status |
+| --------------------------------------------- | ----- | ---------------------------------------- | ------ |
+| usage-nodejs-fs-access-existing-and-missing   | usage | impl-11-validator-fs-dns-process-fixes   | open   |
+| usage-nodejs-fs-copyfile-unlink-chain         | usage | impl-11-validator-fs-dns-process-fixes   | open   |
+| usage-nodejs-fs-cp-recursive                  | usage | impl-11-validator-fs-dns-process-fixes   | open   |
