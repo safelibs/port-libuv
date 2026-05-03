@@ -3,837 +3,409 @@ yaml_source_mode: inline-only
 verifier_encoding: explicit-phases
 phases:
   - order: 1
-    id: impl-01-baseline-and-artifact-policy
+    id: impl-08-validator-bootstrap-and-baseline
     type: implement
     bounce_target: null
     required_preexisting_inputs:
-      - .cargo/config.toml
+      - .plan/workflow-run-base.txt
+      - .gitignore
+      - original/**
       - safe/Cargo.toml
-      - safe/build.rs
+      - safe/Cargo.lock
+      - safe/rust-toolchain.toml
+      - safe/vendor/libc-0.2.184/**
       - safe/src/**
       - safe/include/**
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
+      - safe/debian/**
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
       - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tests/harness/**
-      - safe/tests/upstream/**
+      - safe/tools/verify_deb_payload_contract.py
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
+      - safe/tools/audit_unsafe.py
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - original/include/**
-      - original/debian/**
-      - original/libuv.pc.in
-      - original/libuv-static.pc.in
-      - original/test/**
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
   - order: 2
-    id: check-01-baseline-contract
+    id: check-15-validator-bootstrap-and-artifacts
     type: check
-    bounce_target: impl-01-baseline-and-artifact-policy
+    bounce_target: impl-08-validator-bootstrap-and-baseline
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
+      - validator/.git
+      - validator/Makefile
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator/artifacts/libuv-safe/phase-08/results/libuv/summary.json
+      - validator-report.md
+      - safe/dist/artifacts.env
+      - safe/tools/write_validator_port_lock.py
       - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
-      - safe/tools/stage_install.sh
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - original/include/**
-      - original/debian/libuv1t64.symbols
-      - original/build-checker/**
   - order: 3
-    id: check-02-focused-harness-and-artifact-policy
+    id: check-16-validator-triage-quality
     type: check
-    bounce_target: impl-01-baseline-and-artifact-policy
+    bounce_target: impl-08-validator-bootstrap-and-baseline
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
+      - validator/.git
+      - validator/artifacts/libuv-safe/phase-08/results/libuv/summary.json
+      - validator-report.md
       - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tests/harness/**
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
-      - original/build-checker-review/**
-      - original/test/**
   - order: 4
-    id: impl-02-core-threading-parity
+    id: impl-09-validator-packaging-abi-fixes
     type: implement
     bounce_target: null
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator/artifacts/libuv-safe/phase-08/results/libuv/summary.json
+      - validator-report.md
       - safe/Cargo.toml
+      - safe/Cargo.lock
+      - safe/rust-toolchain.toml
       - safe/build.rs
       - safe/src/**
       - safe/include/**
+      - safe/debian/**
+      - safe/dist/artifacts.env
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/relink_original_tests.sh
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_exports.sh
+      - safe/tools/verify_deb_payload_contract.py
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
+      - safe/tools/run_regressions.sh
+      - safe/tools/write_validator_port_lock.py
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - original/src/uv-common.c
-      - original/src/timer.c
-      - original/src/thread-common.c
-      - original/src/threadpool.c
-      - original/src/random.c
-      - original/build-checker/**
-      - original/test/**
+      - original/include/**
+      - original/debian/libuv1t64.symbols
   - order: 5
-    id: check-03-core-threading-focused-suite
+    id: check-17-packaging-validator-tester
     type: check
-    bounce_target: impl-02-core-threading-parity
+    bounce_target: impl-09-validator-packaging-abi-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator-report.md
       - safe/Cargo.toml
       - safe/build.rs
       - safe/src/**
       - safe/include/**
+      - safe/debian/**
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_deb_payload_contract.py
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - original/src/uv-common.c
-      - original/src/timer.c
-      - original/src/thread-common.c
-      - original/src/threadpool.c
-      - original/src/random.c
-      - original/build-checker/**
-      - original/test/**
+      - original/include/**
+      - original/debian/not-installed
   - order: 6
-    id: check-04-core-threading-safety-review
+    id: check-18-packaging-senior-review
     type: check
-    bounce_target: impl-02-core-threading-parity
+    bounce_target: impl-09-validator-packaging-abi-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/relink_original_tests.sh
+      - validator/.git
+      - validator-report.md
+      - safe/target/release/libuv.so
+      - safe/tools/verify_exports.sh
       - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
-      - safe/tests/regressions/**
-      - original/src/uv-common.c
-      - original/src/timer.c
-      - original/src/thread-common.c
-      - original/src/threadpool.c
-      - original/src/random.c
-      - original/build-checker/**
-      - original/test/**
+      - safe/tools/verify_phase_commit_sequence.py
+      - safe/src/**
+      - original/build-checker/libuv.so.1.0.0
+      - original/debian/libuv1t64.symbols
   - order: 7
-    id: impl-03-io-fs-resolver-parity
+    id: impl-10-validator-core-loop-threading-fixes
     type: implement
     bounce_target: null
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator-report.md
       - safe/Cargo.toml
+      - safe/Cargo.lock
+      - safe/rust-toolchain.toml
       - safe/build.rs
       - safe/src/**
       - safe/include/**
+      - safe/dist/artifacts.env
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tests/harness/CMakeLists.txt
-      - safe/tools/run_upstream_tests.sh
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - safe/tests/regressions/fs_readlink_proc_self.c
-      - safe/tests/regressions/getaddrinfo_long_hostname.c
-      - original/src/unix/*.c
-      - original/test/**
   - order: 8
-    id: check-05-io-fs-resolver-focused-suite
+    id: check-19-core-loop-validator-tester
     type: check
-    bounce_target: impl-03-io-fs-resolver-parity
+    bounce_target: impl-10-validator-core-loop-threading-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator-report.md
       - safe/Cargo.toml
-      - safe/build.rs
       - safe/src/**
-      - safe/include/**
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - safe/tests/regressions/fs_readlink_proc_self.c
-      - safe/tests/regressions/getaddrinfo_long_hostname.c
-      - original/src/unix/*.c
-      - original/test/**
   - order: 9
-    id: check-06-regression-probes-and-resolver-review
+    id: check-20-core-loop-senior-review
     type: check
-    bounce_target: impl-03-io-fs-resolver-parity
+    bounce_target: impl-10-validator-core-loop-threading-fixes
+    required_preexisting_inputs:
+      - .plan/workflow-run-base.txt
+      - validator/.git
+      - validator-report.md
+      - safe/src/**
+      - safe/tools/audit_unsafe.py
+      - safe/tools/verify_phase_commit_sequence.py
+  - order: 10
+    id: impl-11-validator-fs-dns-process-fixes
+    type: implement
+    bounce_target: null
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator-report.md
       - safe/Cargo.toml
+      - safe/Cargo.lock
+      - safe/rust-toolchain.toml
       - safe/build.rs
       - safe/src/**
       - safe/include/**
+      - safe/dist/artifacts.env
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
       - safe/tests/regressions/fs_readlink_proc_self.c
       - safe/tests/regressions/getaddrinfo_long_hostname.c
-      - original/src/unix/*.c
-      - original/test/**
-  - order: 10
-    id: impl-04-process-signal-security
-    type: implement
-    bounce_target: null
-    required_preexisting_inputs:
-      - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tests/harness/CMakeLists.txt
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
-      - safe/tests/regressions/**
-      - all_cves.json
-      - original/src/unix/process.c
-      - original/src/unix/signal.c
-      - original/src/unix/linux.c
-      - original/test/**
   - order: 11
-    id: check-07-process-signal-security-suite
+    id: check-21-fs-dns-process-validator-tester
     type: check
-    bounce_target: impl-04-process-signal-security
+    bounce_target: impl-11-validator-fs-dns-process-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator-report.md
       - safe/Cargo.toml
-      - safe/build.rs
       - safe/src/**
-      - safe/include/**
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - all_cves.json
-      - original/src/unix/process.c
-      - original/src/unix/signal.c
-      - original/src/unix/linux.c
-      - original/test/**
   - order: 12
-    id: check-08-privilege-drop-and-io-uring-review
+    id: check-22-fs-dns-process-senior-review
     type: check
-    bounce_target: impl-04-process-signal-security
+    bounce_target: impl-11-validator-fs-dns-process-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
+      - validator/.git
+      - validator-report.md
       - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
       - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
-      - safe/tests/regressions/**
-      - all_cves.json
-      - original/src/unix/process.c
-      - original/src/unix/signal.c
-      - original/src/unix/linux.c
-      - original/test/**
+      - safe/tools/verify_phase_commit_sequence.py
   - order: 13
-    id: impl-05-full-upstream-and-relink
+    id: impl-12-validator-network-io-fixes
     type: implement
     bounce_target: null
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator-report.md
       - safe/Cargo.toml
+      - safe/Cargo.lock
+      - safe/rust-toolchain.toml
       - safe/build.rs
       - safe/src/**
       - safe/include/**
-      - safe/tools/build_upstream_harness.sh
-      - safe/tests/harness/CMakeLists.txt
-      - safe/tests/harness/**
+      - safe/dist/artifacts.env
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/update_bindings.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
-      - safe/tests/upstream/**
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
+      - safe/tools/audit_unsafe.py
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - original/debian/libuv1t64.symbols
   - order: 14
-    id: check-09-copied-upstream-suite
+    id: check-23-network-validator-tester
     type: check
-    bounce_target: impl-05-full-upstream-and-relink
+    bounce_target: impl-12-validator-network-io-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator-report.md
       - safe/Cargo.toml
-      - safe/build.rs
       - safe/src/**
-      - safe/include/**
+      - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/update_bindings.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
-      - safe/tests/upstream/**
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - original/debian/libuv1t64.symbols
   - order: 15
-    id: check-10-relinked-original-runners
+    id: check-24-network-senior-review
     type: check
-    bounce_target: impl-05-full-upstream-and-relink
+    bounce_target: impl-12-validator-network-io-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
+      - validator/.git
+      - validator-report.md
       - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/update_bindings.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - original/debian/libuv1t64.symbols
+      - safe/tools/audit_unsafe.py
+      - safe/tools/verify_phase_commit_sequence.py
   - order: 16
-    id: impl-06-packaging-and-dependent-image
+    id: impl-13-validator-catchall-and-report
     type: implement
     bounce_target: null
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator/tools/verify_proof_artifacts.py
+      - validator/tools/render_site.py
+      - validator/scripts/verify-site.sh
+      - validator-report.md
       - safe/Cargo.toml
+      - safe/Cargo.lock
+      - safe/rust-toolchain.toml
       - safe/build.rs
       - safe/src/**
       - safe/include/**
-      - safe/tools/build_upstream_harness.sh
-      - safe/tests/harness/CMakeLists.txt
-      - safe/tests/harness/**
-      - safe/tools/cc-linker.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/build_deb.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/update_bindings.sh
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
       - safe/debian/**
+      - safe/dist/artifacts.env
+      - safe/tools/build_deb.sh
+      - safe/tools/stage_install.sh
+      - safe/tools/verify_stage_install.sh
+      - safe/tools/verify_deb_payload_contract.py
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
+      - safe/tools/audit_unsafe.py
+      - safe/tools/run_regressions.sh
+      - safe/tools/write_validator_port_lock.py
+      - safe/tests/regressions/manifest.json
+      - safe/tests/regressions/**
       - original/include/**
-      - original/debian/libuv1t64.symbols
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - dependents.json
-      - test-original.sh
   - order: 17
-    id: check-11-package-payload-and-image-contract
+    id: check-25-final-validator-clean-run
     type: check
-    bounce_target: impl-06-packaging-and-dependent-image
+    bounce_target: impl-13-validator-catchall-and-report
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
+      - validator/.git
+      - validator/Makefile
+      - validator/repositories.yml
+      - validator/tests/libuv/tests/cases/source
+      - validator/tests/libuv/tests/cases/usage
+      - validator/test.sh
+      - validator/tools/verify_proof_artifacts.py
+      - validator/tools/render_site.py
+      - validator/scripts/verify-site.sh
+      - validator-report.md
       - safe/Cargo.toml
       - safe/build.rs
       - safe/src/**
-      - safe/include/**
-      - safe/tools/cc-linker.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/build_deb.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/update_bindings.sh
-      - safe/tools/run_dependents_suite.sh
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
       - safe/debian/**
-      - safe/dist/artifacts.env
-      - safe/tools/verify_deb_payload_contract.py
-      - safe/tools/build_dependents_image.sh
-      - safe/tools/verify_dependents_image_contract.sh
-      - safe/docker/Dockerfile.dependents
-      - safe/docker/run-dependent-probes.sh
-      - safe/tests/dependents/manifest.json
-      - safe/tests/dependents/common.sh
-      - safe/tests/dependents/**
-      - original/include/**
-      - original/debian/libuv1t64.symbols
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - dependents.json
-      - test-original.sh
+      - safe/tools/build_deb.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/write_validator_port_lock.py
+      - safe/tests/regressions/manifest.json
+      - safe/tests/regressions/**
+      - original/**
   - order: 18
-    id: check-12-dependent-image-smoke
+    id: check-26-software-tester-regression-sweep
     type: check
-    bounce_target: impl-06-packaging-and-dependent-image
+    bounce_target: impl-13-validator-catchall-and-report
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
       - safe/Cargo.toml
       - safe/build.rs
       - safe/src/**
       - safe/include/**
-      - safe/tools/cc-linker.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/build_deb.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/update_bindings.sh
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
       - safe/debian/**
-      - safe/dist/artifacts.env
+      - safe/tools/build_deb.sh
+      - safe/tools/stage_install.sh
+      - safe/tools/verify_stage_install.sh
       - safe/tools/verify_deb_payload_contract.py
-      - safe/tools/build_dependents_image.sh
-      - safe/tools/verify_dependents_image_contract.sh
-      - safe/tools/run_dependents_suite.sh
-      - safe/docker/Dockerfile.dependents
-      - safe/docker/run-dependent-probes.sh
-      - safe/tests/dependents/manifest.json
-      - safe/tests/dependents/common.sh
-      - safe/tests/dependents/**
+      - safe/tools/audit_unsafe.py
+      - safe/tools/run_regressions.sh
+      - safe/tests/regressions/manifest.json
+      - safe/tests/regressions/**
       - original/include/**
-      - original/debian/libuv1t64.symbols
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - dependents.json
-      - test-original.sh
   - order: 19
-    id: impl-07-dependent-closure-and-release-hardening
-    type: implement
-    bounce_target: null
-    required_preexisting_inputs:
-      - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tests/harness/CMakeLists.txt
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
-      - safe/tools/build_deb.sh
-      - safe/tools/verify_deb_payload_contract.py
-      - safe/tools/build_dependents_image.sh
-      - safe/tools/run_dependents_suite.sh
-      - safe/tools/verify_dependents_image_contract.sh
-      - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
-      - safe/tests/dependents/**
-      - safe/tests/dependents/manifest.json
-      - safe/tests/dependents/common.sh
-      - safe/dist/artifacts.env
-      - safe/docker/Dockerfile.dependents
-      - safe/docker/run-dependent-probes.sh
-      - safe/debian/**
-      - all_cves.json
-      - original/include/**
-      - original/debian/libuv1t64.symbols
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - original/test/**
-      - test-original.sh
-  - order: 20
-    id: check-13-dependent-functional-matrix
+    id: check-27-senior-tester-final-review
     type: check
-    bounce_target: impl-07-dependent-closure-and-release-hardening
+    bounce_target: impl-13-validator-catchall-and-report
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
+      - validator/.git
+      - validator-report.md
       - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
-      - safe/tools/build_deb.sh
-      - safe/tools/verify_deb_payload_contract.py
-      - safe/tools/build_dependents_image.sh
-      - safe/tools/run_dependents_suite.sh
-      - safe/tools/verify_dependents_image_contract.sh
-      - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
-      - safe/tests/dependents/**
-      - safe/tests/dependents/manifest.json
-      - safe/tests/dependents/common.sh
-      - safe/dist/artifacts.env
-      - safe/docker/Dockerfile.dependents
-      - safe/docker/run-dependent-probes.sh
-      - safe/debian/**
-      - all_cves.json
-      - original/include/**
-      - original/debian/libuv1t64.symbols
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - original/test/**
-      - test-original.sh
-  - order: 21
-    id: check-14-final-safety-release-review
-    type: check
-    bounce_target: impl-07-dependent-closure-and-release-hardening
-    required_preexisting_inputs:
-      - .plan/workflow-run-base.txt
-      - .gitignore
-      - safe/.gitignore
-      - original/.gitignore
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
-      - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_runner_inventory.sh
-      - safe/tools/run_regressions.sh
-      - safe/tests/harness/README.md
-      - safe/tests/upstream/README.md
-      - safe/tests/regressions/manifest.json
-      - safe/COMPATIBILITY_NOTES.md
-      - safe/RELEASE_CHECKLIST.md
-      - .cargo/config.toml
-      - safe/Cargo.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/tools/stage_install.sh
-      - safe/tools/build_upstream_harness.sh
-      - safe/tools/run_upstream_tests.sh
-      - safe/tools/verify_exports.sh
-      - safe/tools/verify_sizes.sh
-      - safe/tools/relink_original_tests.sh
-      - safe/tools/abi-baseline.json
-      - safe/tools/cc-linker.sh
-      - safe/tools/build_deb.sh
-      - safe/tools/verify_deb_payload_contract.py
-      - safe/tools/build_dependents_image.sh
-      - safe/tools/run_dependents_suite.sh
-      - safe/tools/verify_dependents_image_contract.sh
-      - safe/tools/audit_unsafe.py
-      - safe/tests/harness/**
-      - safe/tests/upstream/**
-      - safe/tests/regressions/**
-      - safe/tests/dependents/**
-      - safe/tests/dependents/manifest.json
-      - safe/tests/dependents/common.sh
-      - safe/dist/artifacts.env
-      - safe/docker/Dockerfile.dependents
-      - safe/docker/run-dependent-probes.sh
-      - safe/debian/**
-      - all_cves.json
-      - original/include/**
-      - original/debian/libuv1t64.symbols
-      - original/build-checker/**
-      - original/build-checker-review/**
-      - original/build-checker-verify/**
-      - original/build-checker-audit/**
-      - original/test/**
-      - test-original.sh

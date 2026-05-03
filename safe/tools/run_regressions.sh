@@ -22,6 +22,12 @@ IMPLEMENT_PHASE_ORDER = [
     "impl-05-full-upstream-and-relink",
     "impl-06-packaging-and-dependent-image",
     "impl-07-dependent-closure-and-release-hardening",
+    "impl-08-validator-bootstrap-and-baseline",
+    "impl-09-validator-packaging-abi-fixes",
+    "impl-10-validator-core-loop-threading-fixes",
+    "impl-11-validator-fs-dns-process-fixes",
+    "impl-12-validator-network-io-fixes",
+    "impl-13-validator-catchall-and-report",
 ]
 EXPECTED_KEYS = {
     "id",
