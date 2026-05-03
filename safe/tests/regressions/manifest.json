@@ -81,6 +81,15 @@
       "compile_flags": [],
       "link_flags": [],
       "args": []
+    },
+    {
+      "id": "validator_port_lock_safe_token_sanitized",
+      "path": "validator_port_lock_safe_token_sanitized.sh",
+      "runner": "shell",
+      "phase_owner": "impl-13-validator-catchall-and-report",
+      "compile_flags": [],
+      "link_flags": [],
+      "args": []
     }
   ]
 }
