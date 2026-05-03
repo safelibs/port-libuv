@@ -632,3 +632,283 @@ phase-11 rerun.
 ### Remaining failures after phase-12
 
 None.
+
+## phase-13 — catch-all, final clean port-mode run, and final report
+
+Owner phase: `impl-13-validator-catchall-and-report`.
+
+### Validator source
+
+- Repository: https://github.com/safelibs/validator
+- Validator commit (cloned, pinned): `87b321fe728340d6fc6dd2f638583cca82c667c3`
+- Working tree: `validator/` (gitignored, not committed; tracked files unmodified by this phase).
+
+### Safe commit range
+
+Workflow-run base (from `.plan/workflow-run-base.txt`):
+`b41b6df2e66ec9ab6e33392a7f806ac7ac555760`.
+
+Phase commits applied since the base, in `--first-parent` order
+(this commit is added at the end of phase-13):
+
+| Commit  | Subject                                                                          |
+| ------- | -------------------------------------------------------------------------------- |
+| d3e37ea | impl-08-validator-bootstrap-and-baseline advance workflow-run base past impl-09 head |
+| d20f259 | impl-09-validator-packaging-abi-fixes re-affirm clean phase-09 packaging/ABI rerun |
+| 5cb15bd | impl-10-validator-core-loop-threading-fixes add core-loop/threadpool/random regressions and phase-10 rerun |
+| 71757af | impl-11-validator-fs-dns-process-fixes backfill UV_ERRNO_MAP for fs error names  |
+| d96000a | impl-12-validator-network-io-fixes add tcp/pipe/udp regressions and phase-12 rerun |
+| _HEAD_  | impl-13-validator-catchall-and-report final port-mode run and report             |
+
+### Failure ownership review
+
+The phase-12 rerun shipped a clean strict original-mode override matrix
+(`validator/artifacts/libuv-safe/phase-12/results/libuv/summary.json`:
+`cases=175, source_cases=5, usage_cases=170, passed=175, failed=0,
+casts=175`, with `override_debs_installed: true` for every per-case
+result). Reparsing every result JSON under
+`validator/artifacts/libuv-safe/phase-12/results/libuv/` confirms there is
+no remaining failure for phase-13 to triage. Therefore:
+
+- No new `phase_owner: "impl-13-validator-catchall-and-report"` regression
+  is required.
+- No `safe/src/**`, `safe/debian/**`, or `safe/tools/**` source fix is
+  required.
+- `safe/tests/regressions/manifest.json` is unchanged in this phase.
+
+### Suspected validator bugs
+
+None. Every libuv testcase passes against the locally built libuv-safe
+`.deb` packages, both in strict original-mode (phase-11/phase-12 reruns)
+and in the final port-mode run below. No skip is required and none is
+applied — this is a no-skip clean final state.
+
+### Baseline failure list (phase-08) and final disposition
+
+| testcase_id                                       | kind  | owner_phase                              | final status | regression_file                       | changed_sources              |
+| ------------------------------------------------- | ----- | ---------------------------------------- | ------------ | ------------------------------------- | ---------------------------- |
+| usage-nodejs-fs-access-existing-and-missing       | usage | impl-11-validator-fs-dns-process-fixes   | passed       | validator_fs_enoent_error_names.c     | safe/src/core/error.rs       |
+| usage-nodejs-fs-copyfile-unlink-chain             | usage | impl-11-validator-fs-dns-process-fixes   | passed       | validator_fs_enoent_error_names.c     | safe/src/core/error.rs       |
+| usage-nodejs-fs-cp-recursive                      | usage | impl-11-validator-fs-dns-process-fixes   | passed       | validator_fs_enoent_error_names.c     | safe/src/core/error.rs       |
+
+### Fixes applied by phase
+
+| phase | regression files added                                                                                                                                                                       | source files changed   |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| impl-08-validator-bootstrap-and-baseline | (baseline only — no regressions, no source changes)                                                                                                                                          | (none)                 |
+| impl-09-validator-packaging-abi-fixes    | (none — no phase-09-owned failure)                                                                                                                                                            | (none)                 |
+| impl-10-validator-core-loop-threading-fixes | `validator_timer_ordering_close.c`, `validator_threadpool_queue_work.c`, `validator_random_sync_async.c`                                                                                  | (none)                 |
+| impl-11-validator-fs-dns-process-fixes   | `validator_fs_enoent_error_names.c`                                                                                                                                                          | `safe/src/core/error.rs` (full `UV_ERRNO_MAP` table + unified unknown-code formatter) |
+| impl-12-validator-network-io-fixes       | `validator_tcp_loopback_echo.c`, `validator_pipe_socketpair_stream.c`, `validator_udp_loopback_send_recv.c`                                                                                  | (none)                 |
+| impl-13-validator-catchall-and-report    | (none — no remaining failure to fix)                                                                                                                                                          | (none)                 |
+
+### Final port-mode artifact roots and proof / lock / site paths
+
+| Path role                       | Path                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Final artifact root             | `validator/artifacts/libuv-safe/check-25-final`                                                                 |
+| Final per-case results          | `validator/artifacts/libuv-safe/check-25-final/port/results/libuv/`                                             |
+| Final per-case logs             | `validator/artifacts/libuv-safe/check-25-final/port/logs/libuv/`                                                |
+| Final casts (`--record-casts`)  | `validator/artifacts/libuv-safe/check-25-final/port/casts/libuv/`                                               |
+| Local override-deb root         | `validator/artifacts/libuv-safe/check-25-final/local-debs/libuv/`                                               |
+| Final port-deb lock             | `validator/artifacts/libuv-safe/check-25-final/proof/local-port-debs-lock.json`                                 |
+| Final port-mode proof           | `validator/artifacts/libuv-safe/check-25-final/proof/libuv-safe-validation-proof.json`                          |
+| Final rendered site             | `validator/site/libuv-safe-final/`                                                                              |
+
+None of these paths is committed to git — they are regenerated by the
+phase-13 commands below.
+
+### Final port-deb lock contents
+
+The lock at `validator/artifacts/libuv-safe/check-25-final/proof/local-port-debs-lock.json`
+embeds:
+
+| Field        | Value                                                  |
+| ------------ | ------------------------------------------------------ |
+| schema_version | `1`                                                  |
+| mode         | `port`                                                 |
+| repository   | `safelibs/port-libuv`                                  |
+| url          | `https://github.com/safelibs/port-libuv`               |
+| commit       | `d96000a33980505a38cf0822e7c9183499f49984`             |
+| release_tag  | `local-libuv-safe-d96000a`                             |
+| tag_ref      | `refs/tags/local-libuv-safe-d96000a`                   |
+| debs[0]      | `libuv1t64` `1.48.0-1.1build1+safelibs1` `amd64`       |
+| debs[1]      | `libuv1-dev` `1.48.0-1.1build1+safelibs1` `amd64`      |
+| unported_original_packages | `[]`                                     |
+
+The commit value is the HEAD of the `port-libuv` working tree at the
+moment phase-13 wrote the lock (the parent of this final phase-13 commit).
+The release-tag is a deterministic local synthetic tag of the form
+`local-libuv-safe-<short-commit>` because the local libuv-safe build is
+not (yet) cut as a real upstream release tag in the `safelibs/port-libuv`
+GitHub repository.
+
+### Commands run
+
+```bash
+REPO=/home/yans/safelibs/pipeline/ports/port-libuv
+
+# 0. Verify HEAD belongs to this phase (will pass after the phase-13 commit lands).
+"$REPO/safe/tools/verify_phase_head.sh" impl-13-validator-catchall-and-report
+docker version >/dev/null
+
+# 1. Ensure the upstream baseline build is present (skipped if libuv.so.1.0.0 exists).
+if [ ! -f "$REPO/original/build-checker/libuv.so.1.0.0" ]; then
+  cmake -S "$REPO/original" -B "$REPO/original/build-checker" \
+    -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
+  cmake --build "$REPO/original/build-checker" -j"$(nproc)"
+fi
+
+# 2. Rebuild the libuv-safe Debian artifacts.
+"$REPO/safe/tools/build_deb.sh"
+
+# 3. Stage local override .debs in the final layout and write the port-deb lock.
+ARTIFACT_ROOT="$REPO/validator/artifacts/libuv-safe/check-25-final"
+OVERRIDE_ROOT="$ARTIFACT_ROOT/local-debs"
+PORT_LOCK="$ARTIFACT_ROOT/proof/local-port-debs-lock.json"
+SITE_ROOT="$REPO/validator/site/libuv-safe-final"
+rm -rf "$ARTIFACT_ROOT" "$SITE_ROOT"
+mkdir -p "$OVERRIDE_ROOT/libuv" "$ARTIFACT_ROOT/proof"
+cp "$REPO"/safe/dist/libuv1t64_*.deb   "$OVERRIDE_ROOT/libuv/"
+cp "$REPO"/safe/dist/libuv1-dev_*.deb  "$OVERRIDE_ROOT/libuv/"
+
+python3 "$REPO/safe/tools/write_validator_port_lock.py" \
+  --artifacts-env "$REPO/safe/dist/artifacts.env" \
+  --override-root "$OVERRIDE_ROOT" \
+  --lock-output "$PORT_LOCK" \
+  --library libuv \
+  --repository safelibs/port-libuv \
+  --commit       "$(git -C "$REPO" rev-parse HEAD)" \
+  --release-tag  "local-libuv-safe-$(git -C "$REPO" rev-parse --short HEAD)"
+
+# 4. Validator unit tests + manifest checks.
+make -C "$REPO/validator" unit
+make -C "$REPO/validator" check-testcases
+
+# 5. Final clean port-mode validator run.
+bash "$REPO/validator/test.sh" \
+  --config            "$REPO/validator/repositories.yml" \
+  --tests-root        "$REPO/validator/tests" \
+  --artifact-root     "$ARTIFACT_ROOT" \
+  --mode              port \
+  --port-deb-lock     "$PORT_LOCK" \
+  --override-deb-root "$OVERRIDE_ROOT" \
+  --library           libuv \
+  --record-casts
+
+# 6. Verify port-mode proof artifacts.
+python3 "$REPO/validator/tools/verify_proof_artifacts.py" \
+  --config         "$REPO/validator/repositories.yml" \
+  --tests-root     "$REPO/validator/tests" \
+  --artifact-root  "$ARTIFACT_ROOT" \
+  --proof-output   proof/libuv-safe-validation-proof.json \
+  --mode           port \
+  --library        libuv \
+  --require-casts \
+  --min-source-cases 5 \
+  --min-usage-cases  140 \
+  --min-cases        145 \
+  --ports-root /home/yans/safelibs/pipeline/ports
+
+# 7. Render and verify the validator site.
+python3 "$REPO/validator/tools/render_site.py" \
+  --config        "$REPO/validator/repositories.yml" \
+  --tests-root    "$REPO/validator/tests" \
+  --artifact-root "$ARTIFACT_ROOT" \
+  --proof-path    "$ARTIFACT_ROOT/proof/libuv-safe-validation-proof.json" \
+  --output-root   "$SITE_ROOT"
+
+bash "$REPO/validator/scripts/verify-site.sh" \
+  --config         "$REPO/validator/repositories.yml" \
+  --tests-root     "$REPO/validator/tests" \
+  --artifacts-root "$ARTIFACT_ROOT" \
+  --proof-path     "$ARTIFACT_ROOT/proof/libuv-safe-validation-proof.json" \
+  --site-root      "$SITE_ROOT" \
+  --library        libuv
+
+# 8. Independent safe-crate sweep (check-26).
+cargo build --manifest-path "$REPO/safe/Cargo.toml" --release
+"$REPO/safe/tools/stage_install.sh"        /tmp/libuv-safe-validator-stage
+"$REPO/safe/tools/verify_stage_install.sh" /tmp/libuv-safe-validator-stage
+"$REPO/safe/tools/run_regressions.sh" \
+  --stage /tmp/libuv-safe-validator-stage \
+  --up-to-phase impl-13-validator-catchall-and-report
+"$REPO/safe/tools/build_deb.sh"
+python3 "$REPO/safe/tools/verify_deb_payload_contract.py" \
+  "$REPO/safe/dist/artifacts.env" \
+  "$REPO/original/include" \
+  "$REPO/safe/debian/not-installed"
+python3 "$REPO/safe/tools/audit_unsafe.py" "$REPO/safe/src"
+
+# 9. Final commit-topology / report cross-checks (check-27).
+python3 "$REPO/safe/tools/verify_phase_commit_sequence.py" \
+  --base-file "$REPO/.plan/workflow-run-base.txt" \
+  impl-08-validator-bootstrap-and-baseline \
+  impl-09-validator-packaging-abi-fixes \
+  impl-10-validator-core-loop-threading-fixes \
+  impl-11-validator-fs-dns-process-fixes \
+  impl-12-validator-network-io-fixes \
+  impl-13-validator-catchall-and-report
+git -C "$REPO/validator" diff           --exit-code
+git -C "$REPO/validator" diff --cached  --exit-code
+```
+
+### phase-13 final port-mode run summary
+
+From
+`validator/artifacts/libuv-safe/check-25-final/port/results/libuv/summary.json`:
+
+| Field         | Value      |
+| ------------- | ---------- |
+| schema_version| 2          |
+| library       | libuv      |
+| mode          | port       |
+| cases         | 175        |
+| source_cases  | 5          |
+| usage_cases   | 170        |
+| passed        | 175        |
+| failed        | 0          |
+| casts         | 175        |
+
+All 175 non-summary result JSONs under
+`validator/artifacts/libuv-safe/check-25-final/port/results/libuv/` carry
+`"mode": "port"`. Counts match the cloned validator checkout exactly
+(`validator/tests/libuv/tests/cases/source/*.sh` = 5,
+`validator/tests/libuv/tests/cases/usage/*.sh` = 170, total 175), and all
+175 cases pass with no skip. The thresholds required by the phase plan
+(`--min-source-cases 5`, `--min-usage-cases 140`, `--min-cases 145`) are
+met with a 30-case margin on usage and a 30-case margin on the total.
+
+### Final result
+
+- Strict original-mode override matrix (phase-12): **175 / 175 passed,
+  0 failed**, all results `override_debs_installed: true`.
+- Final port-mode validator run (phase-13, check-25-final):
+  **175 / 175 passed, 0 failed**, all results `mode: "port"`.
+- `validator/tools/verify_proof_artifacts.py --mode port` accepts the
+  port-mode proof at `proof/libuv-safe-validation-proof.json` with the
+  thresholds above.
+- `validator/scripts/verify-site.sh` accepts the rendered site at
+  `validator/site/libuv-safe-final/` with the final user-facing
+  safe/unsafe language present in the rendered HTML.
+- `safe/tools/run_regressions.sh --up-to-phase impl-13-…` passes against
+  `/tmp/libuv-safe-validator-stage`.
+- `safe/tools/verify_deb_payload_contract.py` and
+  `safe/tools/audit_unsafe.py safe/src` pass on the latest `.deb`
+  packages and source tree.
+- `git -C validator diff` is clean (no tracked validator file modified
+  in any phase).
+- No skipped check; no documented validator bug.
+
+### Files changed in phase-13
+
+- `validator-report.md` (this section).
+
+No `safe/src/**`, `safe/debian/**`, `safe/tools/**`, or
+`safe/tests/regressions/**` file is changed in phase-13 — there is no
+remaining failure to repair, and no `phase_owner:
+"impl-13-validator-catchall-and-report"` regression is added.
+
+### Remaining failures after phase-13
+
+None.
