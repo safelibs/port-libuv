@@ -1,5 +1,6 @@
 /Testing/
 /test_file_*
+/validator/
 
 # dpkg-buildpackage and related root-level package artifacts
 /*.buildinfo
