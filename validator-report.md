@@ -509,3 +509,126 @@ those surfaces. The mapping table was the sole defect.
 
 None. All three open failures from the phase-08 baseline are now passing
 under the strict original-mode override matrix.
+
+## phase-12 — network, pipe, stream, poll, TCP, and UDP fixes
+
+Owner phase: `impl-12-validator-network-io-fixes`.
+
+### Failure ownership review
+
+The phase-11 rerun closed the last open failure from the phase-08 baseline,
+so phase-12 inherits a clean validator matrix. A re-review of every result
+JSON under `validator/artifacts/libuv-safe/phase-11/results/libuv/` against
+this phase's scope (TCP/UDP/pipe/poll/stream loopback, HTTP/HTTP2 loopback,
+`net.*`, `dgram.*`, streams/pipeline) confirms there is nothing for
+phase-12 to repair:
+
+- The two source cases this phase owns end-to-end — `tcp-loopback-smoke`
+  and `process-pipe-smoke` — are both `passed` with
+  `override_debs_installed: true`.
+- Every Node.js usage testcase under `net.*`, `dgram.*`, HTTP/HTTP2
+  loopback, and streams/pipeline shapes (e.g. `usage-nodejs-net-tcp-*`,
+  `usage-nodejs-dgram-*`, `usage-nodejs-http-*`, `usage-nodejs-http2-*`,
+  `usage-nodejs-stream-*`) is `passed`.
+- No phase-12-shaped failure was masked by a fix in an earlier phase: the
+  three closed failures all routed through `safe/src/core/error.rs` and
+  did not touch the network/stream surfaces under `safe/src/unix/`.
+
+No source defect lands in this phase. Per the phase plan, minimal C
+regressions are still added so the TCP, pipe/stream, and UDP surfaces are
+locked behind direct ABI probes that will fail loudly under any future
+regression in `safe/src/unix/tcp.rs`, `safe/src/unix/pipe.rs`,
+`safe/src/unix/stream.rs`, or `safe/src/unix/udp.rs`.
+
+### New regressions added
+
+Each is registered in `safe/tests/regressions/manifest.json` with
+`phase_owner: "impl-12-validator-network-io-fixes"`.
+
+| regression_id                          | path                                       | exercises |
+| -------------------------------------- | ------------------------------------------ | --------- |
+| `validator_tcp_loopback_echo`          | `validator_tcp_loopback_echo.c`            | `uv_tcp_init`/`uv_tcp_bind` on `127.0.0.1:0`, `uv_listen` invokes connection_cb exactly once, `uv_accept` transfers the kernel socket, `uv_tcp_getsockname`/`uv_tcp_getpeername` after bind/connect/accept return AF_INET, `uv_read_start` delivers payload + a `UV_EOF` nread on shutdown, `uv_write` completes once with status==0 and `uv_stream_get_write_queue_size` drains to 0, `uv_shutdown` cb fires once, three `uv_close` calls each fire one close_cb. |
+| `validator_pipe_socketpair_stream`     | `validator_pipe_socketpair_stream.c`       | `uv_pipe_init` + `uv_pipe_open` adopt both ends of a `socketpair(AF_UNIX, SOCK_STREAM)`, `uv_try_write` succeeds on a fresh stream, `uv_write` completes once with `write_queue_size`==0 after drain, `uv_shutdown` cb fires once, the reader sees the concatenated `try:` prefix + payload then a `UV_EOF` nread, two `uv_close` calls each fire one close_cb. |
+| `validator_udp_loopback_send_recv`     | `validator_udp_loopback_send_recv.c`       | `uv_udp_init`/`uv_udp_bind` on `127.0.0.1:0`, `uv_udp_getsockname` returns AF_INET with a non-zero port, `uv_udp_set_broadcast`/`uv_udp_set_ttl`/`uv_udp_set_multicast_ttl`/`uv_udp_set_multicast_loop` succeed on a bound loopback socket, `uv_udp_recv_start` delivers two datagrams with populated AF_INET addr, `uv_udp_send` (unconnected, with explicit addr) and `uv_udp_send` (connected, NULL addr) each invoke send_cb once with status==0, `uv_udp_connect` + `uv_udp_getpeername` round-trip the peer port, two `uv_close` calls each fire one close_cb. |
+
+All three pass under `safe/tools/run_regressions.sh --up-to-phase
+impl-12-validator-network-io-fixes` against the staged install at
+`/tmp/libuv-safe-validator-stage`.
+
+### Commands run
+
+```bash
+# 1. Build the safe library and stage it for the regression sweep.
+cargo build --manifest-path safe/Cargo.toml --release
+bash safe/tools/stage_install.sh /tmp/libuv-safe-validator-stage
+bash safe/tools/verify_stage_install.sh /tmp/libuv-safe-validator-stage
+
+# 2. Run regression probes up to and including this phase.
+bash safe/tools/run_regressions.sh \
+  --stage /tmp/libuv-safe-validator-stage \
+  --up-to-phase impl-12-validator-network-io-fixes
+
+# 3. Rebuild Debian packages (no source defect; rebuild for parity).
+bash safe/tools/build_deb.sh
+
+# 4. Stage the rebuilt override .debs in the phase-12 layout.
+mkdir -p validator/artifacts/libuv-safe/phase-12/local-debs/libuv
+cp safe/dist/libuv1t64_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-12/local-debs/libuv/
+cp safe/dist/libuv1-dev_1.48.0-1.1build1+safelibs1_amd64.deb \
+   validator/artifacts/libuv-safe/phase-12/local-debs/libuv/
+
+# 5. Strict matrix in original mode against locally built overrides.
+( cd validator && bash test.sh \
+    --config repositories.yml \
+    --tests-root tests \
+    --artifact-root artifacts/libuv-safe/phase-12 \
+    --mode original \
+    --override-deb-root artifacts/libuv-safe/phase-12/local-debs \
+    --library libuv \
+    --record-casts )
+```
+
+### phase-12 run summary
+
+From `validator/artifacts/libuv-safe/phase-12/results/libuv/summary.json`:
+
+| Field         | Value      |
+| ------------- | ---------- |
+| schema_version| 2          |
+| library       | libuv      |
+| mode          | original   |
+| cases         | 175        |
+| source_cases  | 5          |
+| usage_cases   | 170        |
+| passed        | 175        |
+| failed        | 0          |
+| casts         | 175        |
+
+All 175 non-summary result JSONs under
+`validator/artifacts/libuv-safe/phase-12/results/libuv/` carry
+`"override_debs_installed": true`. No testcase escaped the override
+matrix.
+
+### phase-12 closures
+
+No phase-12-owned validator failure was open at the start of this phase,
+so there is no closure table. The new regressions stand as guard probes
+against future regressions in the TCP/pipe/stream/UDP surfaces.
+
+### Files changed in phase-12
+
+- `safe/tests/regressions/validator_tcp_loopback_echo.c` (new probe).
+- `safe/tests/regressions/validator_pipe_socketpair_stream.c` (new probe).
+- `safe/tests/regressions/validator_udp_loopback_send_recv.c` (new probe).
+- `safe/tests/regressions/manifest.json` (registers the three new probes).
+- `validator-report.md` (this section).
+
+No source files under `safe/src/unix/tcp.rs`, `pipe.rs`, `stream.rs`,
+`udp.rs`, `poll.rs`, `fd.rs`, or `epoll.rs` required a fix — every
+network/IO-shaped validator testcase was already passing under the
+phase-11 rerun.
+
+### Remaining failures after phase-12
+
+None.

@@ -54,6 +54,33 @@
       "compile_flags": [],
       "link_flags": [],
       "args": []
+    },
+    {
+      "id": "validator_tcp_loopback_echo",
+      "path": "validator_tcp_loopback_echo.c",
+      "runner": "c",
+      "phase_owner": "impl-12-validator-network-io-fixes",
+      "compile_flags": [],
+      "link_flags": [],
+      "args": []
+    },
+    {
+      "id": "validator_pipe_socketpair_stream",
+      "path": "validator_pipe_socketpair_stream.c",
+      "runner": "c",
+      "phase_owner": "impl-12-validator-network-io-fixes",
+      "compile_flags": [],
+      "link_flags": [],
+      "args": []
+    },
+    {
+      "id": "validator_udp_loopback_send_recv",
+      "path": "validator_udp_loopback_send_recv.c",
+      "runner": "c",
+      "phase_owner": "impl-12-validator-network-io-fixes",
+      "compile_flags": [],
+      "link_flags": [],
+      "args": []
     }
   ]
 }
