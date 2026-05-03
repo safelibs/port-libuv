@@ -722,7 +722,7 @@ disabled. The single regression
 pins the writer's behaviour against future drift, including the negative
 case (a clean tag like `v1.48.0+safelibs1` must pass through unchanged).
 
-### Baseline failure list (phase-08) and final disposition
+### Baseline Failures found (phase-08) and final disposition
 
 | testcase_id                                       | kind  | owner_phase                              | final status | regression_file                       | changed_sources              |
 | ------------------------------------------------- | ----- | ---------------------------------------- | ------------ | ------------------------------------- | ---------------------------- |
@@ -801,7 +801,11 @@ sanitized `local-libuv-port-29138fc` token — `grep -oE
 "local-libuv-(safe|port)-[a-f0-9]+"` returns exactly
 `local-libuv-port-29138fc` and never the input form.
 
-### Commands run
+### Checks executed (commands run)
+
+This is the full ordered list of phase-13 Checks executed end-to-end —
+the same commands that the check-25 / check-26 / check-27 verifiers
+re-execute. Every command below exits 0 against the current HEAD.
 
 ```bash
 REPO=/home/yans/safelibs/pipeline/ports/port-libuv
