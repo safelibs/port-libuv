@@ -1,3 +1,129 @@
+# libuv-safe network/stream validator review (phase-18)
+
+## Phase
+
+- Phase: `impl-18-validator-network-io-fixes`
+- Purpose: network, pipe, stream, poll, TCP, UDP, loopback HTTP/HTTP2,
+  Node.js `net.*`, `dgram.*`, and streams/pipeline validator review.
+- Validator commit used: `87b321fe728340d6fc6dd2f638583cca82c667c3`
+- Source outcome: no `safe/src/unix/{stream,tcp,udp,pipe,poll,fd,epoll}.rs`,
+  `safe/src/upstream_support/{unix_core,unix_loop}.rs`, export, ABI, or
+  regression changes were required.
+
+## phase-18 artifacts
+
+- Artifact root: `validator/artifacts/libuv-safe/phase-18`
+- Local override root: `validator/artifacts/libuv-safe/phase-18/local-debs/libuv`
+- Per-case results: `validator/artifacts/libuv-safe/phase-18/results/libuv`
+- Per-case logs: `validator/artifacts/libuv-safe/phase-18/logs/libuv`
+- Cast recordings: `validator/artifacts/libuv-safe/phase-18/casts/libuv`
+- Artifacts are generated under gitignored `validator/` and are not committed.
+
+## Commands run
+
+```bash
+cargo build --manifest-path safe/Cargo.toml --release
+safe/tools/stage_install.sh /tmp/libuv-safe-validator-stage
+safe/tools/verify_stage_install.sh /tmp/libuv-safe-validator-stage
+safe/tools/run_regressions.sh \
+  --stage /tmp/libuv-safe-validator-stage \
+  --up-to-phase impl-18-validator-network-io-fixes
+safe/tools/build_deb.sh
+
+ARTIFACT_ROOT="$PWD/validator/artifacts/libuv-safe/phase-18"
+OVERRIDE_ROOT="$ARTIFACT_ROOT/local-debs"
+rm -rf "$ARTIFACT_ROOT"
+mkdir -p "$OVERRIDE_ROOT/libuv"
+cp safe/dist/libuv1t64_*.deb "$OVERRIDE_ROOT/libuv/"
+cp safe/dist/libuv1-dev_*.deb "$OVERRIDE_ROOT/libuv/"
+
+bash validator/test.sh \
+  --config validator/repositories.yml \
+  --tests-root validator/tests \
+  --artifact-root "$ARTIFACT_ROOT" \
+  --mode original \
+  --override-deb-root "$OVERRIDE_ROOT" \
+  --library libuv \
+  --record-casts
+```
+
+The validator command exited with status 0.
+
+## Packages
+
+Read from `safe/dist/artifacts.env` and copied into the phase-18 override root:
+
+| Package | Version | Architecture | SHA-256 |
+| --- | --- | --- | --- |
+| `libuv1t64` | `1.48.0-1.1build1+safelibs1` | `amd64` | `f46e5a6b20c43f3adbf02fb914e9451b5164c9141e7eae0f82bcc8a26ecc7d7d` |
+| `libuv1-dev` | `1.48.0-1.1build1+safelibs1` | `amd64` | `6df4475d00d0e1f3420eb2d46fad94e22a3e4fc3df832eb95ae8add030e63405` |
+
+## Result
+
+Fresh libuv testcase counts from the validator checkout:
+
+| Kind | Count |
+| --- | ---: |
+| Source cases | 5 |
+| Usage cases | 170 |
+| Total cases | 175 |
+
+`validator/artifacts/libuv-safe/phase-18/results/libuv/summary.json` records:
+
+| Field | Value |
+| --- | ---: |
+| `mode` | `original` |
+| `passed` | 175 |
+| `failed` | 0 |
+| `casts` | 175 |
+
+Override coverage: all 175 non-summary result JSON files contain
+`override_debs_installed: true`, so every validator case installed the local
+`libuv1t64` and `libuv1-dev` packages.
+
+## Review
+
+No phase-18 network, pipe, stream, poll, TCP, UDP, loopback HTTP/HTTP2,
+Node.js `net.*`, Node.js `dgram.*`, or streams/pipeline failures were
+recorded. The phase-owned source case `tcp-loopback-smoke` passes, and
+`process-pipe-smoke` also passes with no pipe/stream root cause to own.
+
+Existing focused regressions covering this surface continue to run through
+phase 18: `validator_tcp_loopback_echo.c`,
+`validator_pipe_socketpair_stream.c`, and
+`validator_udp_loopback_send_recv.c`. No new regression probe is needed because
+there was no newly fixed phase-18 defect.
+
+Focused code review found no required source fix for the phase-owned
+invariants:
+
+- `safe/src/unix/stream.rs`: listen, accept, read, write, try-write,
+  shutdown, and close paths preserve callback registration, accepted socket
+  transfer, EOF/error delivery, queue-size draining, and single completion.
+- `safe/src/unix/tcp.rs`: bind, connect, accept-derived peer/socket names,
+  nodelay, keepalive, and close/reset behavior match the passing validator
+  loopback probes.
+- `safe/src/unix/udp.rs`: bound loopback recv, connected and unconnected send,
+  send callback completion, address population, peer/socket names, queue
+  counters, broadcast, TTL, and multicast option paths match the passing
+  validator probes.
+- `safe/src/unix/pipe.rs`, `safe/src/unix/poll.rs`,
+  `safe/src/unix/fd.rs`, and `safe/src/unix/epoll.rs`: pipe stream adoption,
+  fd readiness registration, polling, and close invalidation did not produce
+  any phase-owned source or usage failure.
+
+## Failures
+
+No `impl-18-validator-network-io-fixes` failure owner assignments, source
+fixes, or new regression probes are required.
+
+## Skipped validator bugs
+
+None. No testcase was treated as a validator bug and no testcase was excluded
+from acceptance accounting.
+
+## Historical report
+
 # libuv-safe filesystem/DNS/process validator review (phase-17)
 
 ## Phase
