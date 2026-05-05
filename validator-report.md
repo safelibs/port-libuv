@@ -1,3 +1,134 @@
+# libuv-safe filesystem/DNS/process validator review (phase-17)
+
+## Phase
+
+- Phase: `impl-17-validator-fs-dns-process-fixes`
+- Purpose: filesystem, DNS/resolver, process, spawn, stdio/reaping, signal
+  restore, and error-name validator review.
+- Validator commit used: `87b321fe728340d6fc6dd2f638583cca82c667c3`
+- Source outcome: no `safe/src/unix/{fs,fs_event,fs_poll,getaddrinfo,getnameinfo,process,pipe,signal,fd}.rs`,
+  `safe/src/core/error.rs`, `safe/src/threading/threadpool.rs`, export, ABI,
+  or regression changes were required.
+
+## phase-17 artifacts
+
+- Artifact root: `validator/artifacts/libuv-safe/phase-17`
+- Local override root: `validator/artifacts/libuv-safe/phase-17/local-debs/libuv`
+- Per-case results: `validator/artifacts/libuv-safe/phase-17/results/libuv`
+- Per-case logs: `validator/artifacts/libuv-safe/phase-17/logs/libuv`
+- Cast recordings: `validator/artifacts/libuv-safe/phase-17/casts/libuv`
+- Artifacts are generated under gitignored `validator/` and are not committed.
+
+## Commands run
+
+```bash
+cargo build --manifest-path safe/Cargo.toml --release
+safe/tools/stage_install.sh /tmp/libuv-safe-validator-stage
+safe/tools/verify_stage_install.sh /tmp/libuv-safe-validator-stage
+safe/tools/run_regressions.sh \
+  --stage /tmp/libuv-safe-validator-stage \
+  --up-to-phase impl-17-validator-fs-dns-process-fixes
+safe/tools/build_deb.sh
+
+ARTIFACT_ROOT="$PWD/validator/artifacts/libuv-safe/phase-17"
+OVERRIDE_ROOT="$ARTIFACT_ROOT/local-debs"
+rm -rf "$ARTIFACT_ROOT"
+mkdir -p "$OVERRIDE_ROOT/libuv"
+cp safe/dist/libuv1t64_*.deb "$OVERRIDE_ROOT/libuv/"
+cp safe/dist/libuv1-dev_*.deb "$OVERRIDE_ROOT/libuv/"
+
+bash validator/test.sh \
+  --config validator/repositories.yml \
+  --tests-root validator/tests \
+  --artifact-root "$ARTIFACT_ROOT" \
+  --mode original \
+  --override-deb-root "$OVERRIDE_ROOT" \
+  --library libuv \
+  --record-casts
+```
+
+The validator command exited with status 0.
+
+## Packages
+
+Read from `safe/dist/artifacts.env` and copied into the phase-17 override root:
+
+| Package | Version | Architecture | SHA-256 |
+| --- | --- | --- | --- |
+| `libuv1t64` | `1.48.0-1.1build1+safelibs1` | `amd64` | `f46e5a6b20c43f3adbf02fb914e9451b5164c9141e7eae0f82bcc8a26ecc7d7d` |
+| `libuv1-dev` | `1.48.0-1.1build1+safelibs1` | `amd64` | `6df4475d00d0e1f3420eb2d46fad94e22a3e4fc3df832eb95ae8add030e63405` |
+
+## Result
+
+Fresh libuv testcase counts from the validator checkout:
+
+| Kind | Count |
+| --- | ---: |
+| Source cases | 5 |
+| Usage cases | 170 |
+| Total cases | 175 |
+
+`validator/artifacts/libuv-safe/phase-17/results/libuv/summary.json` records:
+
+| Field | Value |
+| --- | ---: |
+| `mode` | `original` |
+| `passed` | 175 |
+| `failed` | 0 |
+| `casts` | 175 |
+
+Override coverage: all 175 non-summary result JSON files contain
+`override_debs_installed: true`, so every validator case installed the local
+`libuv1t64` and `libuv1-dev` packages.
+
+## Review
+
+No phase-17 filesystem, DNS, resolver, process, spawn, child stdio, process
+exit-status, process close, signal-restore, reaping, or error-name failures
+were recorded. The phase-owned source cases `dns-getaddrinfo.sh` and
+`fs-read-write.sh` pass, as do the Node.js usage probes for `fs.*`,
+`fs.promises.*`, `opendir`, `watch`, `watchFile`, symlink/readlink/realpath,
+stat/statfs, chmod/truncate/readv/writev, `dns.lookup`, resolver promises, and
+`child_process.*`.
+
+Focused code review found no required source fix:
+
+- `safe/src/unix/fs.rs`: `fs_req_init` preserves caller `data`, clears the
+  request, and sets type, loop, fs type, and callback fields; `access` routes
+  through `init_path_request` and `run_or_submit`; `req_cleanup` releases owned
+  async path/new-path/buffer allocations while preserving synchronous request
+  ownership compatibly.
+- `safe/src/core/error.rs`: positive errno inputs canonicalize to negative
+  libuv codes through the ABI constants, known codes including `ENOENT` map to
+  upstream `err_name`/`strerror` names and messages, and unknown direct and
+  `_r` variants format as `Unknown system error <raw-code>`.
+- `safe/src/unix/getaddrinfo.rs` and `safe/src/threading/threadpool.rs`:
+  resolver host/service/hints inputs are cloned before async dispatch, freed in
+  completion, delivered on the owning loop, and `uv_freeaddrinfo` delegates to
+  libc `freeaddrinfo`; the existing long-hostname IDNA regression remains in
+  the regression suite.
+- `safe/src/unix/process.rs`: spawn validates and opens stdio, reports failed
+  child setup or `execvp` through the error pipe, applies cwd, environment,
+  uid/gid flags, signal disposition/mask handling, and reaps children through
+  `process_reap` with one exit callback.
+
+Existing focused regressions covering this area continue to run through phase
+17: `fs_readlink_proc_self.c`, `getaddrinfo_long_hostname.c`, and
+`validator_fs_enoent_error_names.c`. No new regression probe is needed because
+there was no newly fixed phase-17 defect.
+
+## Failures
+
+No `impl-17-validator-fs-dns-process-fixes` failure owner assignments, source
+fixes, or new regression probes are required.
+
+## Skipped validator bugs
+
+None. No testcase was treated as a validator bug and no testcase was excluded
+from acceptance accounting.
+
+## Historical report
+
 # libuv-safe core loop/threading validator review (phase-16)
 
 ## Phase
