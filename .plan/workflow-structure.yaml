@@ -3,10 +3,11 @@ yaml_source_mode: inline-only
 verifier_encoding: explicit-phases
 phases:
   - order: 1
-    id: impl-08-validator-bootstrap-and-baseline
+    id: impl-14-validator-refresh-baseline
     type: implement
     bounce_target: null
     required_preexisting_inputs:
+      - .plan/plan.md
       - .plan/workflow-run-base.txt
       - .gitignore
       - original/**
@@ -19,92 +20,143 @@ phases:
       - safe/debian/**
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
+      - safe/tools/verify_stage_install.sh
       - safe/tools/verify_exports.sh
       - safe/tools/verify_deb_payload_contract.py
+      - safe/tools/write_validator_port_lock.py
+      - safe/tools/run_regressions.sh
       - safe/tools/verify_phase_head.sh
       - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
-      - safe/tools/run_regressions.sh
       - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
+      - safe/tests/upstream/**
+      - safe/tests/harness/**
+      - safe/tests/dependents/**
+      - safe/docker/**
+      - all_cves.json
+      - relevant_cves.json
+      - dependents.json
+      - validator/.git
+      - validator/README.md
+      - validator/Makefile
+      - validator/test.sh
+      - validator/repositories.yml
+      - validator/tests/libuv/**
+      - validator/artifacts/libuv-safe/phase-08/**
+      - validator/artifacts/libuv-safe/phase-09/**
+      - validator/artifacts/libuv-safe/phase-10/**
+      - validator/artifacts/libuv-safe/phase-11/**
+      - validator/artifacts/libuv-safe/phase-12/**
+      - validator/artifacts/libuv-safe/check-25-final/**
+      - validator/site/libuv-safe-final/**
+      - validator-report.md
   - order: 2
-    id: check-15-validator-bootstrap-and-artifacts
+    id: check-28-validator-refresh-artifacts
     type: check
-    bounce_target: impl-08-validator-bootstrap-and-baseline
+    bounce_target: impl-14-validator-refresh-baseline
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - .gitignore
       - validator/.git
       - validator/Makefile
       - validator/repositories.yml
+      - validator/test.sh
       - validator/tests/libuv/tests/cases/source
       - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
-      - validator/artifacts/libuv-safe/phase-08/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-14/local-debs/libuv
       - validator-report.md
       - safe/dist/artifacts.env
       - safe/tools/write_validator_port_lock.py
+      - safe/tools/run_regressions.sh
       - safe/tools/verify_phase_head.sh
+      - safe/tests/regressions/validator_port_lock_safe_token_sanitized.sh
   - order: 3
-    id: check-16-validator-triage-quality
+    id: check-29-validator-triage-quality
     type: check
-    bounce_target: impl-08-validator-bootstrap-and-baseline
+    bounce_target: impl-14-validator-refresh-baseline
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
-      - validator/artifacts/libuv-safe/phase-08/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/*.json
       - validator-report.md
       - safe/tools/verify_phase_commit_sequence.py
   - order: 4
-    id: impl-09-validator-packaging-abi-fixes
+    id: impl-15-validator-packaging-abi-fixes
     type: implement
     bounce_target: null
     required_preexisting_inputs:
+      - .plan/plan.md
       - .plan/workflow-run-base.txt
       - .gitignore
-      - validator/.git
-      - validator/repositories.yml
-      - validator/tests/libuv/tests/cases/source
-      - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
-      - validator/artifacts/libuv-safe/phase-08/results/libuv/summary.json
       - validator-report.md
+      - validator/.git
+      - validator/README.md
+      - validator/Makefile
+      - validator/test.sh
+      - validator/repositories.yml
+      - validator/tests/libuv/**
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-14/local-debs/libuv/*.deb
+      - validator/artifacts/libuv-safe/phase-08/**
+      - validator/artifacts/libuv-safe/phase-09/**
+      - validator/artifacts/libuv-safe/phase-10/**
+      - validator/artifacts/libuv-safe/phase-11/**
+      - validator/artifacts/libuv-safe/phase-12/**
+      - validator/artifacts/libuv-safe/check-25-final/**
+      - validator/site/libuv-safe-final/**
       - safe/Cargo.toml
       - safe/Cargo.lock
       - safe/rust-toolchain.toml
+      - safe/vendor/libc-0.2.184/**
+      - safe/src/lib.rs
       - safe/build.rs
-      - safe/src/**
-      - safe/include/**
       - safe/debian/**
-      - safe/dist/artifacts.env
+      - safe/include/**
+      - safe/src/exports/mod.rs
+      - safe/src/exports/generated.rs
+      - safe/src/abi/linux_x86_64.rs
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
       - safe/tools/verify_exports.sh
       - safe/tools/verify_deb_payload_contract.py
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
+      - safe/tools/render_debian_symbols.py
       - safe/tools/audit_unsafe.py
       - safe/tools/run_regressions.sh
-      - safe/tools/write_validator_port_lock.py
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
       - safe/tests/regressions/manifest.json
       - safe/tests/regressions/**
       - original/include/**
       - original/debian/libuv1t64.symbols
+      - original/debian/not-installed
+      - all_cves.json
+      - relevant_cves.json
+      - dependents.json
+      - safe/tests/upstream/**
+      - safe/tests/harness/**
+      - safe/tests/dependents/**
+      - safe/docker/**
   - order: 5
-    id: check-17-packaging-validator-tester
+    id: check-30-packaging-validator-tester
     type: check
-    bounce_target: impl-09-validator-packaging-abi-fixes
+    bounce_target: impl-15-validator-packaging-abi-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
       - validator/repositories.yml
+      - validator/test.sh
       - validator/tests/libuv/tests/cases/source
       - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/*.json
       - validator-report.md
       - safe/Cargo.toml
-      - safe/build.rs
       - safe/src/**
       - safe/include/**
       - safe/debian/**
@@ -115,78 +167,116 @@ phases:
       - safe/tools/verify_phase_head.sh
       - safe/tools/run_regressions.sh
       - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
       - original/include/**
       - original/debian/not-installed
   - order: 6
-    id: check-18-packaging-senior-review
+    id: check-31-packaging-senior-review
     type: check
-    bounce_target: impl-09-validator-packaging-abi-fixes
+    bounce_target: impl-15-validator-packaging-abi-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
       - validator-report.md
       - safe/target/release/libuv.so
+      - safe/src/**
       - safe/tools/verify_exports.sh
       - safe/tools/audit_unsafe.py
       - safe/tools/verify_phase_commit_sequence.py
-      - safe/src/**
-      - original/build-checker/libuv.so.1.0.0
       - original/debian/libuv1t64.symbols
   - order: 7
-    id: impl-10-validator-core-loop-threading-fixes
+    id: impl-16-validator-core-loop-threading-fixes
     type: implement
     bounce_target: null
     required_preexisting_inputs:
+      - .plan/plan.md
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - validator/.git
-      - validator/repositories.yml
-      - validator/tests/libuv/tests/cases/source
-      - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
       - validator-report.md
+      - validator/.git
+      - validator/README.md
+      - validator/Makefile
+      - validator/test.sh
+      - validator/repositories.yml
+      - validator/tests/libuv/**
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-08/**
+      - validator/artifacts/libuv-safe/phase-09/**
+      - validator/artifacts/libuv-safe/phase-10/**
+      - validator/artifacts/libuv-safe/phase-11/**
+      - validator/artifacts/libuv-safe/phase-12/**
+      - validator/artifacts/libuv-safe/check-25-final/**
+      - validator/site/libuv-safe-final/**
       - safe/Cargo.toml
       - safe/Cargo.lock
       - safe/rust-toolchain.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/dist/artifacts.env
+      - safe/vendor/libc-0.2.184/**
+      - safe/src/lib.rs
+      - safe/src/core/loop.rs
+      - safe/src/core/default_loop.rs
+      - safe/src/core/handle.rs
+      - safe/src/core/request.rs
+      - safe/src/core/timer.rs
+      - safe/src/core/time.rs
+      - safe/src/core/metrics.rs
+      - safe/src/unix/epoll.rs
+      - safe/src/unix/async.rs
+      - safe/src/threading/threadpool.rs
+      - safe/src/threading/thread.rs
+      - safe/src/threading/sync.rs
+      - safe/src/threading/random.rs
+      - safe/src/exports/generated.rs
+      - safe/src/exports/mod.rs
+      - safe/src/abi/linux_x86_64.rs
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
       - safe/tools/run_regressions.sh
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
       - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
+      - safe/tests/regressions/validator_timer_ordering_close.c
+      - safe/tests/regressions/validator_threadpool_queue_work.c
+      - safe/tests/regressions/validator_random_sync_async.c
+      - all_cves.json
+      - relevant_cves.json
+      - dependents.json
+      - safe/tests/upstream/**
+      - safe/tests/harness/**
+      - safe/tests/dependents/**
+      - safe/docker/**
+      - safe/debian/**
   - order: 8
-    id: check-19-core-loop-validator-tester
+    id: check-32-core-loop-validator-tester
     type: check
-    bounce_target: impl-10-validator-core-loop-threading-fixes
+    bounce_target: impl-16-validator-core-loop-threading-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
       - validator/repositories.yml
+      - validator/test.sh
       - validator/tests/libuv/tests/cases/source
       - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/*.json
       - validator-report.md
       - safe/Cargo.toml
       - safe/src/**
+      - safe/debian/**
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
       - safe/tools/verify_phase_head.sh
       - safe/tools/run_regressions.sh
       - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
   - order: 9
-    id: check-20-core-loop-senior-review
+    id: check-33-core-loop-senior-review
     type: check
-    bounce_target: impl-10-validator-core-loop-threading-fixes
+    bounce_target: impl-16-validator-core-loop-threading-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
@@ -195,61 +285,88 @@ phases:
       - safe/tools/audit_unsafe.py
       - safe/tools/verify_phase_commit_sequence.py
   - order: 10
-    id: impl-11-validator-fs-dns-process-fixes
+    id: impl-17-validator-fs-dns-process-fixes
     type: implement
     bounce_target: null
     required_preexisting_inputs:
+      - .plan/plan.md
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - validator/.git
-      - validator/repositories.yml
-      - validator/tests/libuv/tests/cases/source
-      - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
       - validator-report.md
-      - safe/Cargo.toml
-      - safe/Cargo.lock
-      - safe/rust-toolchain.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/dist/artifacts.env
+      - validator/.git
+      - validator/README.md
+      - validator/Makefile
+      - validator/test.sh
+      - validator/repositories.yml
+      - validator/tests/libuv/**
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-32/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-32/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-08/**
+      - validator/artifacts/libuv-safe/phase-09/**
+      - validator/artifacts/libuv-safe/phase-10/**
+      - validator/artifacts/libuv-safe/phase-11/**
+      - validator/artifacts/libuv-safe/phase-12/**
+      - validator/artifacts/libuv-safe/check-25-final/**
+      - validator/site/libuv-safe-final/**
+      - safe/tests/regressions/manifest.json
+      - safe/tests/regressions/fs_readlink_proc_self.c
+      - safe/tests/regressions/getaddrinfo_long_hostname.c
+      - safe/tests/regressions/validator_fs_enoent_error_names.c
+      - safe/src/core/error.rs
+      - safe/src/unix/fs.rs
+      - safe/src/unix/fs_event.rs
+      - safe/src/unix/fs_poll.rs
+      - safe/src/unix/getaddrinfo.rs
+      - safe/src/unix/getnameinfo.rs
+      - safe/src/util/idna.rs
+      - safe/src/upstream_support/inet.rs
+      - safe/src/unix/process.rs
+      - safe/src/unix/pipe.rs
+      - safe/src/unix/signal.rs
+      - safe/src/unix/fd.rs
+      - safe/src/threading/threadpool.rs
+      - safe/src/exports/generated.rs
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
       - safe/tools/run_regressions.sh
-      - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
-      - safe/tests/regressions/fs_readlink_proc_self.c
-      - safe/tests/regressions/getaddrinfo_long_hostname.c
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
   - order: 11
-    id: check-21-fs-dns-process-validator-tester
+    id: check-34-fs-dns-process-validator-tester
     type: check
-    bounce_target: impl-11-validator-fs-dns-process-fixes
+    bounce_target: impl-17-validator-fs-dns-process-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
       - validator/repositories.yml
+      - validator/test.sh
       - validator/tests/libuv/tests/cases/source
       - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
+      - validator/artifacts/libuv-safe/phase-17/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-17/results/libuv/*.json
       - validator-report.md
       - safe/Cargo.toml
       - safe/src/**
+      - safe/debian/**
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
       - safe/tools/verify_phase_head.sh
       - safe/tools/run_regressions.sh
       - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
   - order: 12
-    id: check-22-fs-dns-process-senior-review
+    id: check-35-fs-dns-process-senior-review
     type: check
-    bounce_target: impl-11-validator-fs-dns-process-fixes
+    bounce_target: impl-17-validator-fs-dns-process-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
@@ -258,59 +375,88 @@ phases:
       - safe/tools/audit_unsafe.py
       - safe/tools/verify_phase_commit_sequence.py
   - order: 13
-    id: impl-12-validator-network-io-fixes
+    id: impl-18-validator-network-io-fixes
     type: implement
     bounce_target: null
     required_preexisting_inputs:
+      - .plan/plan.md
       - .plan/workflow-run-base.txt
-      - .gitignore
-      - validator/.git
-      - validator/repositories.yml
-      - validator/tests/libuv/tests/cases/source
-      - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
       - validator-report.md
-      - safe/Cargo.toml
-      - safe/Cargo.lock
-      - safe/rust-toolchain.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/dist/artifacts.env
+      - validator/.git
+      - validator/README.md
+      - validator/Makefile
+      - validator/test.sh
+      - validator/repositories.yml
+      - validator/tests/libuv/**
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-17/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-32/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-34/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-17/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-32/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-34/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-08/**
+      - validator/artifacts/libuv-safe/phase-09/**
+      - validator/artifacts/libuv-safe/phase-10/**
+      - validator/artifacts/libuv-safe/phase-11/**
+      - validator/artifacts/libuv-safe/phase-12/**
+      - validator/artifacts/libuv-safe/check-25-final/**
+      - validator/site/libuv-safe-final/**
+      - safe/tests/regressions/manifest.json
+      - safe/tests/regressions/validator_tcp_loopback_echo.c
+      - safe/tests/regressions/validator_pipe_socketpair_stream.c
+      - safe/tests/regressions/validator_udp_loopback_send_recv.c
+      - safe/src/unix/stream.rs
+      - safe/src/unix/tcp.rs
+      - safe/src/unix/udp.rs
+      - safe/src/unix/pipe.rs
+      - safe/src/unix/poll.rs
+      - safe/src/unix/fd.rs
+      - safe/src/unix/epoll.rs
+      - safe/src/upstream_support/unix_core.rs
+      - safe/src/upstream_support/unix_loop.rs
+      - safe/src/exports/generated.rs
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
       - safe/tools/run_regressions.sh
-      - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
   - order: 14
-    id: check-23-network-validator-tester
+    id: check-36-network-io-validator-tester
     type: check
-    bounce_target: impl-12-validator-network-io-fixes
+    bounce_target: impl-18-validator-network-io-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
       - validator/repositories.yml
+      - validator/test.sh
       - validator/tests/libuv/tests/cases/source
       - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
+      - validator/artifacts/libuv-safe/phase-18/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-18/results/libuv/*.json
       - validator-report.md
       - safe/Cargo.toml
       - safe/src/**
+      - safe/debian/**
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
       - safe/tools/verify_phase_head.sh
       - safe/tools/run_regressions.sh
       - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
   - order: 15
-    id: check-24-network-senior-review
+    id: check-37-network-io-senior-review
     type: check
-    bounce_target: impl-12-validator-network-io-fixes
+    bounce_target: impl-18-validator-network-io-fixes
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
@@ -319,77 +465,108 @@ phases:
       - safe/tools/audit_unsafe.py
       - safe/tools/verify_phase_commit_sequence.py
   - order: 16
-    id: impl-13-validator-catchall-and-report
+    id: impl-19-validator-catchall-final-report
     type: implement
     bounce_target: null
     required_preexisting_inputs:
+      - .plan/plan.md
       - .plan/workflow-run-base.txt
-      - .gitignore
+      - validator-report.md
       - validator/.git
-      - validator/repositories.yml
-      - validator/tests/libuv/tests/cases/source
-      - validator/tests/libuv/tests/cases/usage
+      - validator/README.md
+      - validator/Makefile
       - validator/test.sh
+      - validator/repositories.yml
+      - validator/tests/libuv/**
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-17/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-18/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-32/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-34/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/check-36/results/libuv/summary.json
+      - validator/artifacts/libuv-safe/phase-14/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-15/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-16/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-17/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-18/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-30/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-32/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-34/results/libuv/*.json
+      - validator/artifacts/libuv-safe/check-36/results/libuv/*.json
+      - validator/artifacts/libuv-safe/phase-08/**
+      - validator/artifacts/libuv-safe/phase-09/**
+      - validator/artifacts/libuv-safe/phase-10/**
+      - validator/artifacts/libuv-safe/phase-11/**
+      - validator/artifacts/libuv-safe/phase-12/**
+      - validator/artifacts/libuv-safe/check-25-final/**
+      - validator/site/libuv-safe-final/**
+      - safe/tests/regressions/manifest.json
+      - safe/tests/regressions/*.c
+      - safe/tests/regressions/*.sh
+      - safe/tests/regressions/validator_port_lock_safe_token_sanitized.sh
+      - safe/tools/write_validator_port_lock.py
       - validator/tools/verify_proof_artifacts.py
       - validator/tools/render_site.py
       - validator/scripts/verify-site.sh
-      - validator-report.md
-      - safe/Cargo.toml
-      - safe/Cargo.lock
-      - safe/rust-toolchain.toml
-      - safe/build.rs
-      - safe/src/**
-      - safe/include/**
-      - safe/debian/**
-      - safe/dist/artifacts.env
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
       - safe/tools/verify_stage_install.sh
       - safe/tools/verify_deb_payload_contract.py
-      - safe/tools/verify_phase_head.sh
-      - safe/tools/verify_phase_commit_sequence.py
       - safe/tools/audit_unsafe.py
       - safe/tools/run_regressions.sh
-      - safe/tools/write_validator_port_lock.py
-      - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
-      - original/include/**
+      - safe/tools/verify_phase_head.sh
+      - safe/tools/verify_phase_commit_sequence.py
+      - safe/Cargo.toml
+      - safe/Cargo.lock
+      - safe/rust-toolchain.toml
+      - safe/vendor/libc-0.2.184/**
+      - safe/src/**
+      - safe/include/**
+      - safe/debian/**
+      - original/**
+      - all_cves.json
+      - relevant_cves.json
+      - dependents.json
+      - safe/tests/upstream/**
+      - safe/tests/harness/**
+      - safe/tests/dependents/**
+      - safe/docker/**
   - order: 17
-    id: check-25-final-validator-clean-run
+    id: check-38-final-validator-proof-site
     type: check
-    bounce_target: impl-13-validator-catchall-and-report
+    bounce_target: impl-19-validator-catchall-final-report
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
       - validator/.git
       - validator/Makefile
       - validator/repositories.yml
+      - validator/test.sh
       - validator/tests/libuv/tests/cases/source
       - validator/tests/libuv/tests/cases/usage
-      - validator/test.sh
       - validator/tools/verify_proof_artifacts.py
       - validator/tools/render_site.py
       - validator/scripts/verify-site.sh
       - validator-report.md
       - safe/Cargo.toml
-      - safe/build.rs
       - safe/src/**
       - safe/debian/**
       - safe/tools/build_deb.sh
-      - safe/tools/verify_phase_head.sh
       - safe/tools/write_validator_port_lock.py
-      - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
+      - safe/tools/verify_phase_head.sh
+      - safe/tests/regressions/validator_port_lock_safe_token_sanitized.sh
       - original/**
   - order: 18
-    id: check-26-software-tester-regression-sweep
+    id: check-39-final-safe-crate-senior-review
     type: check
-    bounce_target: impl-13-validator-catchall-and-report
+    bounce_target: impl-19-validator-catchall-final-report
     required_preexisting_inputs:
-      - .plan/workflow-run-base.txt
+      - validator/.git
+      - validator-report.md
       - safe/Cargo.toml
-      - safe/build.rs
       - safe/src/**
-      - safe/include/**
       - safe/debian/**
       - safe/tools/build_deb.sh
       - safe/tools/stage_install.sh
@@ -398,14 +575,15 @@ phases:
       - safe/tools/audit_unsafe.py
       - safe/tools/run_regressions.sh
       - safe/tests/regressions/manifest.json
-      - safe/tests/regressions/**
       - original/include/**
+      - original/debian/not-installed
   - order: 19
-    id: check-27-senior-tester-final-review
+    id: check-40-final-report-and-topology
     type: check
-    bounce_target: impl-13-validator-catchall-and-report
+    bounce_target: impl-19-validator-catchall-final-report
     required_preexisting_inputs:
       - .plan/workflow-run-base.txt
-      - validator/.git
       - validator-report.md
+      - safe/tools/write_validator_port_lock.py
+      - safe/tests/regressions/validator_port_lock_safe_token_sanitized.sh
       - safe/tools/verify_phase_commit_sequence.py
