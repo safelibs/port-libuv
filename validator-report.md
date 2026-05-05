@@ -1,3 +1,104 @@
+# libuv-safe core loop/threading validator review (phase-16)
+
+## Phase
+
+- Phase: `impl-16-validator-core-loop-threading-fixes`
+- Purpose: core loop, timer, async, threadpool, threading, and random
+  validator review.
+- Validator commit used: `87b321fe728340d6fc6dd2f638583cca82c667c3`
+- Source outcome: no `safe/src/core/**`, `safe/src/unix/{epoll,async}.rs`,
+  `safe/src/threading/**`, export, ABI, or regression changes were required.
+
+## phase-16 artifacts
+
+- Artifact root: `validator/artifacts/libuv-safe/phase-16`
+- Local override root: `validator/artifacts/libuv-safe/phase-16/local-debs/libuv`
+- Per-case results: `validator/artifacts/libuv-safe/phase-16/results/libuv`
+- Per-case logs: `validator/artifacts/libuv-safe/phase-16/logs/libuv`
+- Cast recordings: `validator/artifacts/libuv-safe/phase-16/casts/libuv`
+- Artifacts are generated under gitignored `validator/` and are not committed.
+
+## Commands run
+
+```bash
+cargo build --manifest-path safe/Cargo.toml --release
+safe/tools/stage_install.sh /tmp/libuv-safe-validator-stage
+safe/tools/verify_stage_install.sh /tmp/libuv-safe-validator-stage
+safe/tools/run_regressions.sh \
+  --stage /tmp/libuv-safe-validator-stage \
+  --up-to-phase impl-16-validator-core-loop-threading-fixes
+safe/tools/build_deb.sh
+
+ARTIFACT_ROOT="$PWD/validator/artifacts/libuv-safe/phase-16"
+OVERRIDE_ROOT="$ARTIFACT_ROOT/local-debs"
+rm -rf "$ARTIFACT_ROOT"
+mkdir -p "$OVERRIDE_ROOT/libuv"
+cp safe/dist/libuv1t64_*.deb "$OVERRIDE_ROOT/libuv/"
+cp safe/dist/libuv1-dev_*.deb "$OVERRIDE_ROOT/libuv/"
+
+bash validator/test.sh \
+  --config validator/repositories.yml \
+  --tests-root validator/tests \
+  --artifact-root "$ARTIFACT_ROOT" \
+  --mode original \
+  --override-deb-root "$OVERRIDE_ROOT" \
+  --library libuv \
+  --record-casts
+```
+
+The validator command exited with status 0.
+
+## Packages
+
+Read from `safe/dist/artifacts.env` and copied into the phase-16 override root:
+
+| Package | Version | Architecture | SHA-256 |
+| --- | --- | --- | --- |
+| `libuv1t64` | `1.48.0-1.1build1+safelibs1` | `amd64` | `f46e5a6b20c43f3adbf02fb914e9451b5164c9141e7eae0f82bcc8a26ecc7d7d` |
+| `libuv1-dev` | `1.48.0-1.1build1+safelibs1` | `amd64` | `6df4475d00d0e1f3420eb2d46fad94e22a3e4fc3df832eb95ae8add030e63405` |
+
+## Result
+
+Fresh libuv testcase counts from the validator checkout:
+
+| Kind | Count |
+| --- | ---: |
+| Source cases | 5 |
+| Usage cases | 170 |
+| Total cases | 175 |
+
+`validator/artifacts/libuv-safe/phase-16/results/libuv/summary.json` records:
+
+| Field | Value |
+| --- | ---: |
+| `mode` | `original` |
+| `passed` | 175 |
+| `failed` | 0 |
+| `casts` | 175 |
+
+Override coverage: all 175 non-summary result JSON files contain
+`override_debs_installed: true`, so every validator case installed the local
+`libuv1t64` and `libuv1-dev` packages.
+
+## Failures
+
+No phase-16 event-loop, timer, async, threadpool, worker scheduling, random,
+crypto randomness, scrypt, or zlib/threadpool-completion failures were
+recorded. Existing focused regressions owned by the earlier core-loop pass
+continue to run through phase 16:
+`validator_timer_ordering_close.c`, `validator_threadpool_queue_work.c`, and
+`validator_random_sync_async.c`.
+
+No `impl-16-validator-core-loop-threading-fixes` failure owner assignments,
+source fixes, or new regression probes are required.
+
+## Skipped validator bugs
+
+None. No testcase was treated as a validator bug and no testcase was excluded
+from acceptance accounting.
+
+## Historical report
+
 # libuv-safe packaging/ABI validator review (phase-15)
 
 ## Phase
