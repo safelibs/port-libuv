@@ -28,6 +28,12 @@ IMPLEMENT_PHASE_ORDER = [
     "impl-11-validator-fs-dns-process-fixes",
     "impl-12-validator-network-io-fixes",
     "impl-13-validator-catchall-and-report",
+    "impl-14-validator-refresh-baseline",
+    "impl-15-validator-packaging-abi-fixes",
+    "impl-16-validator-core-loop-threading-fixes",
+    "impl-17-validator-fs-dns-process-fixes",
+    "impl-18-validator-network-io-fixes",
+    "impl-19-validator-catchall-final-report",
 ]
 EXPECTED_KEYS = {
     "id",

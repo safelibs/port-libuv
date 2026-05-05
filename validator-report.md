@@ -1,3 +1,108 @@
+# libuv-safe validator refresh (phase-14)
+
+## Validator commit
+
+- Phase: `impl-14-validator-refresh-baseline`
+- Workflow base before phase-14: `90e55a2b45ebc0db3af14426754c6a2abf656b7e`
+- Validator checkout: `validator/` (gitignored nested repository; no tracked validator files committed)
+- Validator update command: `git -C validator pull --ff-only`
+- Validator commit before refresh: `87b321fe728340d6fc6dd2f638583cca82c667c3`
+- Validator commit used for phase-14: `87b321fe728340d6fc6dd2f638583cca82c667c3`
+- Fast-forward result: already up to date
+
+## phase-14 artifacts
+
+- Artifact root: `validator/artifacts/libuv-safe/phase-14`
+- Local override root: `validator/artifacts/libuv-safe/phase-14/local-debs/libuv`
+- Per-case results: `validator/artifacts/libuv-safe/phase-14/results/libuv`
+- Per-case logs: `validator/artifacts/libuv-safe/phase-14/logs/libuv`
+- Cast recordings: `validator/artifacts/libuv-safe/phase-14/casts/libuv`
+- Historical comparison roots preserved in place: `validator/artifacts/libuv-safe/phase-08`, `phase-09`, `phase-10`, `phase-11`, `phase-12`, `validator/artifacts/libuv-safe/check-25-final`, and `validator/site/libuv-safe-final`.
+
+## Commands run
+
+```bash
+git rev-parse HEAD > .plan/workflow-run-base.txt
+git -C validator pull --ff-only
+
+cmake -S original -B original/build-checker \
+  -DBUILD_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build original/build-checker -j"$(nproc)"
+
+safe/tools/build_deb.sh
+
+ARTIFACT_ROOT="$PWD/validator/artifacts/libuv-safe/phase-14"
+OVERRIDE_ROOT="$ARTIFACT_ROOT/local-debs"
+rm -rf "$ARTIFACT_ROOT"
+mkdir -p "$OVERRIDE_ROOT/libuv"
+cp safe/dist/libuv1t64_*.deb "$OVERRIDE_ROOT/libuv/"
+cp safe/dist/libuv1-dev_*.deb "$OVERRIDE_ROOT/libuv/"
+
+make -C validator unit
+make -C validator check-testcases
+
+bash validator/test.sh \
+  --config validator/repositories.yml \
+  --tests-root validator/tests \
+  --artifact-root validator/artifacts/libuv-safe/phase-14 \
+  --mode original \
+  --override-deb-root validator/artifacts/libuv-safe/phase-14/local-debs \
+  --library libuv \
+  --record-casts
+```
+
+The baseline run intentionally used validator `--mode original` with
+`--override-deb-root` pointed at locally built `libuv-safe` packages. No
+original-mode proof or final site output was generated from this override run.
+
+## Packages
+
+Read from `safe/dist/artifacts.env` and copied into the phase-14 override root:
+
+| Package | Version | Architecture | SHA-256 |
+| --- | --- | --- | --- |
+| `libuv1t64` | `1.48.0-1.1build1+safelibs1` | `amd64` | `f46e5a6b20c43f3adbf02fb914e9451b5164c9141e7eae0f82bcc8a26ecc7d7d` |
+| `libuv1-dev` | `1.48.0-1.1build1+safelibs1` | `amd64` | `6df4475d00d0e1f3420eb2d46fad94e22a3e4fc3df832eb95ae8add030e63405` |
+
+## Baseline result
+
+Fresh libuv testcase counts from the validator checkout after the pull:
+
+| Kind | Count |
+| --- | ---: |
+| Source cases | 5 |
+| Usage cases | 170 |
+| Total cases | 175 |
+
+`validator/artifacts/libuv-safe/phase-14/results/libuv/summary.json` records:
+
+| Field | Value |
+| --- | ---: |
+| `mode` | `original` |
+| `passed` | 175 |
+| `failed` | 0 |
+| `casts` | 175 |
+
+Override coverage: all 175 non-summary result JSON files contain
+`override_debs_installed: true`.
+
+## Failures
+
+No phase-14 baseline failures were recorded. No owner phase assignment is
+required for `impl-15-validator-packaging-abi-fixes`,
+`impl-16-validator-core-loop-threading-fixes`,
+`impl-17-validator-fs-dns-process-fixes`,
+`impl-18-validator-network-io-fixes`, or
+`impl-19-validator-catchall-final-report`.
+
+## Skipped validator bugs
+
+None. No testcase was treated as a validator bug and no testcase was excluded
+from acceptance accounting.
+
+## Historical report
+
 # libuv-safe validator baseline (phase-08, phase-09)
 
 ## Validator source
